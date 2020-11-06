@@ -9,10 +9,11 @@
 #' @details Stuff and stuff.
 #' @importFrom sandwich vcovHC
 #' @importFrom lmtest coeftest
+#' @importFrom stats pt qnorm
 #' @export
 resi.lm = function(object, vcov.=sandwich::vcovHC, ...){
   x = coeftest(object, vcov.=vcov., ...)
-  cbind(x, S = RESI::S(x[,'t value']^2, 1, object$df.residual))
+  cbind(x, S = RESI::chisq2S(qnorm(pt(x[,'t value'], df = object$df.residual))^2, 1, object$df.residual))
 }
 
 #' Robust effect size add-on for glm
@@ -29,7 +30,7 @@ resi.lm = function(object, vcov.=sandwich::vcovHC, ...){
 #' @export
 resi.glm = function(object, vcov.=sandwich::vcovHC, ...){
   x = coeftest(object, vcov.=vcov., ...)
-  cbind(x, S = RESI::S(x[,'z value']^2, 1, object$df.residual))
+  cbind(x, S = RESI::chisq2S(x[,'z value']^2, 1, object$df.residual))
 }
 
 #' Robust effect size add-on for Wald tests and anova
@@ -41,9 +42,10 @@ resi.glm = function(object, vcov.=sandwich::vcovHC, ...){
 #' @keywords wald test, anova
 #' @return Returns an anova-like test and the robust effect size index for comparing two or more models.
 #' @importFrom sandwich vcovHC
-#' @importFrom lmtest coeftest
+#' @importFrom lmtest waldtest
+#' @importFrom stats pt qnorm
 #' @export
 resi.waldtest = function(object, ..., vcov.=sandwich::vcovHC){
   x = waldtest(object, ...=..., vcov=vcov.)
-  cbind(x, S = RESI::S(x[,'t value']^2, 1, object$df.residual))
+  cbind(x, S = RESI::chisq2S(qnorm(pt(x[,'t value'], df = object$df.residual))^2, 1, object$df.residual))
 }

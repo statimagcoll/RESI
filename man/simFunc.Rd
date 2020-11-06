@@ -9,7 +9,13 @@ chi-squared distribution. Journal of Statistical Planning and Inference,
 46(2), 147–159. https://doi.org/10.1016/0378-3758(94)00104-4.
 See image.statMap for additional arguments}
 \usage{
-simFunc(simsetup, shape = 0.5, n = 500, alpha = 0.05)
+simFunc(
+  simsetup,
+  shape = 0.5,
+  n = 500,
+  alpha = 0.05,
+  vcovFunc = sandwich::vcovHC
+)
 }
 \arguments{
 \item{simsetup}{list, output from simSetup function.}
@@ -19,6 +25,8 @@ simFunc(simsetup, shape = 0.5, n = 500, alpha = 0.05)
 \item{n}{integer, sample size for this simulation.}
 
 \item{alpha}{numeric, probability for confidence interval.}
+
+\item{vcovFunc}{function for computing the covariance matrix}
 }
 \description{
 Run one simulation analysis to assess bias and variance of effect size index.

@@ -1,0 +1,293 @@
+---
+title: "Robust effect size index in practice"
+author: "Simon Vandekar"
+date: "5/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, eval=TRUE, message=FALSE)
+set.seed(123456)
+## LIBRARIES
+devtools::load_all('./')
+library(testthat)
+library(pracma)
+library(sandwich)
+library(lmtest)
+library(lattice)
+```
+
+## Estimators and confidence intervals
+
+This code evaluates the coverage of CIs for the noncentrality parameter of the chi-squared distribution.
+The goal is to construct a CI for the effect size index that is a function of the noncentrality parameter of the chi-squared distribution.
+We evaluate the CIs for a robust test statistic that relies on a sandwich covariance estimator.
+
+## Simulations
+```{r, simulation, cache=TRUE}
+nsim=1000
+alpha=0.05
+# controls skewness of gamma
+shapes = 10 #c(0.5, 10)
+ns = c(25, 50, 100, 250, 500, 1000) #  
+SIs = c(0.1, 0.4, 0.6) # 0.1, 0.4, 
+m1s = c(1)
+m0s = c(1)
+rhosqs = c(0, .6)
+hetero = 0 # x variable that induces heterogeneity. 0 for none
+out = expand.grid(shape=shapes, n=ns, m1=m1s, m0=m0s, S=SIs, rhosq=rhosqs)
+params = names(out)
+SI=SIs[1]; n=1000; shape=shapes[1]; m1=m1s[1]; m0=m0s[1]; rhosq=rhosqs[1]
+simparameters = simSetup(S=SI, m1=m1, m0=m0, rhosq=rhosq, hetero=hetero)
+nms = c('variance', names(simFunc(simparameters, shape=shape, n=n, alpha=0.05) )) 
+out[, nms] = NA
+
+for( rhosq in rhosqs){
+  for(SI in SIs){
+    for(m1 in m1s){
+      for(m0 in m0s){
+        for(n in ns){
+          for(shape in shapes){
+            message(paste(shape, n, m1, m0, SI, rhosq, collapse=','))
+            simparameters = simSetup(S=SI, m1=m1, m0=m0, rhosq=rhosq, hetero=hetero)
+            # if x is specified here then it is fixed throughout the simulations
+            #simparameters[['x']] = matrix(rnorm(n * m), nrow=n, ncol=m ) %*% simsetup[['Vsqrt']]
+            temp = t(replicate(nsim, simFunc(simparameters, shape=shape, n=n, alpha=0.05)))
+            out[which( out$shape==shape & out$n==n & out$m1==m1 & out$m0==m0 & out$S==SI & out$rhosq==rhosq), nms] = c(var(temp[,1]), colMeans(temp))
+          }
+        }
+      }
+    }
+  }
+}
+out[,c(1,3:6)] = sapply(names(out)[c(1,3:6)], function(x) as.factor(paste((x), out[,x], sep=' = ') ) )
+```
+
+
+## Simulation results
+
+The results demonstrate poor coverage of the noncentrality parameter. The bias of the estimator isn't used in the construction of the CI, but we can see that it is relatively small.
+
+```{r simulationResults}
+# setwd('~/Box Sync/work/nonparametric_effect_size'); library(qwraps2); lazyload_cache_labels('graphics-simulations')
+   trellis.device(color=FALSE, new=FALSE)
+    test = xyplot(coverage.central ~ n | S * rhosq, data=out[out$m0=='m0 = 1' & out$m1=='m1 = 1' & out$shape=='shape = 10',], type='b', lwd=2,
+      ylab='Coverage', xlab = 'Sample size',
+      panel= function(x, y, ...){
+        panel.grid()
+        panel.xyplot(x, y, ..., col='black')
+        panel.abline(h=0.95, col='gray', ..., lty=2)
+      }, main='Central CI')
+    print(test)
+
+        test = xyplot(coverage.sr ~ n | S * rhosq, data=out[out$m0=='m0 = 1' & out$m1=='m1 = 1' & out$shape=='shape = 10',], type='b', lwd=2,
+      ylab='Coverage', xlab = 'Sample size',
+      panel= function(x, y, ...){
+        panel.grid()
+        panel.xyplot(x, y, ..., col='black')
+        panel.abline(h=0.95, col='gray', ..., lty=2)
+      }, main='Symmetric Range CI')
+    print(test)
+    
+     trellis.device(color=FALSE, new=FALSE)
+    test = xyplot(bias ~ n | S * rhosq, data=out[out$m0=='m0 = 1' & out$m1=='m1 = 1' & out$shape=='shape = 10',], type='b', lwd=2,
+      ylab='Bias', xlab = 'Sample size',
+      panel= function(x, y, ...){
+        panel.grid()
+        panel.xyplot(x, y, ..., col='black')
+        panel.abline(h=0.95, col='gray', ..., lty=2)
+      })
+    print(test)
+```
+
+## Assessing the distribution of the chisquare statistic
+
+ To investigate possible causes of the coverage further, we compare the mean and variance of the chi-squared test statistic to the true (theoretical) value of the mean and variance of the chi-squared statistic.
+
+We considered a few different type of test statistics:
+
+1. **Robust** this test statistic uses the sandwich covariance matrix.
+2. **Standard** This test statistic uses the standard parametric covariance matrix. If the errors are normal, then this should be noncentral F-distributed.
+3. **Asymptotic** This is a true chi-squared test statistic with the true noncentrality parameter. This should have the correct mean and variance.
+4. **Hotelling** This assumes normality, but computes the test statistic using the sandwich covariance matrix.
+5. **Known** This test statistic conditions in the unknown covariance matrix (it treats the covariance matrix as a known parameter).
+
+The mean of the test statistic is denoted by the dashed line, all chi-square statistics are unbiased for the theoretical value.
+
+The dashed line is the variance of the noncentral chi-squared distribution. The dotted line is the variance of the non-central F-distribution. Based on these results, I expect that the CI procedure will work well if we use the true unknown mean.
+Based on the variance of the standard covariance test statistic, I expect that and F-distribution CI should have pretty close to nominal coverage.
+
+
+```{r chisquareMeanVariance, eval=TRUE, cache=TRUE}
+shapes = 10#c(0.5, 10)
+ns = c(25, 50, 100, 250, 500, 1000) # 
+SIs = c(0.4) # 0.1, 0.4, 
+m1s = c(1)
+m0s = c(1)
+rhosqs = c(0)
+covariances = c('Known', 'Standard', 'Robust', 'Asymptotic', 'Hotelling')
+hetero = 0 # x variable that induces heterogeneity. 0 for none
+nsim=10000
+simparameters = simSetup(S=SIs[1], m1=m1s[1], m0=m0s[1], rhosq=rhosqs[1], hetero=hetero)
+out = expand.grid(shape=shapes, n=ns, m1=m1s, m0=m0s, S=SIs, rhosq=rhosqs, covariance=covariances)
+params = names(out)
+
+sim.func = function(simparameters, shape, n, nsim){
+  m1 = simparameters[['m1']]
+  m = m1 + simparameters[['m0']]
+  # if x is specified here then it is fixed throughout the simulations
+  simparameters[['x']] = matrix(rnorm(n * (m1+m0)), nrow=n, ncol=(m1+m0) ) %*% simparameters[['Vsqrt']]
+  simparameters[['x']][,2] = qr.resid(qr(simparameters[['x']][,1]), simparameters[['x']][,2])
+  simparameters[['x']] = scale(simparameters[['x']], center=FALSE)
+  # For fixed X
+  x = simparameters[['x']]
+  varcovx = solve(t(x) %*% x)
+  V = svd(x)$u
+  # standard covariance estimator
+  tmp = list()
+  tmp[['Known']] = as.data.frame(t(replicate(nsim, simFunc(simparameters, shape=shape, n=n, alpha=0.05, vcovFunc = function(x){ varcovx } ))))$chisq
+  tmp[['Standard']] = as.data.frame(t(replicate(nsim, simFunc(simparameters, shape=shape, n=n, alpha=0.05, vcovFunc = vcov ))))$chisq
+  # robust HC3 estimator
+  tmp[['Robust']] = as.data.frame(t(replicate(nsim, simFunc(simparameters, shape=shape, n=n, alpha=0.05, vcovFunc = sandwich::vcovHC )) ))$chisq
+ tmp[['Asymptotic']] = realchisq = rchisq(10000, df=m1, ncp=SI^2*n)
+ tmp[['Hotelling']] = replicate(10000, {Z1V = crossprod(rnorm(n, mean = x %*% simparameters[['beta']]), V)
+  VTdiagZ2Vinv = solve(crossprod(sweep(V, 1, rnorm(n)^2, FUN = '*'), V))
+  Z1V %*% VTdiagZ2Vinv %*% t(Z1V)} )
+ return(data.frame(mean=sapply(tmp, mean), var = sapply(tmp, var)) )
+}
+
+SI=SIs[1]; n=ns[1]; shape=shapes[1]; m1=m1s[1]; m0=m0s[1]; rhosq=rhosqs[1]; hetero=1
+nms = c('Mean', 'Var')
+out[, nms] = NA
+
+for( rhosq in rhosqs){
+  for(SI in SIs){
+    for(m1 in m1s){
+      for(m0 in m0s){
+        for(n in ns){
+          for(shape in shapes){
+            message(paste(shape, n, m1, m0, SI, rhosq, collapse=','))
+            out[which( out$shape==shape & out$n==n & out$m1==m1 & out$m0==m0 & out$S==SI & out$rhosq==rhosq),nms]  = sim.func(simparameters, shape=shape, n=n, nsim=nsim)
+          }
+        }
+      }
+    }
+  }
+}
+out[,c(1,3:7)] = sapply(names(out)[c(1,3:7)], function(x) as.factor(paste((x), out[,x], sep=' = ') ) )
+#ll = function(lambda) -mean(dchisq(chisq, df = m1, ncp = lambda, log = TRUE))
+#lambda = optim(par=mean(chisq), fn=ll, method='Brent',lower=0, upper=10000)$par
+```
+
+
+
+```{r chisquarePlots}
+# setwd('~/Box Sync/work/nonparametric_effect_size'); library(qwraps2); lazyload_cache_labels('graphics-simulations')
+   trellis.device(color=FALSE, new=FALSE)
+    test = xyplot(Mean ~ n | covariance, data=out[out$m0=='m0 = 1' & out$m1=='m1 = 1' & out$shape=='shape = 10',], ns = seq(1:max(ns)), S = as.numeric(strsplit(out[,'S'], '=')[[1]][2]), df=as.numeric(strsplit(out[,'m1'], '=')[[1]][2]), type='b', lwd=2,
+      ylab='Mean', xlab = 'Sample size',
+      panel= function(x, y, ns, S, df, subscripts, ...){
+        panel.grid()
+        panel.xyplot(x, y, ..., col='black')
+        panel.lines(x=ns, y=df+ns*S[1]^2, lty=2)
+      })
+    print(test)
+    
+       trellis.device(color=FALSE, new=FALSE)
+    test = xyplot(Var ~ n | covariance, data=out[out$m0=='m0 = 1' & out$m1=='m1 = 1' & out$shape=='shape = 10',], ns = seq(1:max(ns)), S = as.numeric(strsplit(out[,'S'], '=')[[1]][2]), df=as.numeric(strsplit(out[,'m1'], '=')[[1]][2]), type='b', lwd=2,
+      ylab='Variance', xlab = 'Sample size',
+      panel= function(x, y, ns, S, df, subscripts, ...){
+        panel.grid()
+        panel.xyplot(x, y, ..., col='black')
+        panel.lines(x=ns, y=2*(df+2*ns*S[1]^2), lty=2)
+        panel.lines(x=ns, y=2*df*(S[1]^2+1) + 2*ns*S[1]^2 *(S[1]^2+2), lty=3)
+      })
+    print(test)
+```
+
+## Rebuild CIs with known covariance
+
+To see whether the Chi-squared distribution has the correct coverage when we treat the covariance matrix as known, I reran the simulations above using the true covariance matrix in the formula.
+It looks like the CIs have close to nominal coverage, so that would be the next thing to try for the standard covariance approach.
+Finally, for the robust statistic, we could use a CI based on the Hotelling version. I could not find a formula for its variance or its PDF so we could use simulations or bootstrapping if all else fails.
+Otherwise, we could see if it is a named distribution and try to find it's variance and what the CDF is so that we can compute CIs.
+
+```{r, simulationFixedXknownVariance, cache=TRUE}
+nsim=1000
+alpha=0.05
+# controls skewness of gamma
+shapes = 10 #c(0.5, 10)
+ns = c(25, 50, 100, 250, 500, 1000) #  
+SIs = c(0, 0.1, 0.4, 0.6) # 
+m1s = c(3)
+m0s = c(1)
+rhosqs = c(0, .6)
+hetero = 0 # x variable that induces heterogeneity. 0 for none
+out = expand.grid(shape=shapes, n=ns, m1=m1s, m0=m0s, S=SIs, rhosq=rhosqs)
+params = names(out)
+SI=SIs[1]; n=1000; shape=shapes[1]; m1=m1s[1]; m0=m0s[1]; rhosq=rhosqs[1]
+simparameters = simSetup(S=SI, m1=m1, m0=m0, rhosq=rhosq, hetero=hetero)
+nms = c('variance', names(simFunc(simparameters, shape=shape, n=n, alpha=0.05) ))
+out[, nms] = NA
+
+for( rhosq in rhosqs){
+  for(SI in SIs){
+    for(m1 in m1s){
+      for(m0 in m0s){
+        for(n in ns){
+          for(shape in shapes){
+            message(paste(shape, n, m1, m0, SI, rhosq, collapse=','))
+            simparameters = simSetup(S=SI, m1=m1, m0=m0, rhosq=rhosq, hetero=hetero)
+            # if x is specified here then it is fixed throughout the simulations
+            simparameters[['x']] = matrix(rnorm(n * (m1+m0)), nrow=n, ncol=(m1+m0) )
+            x.svd = svd(simparameters[['x']])
+            # orthogonalize the columns
+            simparameters[['x']] = scale(simparameters[['x']] %*% x.svd$v, center=FALSE)
+            # give them the correct covariance structure
+            simparameters[['x']] = simparameters[['x']] %*% simparameters[['Vsqrt']]
+  # For fixed X
+            x = simparameters[['x']]
+            varcovx = solve(t(x) %*% x)
+            temp = t(replicate(nsim, simFunc(simparameters, shape=shape, n=n, alpha=0.05, vcovFunc = function(x){ varcovx })))
+            out[which( out$shape==shape & out$n==n & out$m1==m1 & out$m0==m0 & out$S==SI & out$rhosq==rhosq), nms] = c(var(temp[,1]), colMeans(temp))
+          }
+        }
+      }
+    }
+  }
+}
+out[,c(1,3:6)] = sapply(names(out)[c(1,3:6)], function(x) as.factor(paste((x), out[,x], sep=' = ') ) )
+```
+
+
+```{r, fixedXresults}
+# setwd('~/Box Sync/work/nonparametric_effect_size'); library(qwraps2); lazyload_cache_labels('graphics-simulations')
+   trellis.device(color=FALSE, new=FALSE)
+    test = xyplot(coverage.central ~ n | S * rhosq, data=out[out$m0=='m0 = 1' & out$m1=='m1 = 3' & out$shape=='shape = 10',], type='b', lwd=2,
+      ylab='Coverage', xlab = 'Sample size',
+      panel= function(x, y, ...){
+        panel.grid()
+        panel.xyplot(x, y, ..., col='black')
+        panel.abline(h=0.95, col='gray', ..., lty=2)
+      })
+    print(test)
+
+        test = xyplot(coverage.sr ~ n | S * rhosq, data=out[out$m0=='m0 = 1' & out$m1=='m1 = 3' & out$shape=='shape = 10',], type='b', lwd=2,
+      ylab='Coverage', xlab = 'Sample size',
+      panel= function(x, y, ...){
+        panel.grid()
+        panel.xyplot(x, y, ..., col='black')
+        panel.abline(h=0.95, col='gray', ..., lty=2)
+      })
+    print(test)
+    
+     trellis.device(color=FALSE, new=FALSE)
+    test = xyplot(bias ~ n | S * rhosq, data=out[out$m0=='m0 = 1' & out$m1=='m1 = 3' & out$shape=='shape = 10',], type='b', lwd=2,
+      ylab='Bias', xlab = 'Sample size',
+      panel= function(x, y, ...){
+        panel.grid()
+        panel.xyplot(x, y, ..., col='black')
+        panel.abline(h=0.95, col='gray', ..., lty=2)
+      })
+    print(test)
+```

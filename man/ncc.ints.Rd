@@ -2,7 +2,7 @@
 % Please edit documentation in R/nccd.R
 \name{ncc.ints}
 \alias{ncc.ints}
-\title{Return two confidence intervals for noncentrality parameter of a chi-square distribution.}
+\title{Return four confidence intervals for noncentrality parameter of a chi-square distribution.}
 \usage{
 ncc.ints(yl, p, alpha = 0.05)
 }

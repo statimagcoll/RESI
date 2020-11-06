@@ -1,7 +1,7 @@
 Package: RESI
 Type: Package
 Title: Robust Effect Size Index (RESI) Estimation
-Version: 0.1.0
+Version: 0.1.2
 Authors@R: person('Simon', 'Vandekar', email='simon.vandekar@vanderbilt.edu', role=c('aut', 'cre'))
 Description: Tools to summarize model output using a robust effect size index. The index is introduced in Vandekar, Rao, \& Blume (2020).
 License: GPL-3
@@ -13,4 +13,4 @@ Imports:
   sandwich
 Suggests:
   testthat
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0

@@ -8,7 +8,7 @@
 #' @keywords power
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
 #' @export
-S = function(chisq, df, rdf){
+chisq2S = function(chisq, df, rdf){
   S = (chisq - df)/rdf
   sqrt(ifelse(S<0, 0, S))
 }

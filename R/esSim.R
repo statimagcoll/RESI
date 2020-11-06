@@ -11,37 +11,51 @@
 #' @param shape numeric, shape parameter for gamma distribution.
 #' @param n integer, sample size for this simulation.
 #' @param alpha numeric, probability for confidence interval.
+#' @param vcovFunc function for computing the covariance matrix
 #' @importFrom stats as.formula lm rgamma rnorm
 #' @importFrom lmtest waldtest
 #' @importFrom sandwich vcovHC
-simFunc = function(simsetup, shape=0.5, n=500, alpha=0.05){
+simFunc = function(simsetup, shape=0.5, n=500, alpha=0.05, vcovFunc = sandwich::vcovHC){
   S = simsetup[['S']]
   m1 = simsetup[['m1']]
   m = m1 + simsetup[['m0']]
-  x = matrix(rnorm(n * m), nrow=n, ncol=m ) %*% simsetup[['Vsqrt']]
+  if(!is.null(simsetup[['x']])){
+    x = simsetup[['x']]
+  } else {
+    x = matrix(rnorm(n * m), nrow=n, ncol=m ) %*% simsetup[['Vsqrt']]
+  }
   beta = simsetup[['beta']]
   hetero = simsetup[['hetero']]
   if(hetero){
     # here, the average variance is 1, but the variance depends on the value of x
-    y = x %*% beta + rgamma(n, shape = shape, rate = sqrt(shape/ x[,1]^2) ) - sqrt(shape * x[,1]^2) # mean of gamma will be sqrt(shape * x)
+    y = x %*% beta + rgamma(n, shape = shape, rate = sqrt(shape/ x[,hetero]^2) ) - sqrt(shape * x[,hetero]^2) # mean of gamma will be sqrt(shape * x)
   } else {y = x %*% beta + rgamma(n, shape = shape, rate = sqrt(shape) ) - sqrt(shape)}
   x = as.data.frame(x)
   modelfull = lm( as.formula(paste0('y ~ -1 + ', paste0('V', 1:m, collapse='+') )), data=x )
-  modelreduced = lm( as.formula(paste0('y ~ -1 + ', paste0('V', (m1+1):m, collapse='+') )), data=x )
+  modelreduced = lm( as.formula(paste0('y ~ -1 + ', paste0('V', (m1+1):m, collapse='+') ) ), data=x )
 
-  chistat = lmtest::waldtest(modelreduced, modelfull, vcov=sandwich::vcovHC(modelfull), test = 'Chisq')
+  chistat = lmtest::waldtest(modelreduced, modelfull, vcov=vcovFunc(modelfull), test = 'Chisq')
   chi = sqrt(chistat[2,'Chisq'])
   resdf = chistat[2,'Res.Df']
   df = chistat[2,'Df']
   Shat = sqrt(max((chistat[2,'Chisq'] - df)/resdf, 0) )
   bias = (Shat - S) # bias
-  CI = ncc.ints(chi, df, alpha=alpha)/sqrt(resdf)
+  CI = ncc.ints(chi, df, alpha=alpha)#/sqrt(resdf)
   widths = diff(t(CI))
-  c(bias=bias,
-    coverage.central=(S>=CI[1,1] & S<CI[1,2]),
-    coverage.sr=(S>=CI[2,1] & S<CI[2,2]),
+  lambdaSq = S*sqrt(resdf)
+  c(chisq=chistat[2,'Chisq'],
+    estimate=Shat,
+    bias=bias,
+    coverage.central=(lambdaSq>=CI[1,1] & lambdaSq<CI[1,2]),
+    coverage.sr=(lambdaSq>=CI[2,1] & lambdaSq<CI[2,2]),
+    #coverage.bessel=(lambdaSq>=CI[3,1] & lambdaSq<CI[3,2]),
+    #coverage.radial=(lambdaSq>=CI[4,1] & lambdaSq<CI[4,2]),
     width.central=widths[1],
-    width.sr=widths[2] ) # was 4, now 3
+    width.sr=widths[2],
+    lower.sr = CI[2,1],
+    upper.sr = CI[2,2])
+    #width.bessel=widths[3],
+    #width.radial=widths[4])
 }
 
 #' Generate design matrix for regression of Y on X with dependence among covariates.
@@ -68,7 +82,7 @@ simSetup = function(S=0.25, m1=3, m0=2, rhosq=0.6, hetero=TRUE){
     A = diag(m1) - matrix(1, nrow=m1, ncol=m1) * rhosq/m1
     X1TDeltaX0X0TX1 = matrix(c(3 * rhosq/m1, rep(rhosq/m1, m1-1)), nrow=m1, ncol=m1)
     B <- if(m1==1) matrix(3) else diag(c(3, rep(1, m1-1)) )
-    B = B + rhosq/m0/m1 * (m0 + 2 * m0 * rhosq/m1) * matrix(1, nrow=m1, ncol=m1) - (X1TDeltaX0X0TX1  + t(X1TDeltaX0X0TX1 ) )
+    B = B + rhosq/m1 * (1 + 2 * rhosq/m1) * matrix(1, nrow=m1, ncol=m1) - (X1TDeltaX0X0TX1  + t(X1TDeltaX0X0TX1 ) )
     Binv = solve(B)
     beta = rep(c(S/sqrt(sum(A %*% Binv %*% A)), 0), c(m1, m0) )
   } else {
