@@ -1,4 +1,4 @@
-#' Compute the robust effect size index estimator
+#' Compute the robust effect size index estimator from chi-squared statistic
 #'
 #' This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
 #' Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
@@ -10,6 +10,22 @@
 #' @export
 chisq2S = function(chisq, df, rdf){
   S = (chisq - df)/rdf
+  sqrt(ifelse(S<0, 0, S))
+}
+
+
+#' Compute the robust effect size index estimator from F-statistic
+#'
+#' This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
+#' Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
+#' @param f The chi-square statistic for the parameter of interest.
+#' @param df Number of degrees of freedom of the chi-square statistic.
+#' @param rdf Model residual degrees of freedom or number of independent samples.
+#' @keywords power
+#' @return Returns a scalar or vector argument of the the robust effect size index estimate.
+#' @export
+f2S = function(f, df, rdf){
+  S = (f*df*(rdf-2) - df)/rdf
   sqrt(ifelse(S<0, 0, S))
 }
 
