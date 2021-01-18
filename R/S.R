@@ -25,7 +25,7 @@ chisq2S = function(chisq, df, rdf){
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
 #' @export
 f2S = function(f, df, rdf){
-  S = (f*df*(rdf-2) - df)/rdf
+  S = (f*df*(rdf-2)/rdf - df)/rdf
   sqrt(ifelse(S<0, 0, S))
 }
 
