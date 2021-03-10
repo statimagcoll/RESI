@@ -3,7 +3,6 @@
 # along with the specified version of CIs
 
 #' Robust Effect Size index (RESI) estimation for linear regression models
-#' @export
 #' @param model model formula for
 #' @param model0 the comparison model
 #' @param data the data frame containing the variables speficiedd in the model formula(s)
@@ -12,11 +11,12 @@
 #' "wild.rademacher" = wild bootstrapping with multiplier following rademacher distribution; "f" = F distribution; "chisq" = Chi-square distribution
 #' @param alpha The type I error rate for the constructed CI
 #' @param nboot if a bootstrapping method were specified to construct the CI, nboot = the number of bootstraps that will be implemented.
+#' @return sssss
+#' @export
 #'
-
 # Note:
 # 1) I don't know how to call the fucntion in another R file.
-
+# 2) The design matrix used in bootstraps should accomodate to the model w/ or w/o intercept
 
 anoes.lm <- function(model, model0 = NULL, data,
                      .vcov = sandwich::vcovHC,
@@ -42,7 +42,8 @@ anoes.lm <- function(model, model0 = NULL, data,
   df = wald.output$Df[2]
 
   # estimated RESI
-  S.hat = sqrt(max((chistat - df)/res.df, 0) )
+  # S.hat = sqrt(max((chistat - df)/res.df, 0) )
+  S.hat = chisq2S(chisq = chistat, df = df, rdf = res.df)
 
   # CIs
   # via Chi-square distribution
@@ -125,3 +126,6 @@ x2 = runif(100)*5 - 20
 data = data.frame(y, x1, x2)
 
 anoes.lm(model = y ~ x1+x2, data = data)
+
+fit  = lm(y ~ -1 + x1 + x2)
+

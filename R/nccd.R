@@ -18,22 +18,27 @@
 #'
 #' Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 #'
-#' @export
+
 #' @param u numeric, value of chi random variable.
 #' @param p integer, degrees of freedom.
 #' @param lambda, noncentrality parameter of chi distribution.
 #' @importFrom stats pchisq
+#' @export
+#'
 F=function(u,p,lambda) pchisq(u^2,p,lambda^2) # cdf of ncc
 
 #' chi quantile function.
 #'
 #' Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 #'
-#' @export
+
 #' @param prob numeric in [0,1], quantile of chi random variable.
 #' @param p integer, degrees of freedom.
 #' @param lambda, noncentrality parameter of chi distribution.
 #' @importFrom stats qchisq
+#' @return xxxx
+#' @export
+#'
 Finv=function(prob,p,lambda) sqrt(qchisq(prob,p,lambda^2)) # quantile
 
 
@@ -54,6 +59,8 @@ lambound=function(y,p,alpha) {
 #' @param p integer, degrees of freedom.
 #' @param alpha probability.
 #' @importFrom stats uniroot
+#' @return xxxx
+#' @export
 lamfind=function(y,p,alpha) {
   if(alpha<1e-4 | F(y,p,0)<alpha) stop("bad lamfind")
   lbig=lambound(y,p,alpha)
@@ -69,6 +76,7 @@ lamfind=function(y,p,alpha) {
 #' @param u something.
 #' @param nu something else.
 #' @param lambda parameter value.
+#' @return xxxx
 gb=function(u,nu,lambda) {
   # noncentral chi pdf wrt  Bessel base
   case1=(u>0 & lambda>0)
@@ -89,6 +97,7 @@ gb=function(u,nu,lambda) {
 #' @param u something.
 #' @param nu something else.
 #' @param lambda parameter value.
+#' @return xxxx
 gr=function(u,nu,lambda) {
   # noncentral chi pdf wrt radial base
   ul=lambda*u
@@ -105,6 +114,7 @@ gr=function(u,nu,lambda) {
 #' @param y numeric, value of chi random variable.
 #' @param p integer, degrees of freedom.
 #' @param alpha probability for confidence interval.
+#' @return xxxx
 ncc.ci.central=function(y,p,alpha=0.05) {
   u1=Finv(alpha/2,p,0); u2=Finv(1-alpha/2,p,0)
   if(y<=u1) {ll=0; lu=0}
@@ -131,6 +141,7 @@ ncc.ci.central=function(y,p,alpha=0.05) {
 #' @param y numeric, value of chi random variable.
 #' @param p integer, degrees of freedom.
 #' @param alpha probability for confidence interval.
+#' @return xxxx
 ncc.ci.sr=function(y,p,alpha=0.05) {
   u0=Finv(1-alpha,p,0)
   if(y<=u0) ll=0
@@ -162,6 +173,7 @@ ncc.ci.sr=function(y,p,alpha=0.05) {
 #' @param p integer, degrees of freedom.
 #' @param alpha probability for confidence interval.
 #' @importFrom stats constrOptim
+#' @return xxx
 ncc.ci.mdb=function(y,p,alpha=0.05) {
   u0=Finv(1-alpha,p,0); nu=(p-2)/2; zz=-qnorm(alpha/2)
   if(y<=u0) ll=0
@@ -198,6 +210,7 @@ ncc.ci.mdb=function(y,p,alpha=0.05) {
 #' @param p integer, degrees of freedom.
 #' @param alpha probability for confidence interval.
 #' @importFrom stats constrOptim qnorm
+#' @return xxx
 ncc.ci.mdr=function(y,p,alpha=0.05) {
   u0=Finv(1-alpha,p,0); nu=(p-2)/2; zz=-qnorm(alpha/2)
   if(y<=u0) ll=0
@@ -230,10 +243,12 @@ ncc.ci.mdr=function(y,p,alpha=0.05) {
 #'
 #' Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 #'
-#' @export
+#'
 #' @param yl numeric, value of chi random variable.
 #' @param p integer, degrees of freedom.
 #' @param alpha, probability for confidence interval.
+#' @return xxxx
+#' @export
 ncc.ints=function(yl,p,alpha=0.05) {
   int1=ncc.ci.central(yl,p,alpha)
   int2=ncc.ci.sr(yl,p,alpha)
