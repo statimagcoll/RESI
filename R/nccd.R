@@ -18,7 +18,6 @@
 #'
 #' Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 #'
-
 #' @param u numeric, value of chi random variable.
 #' @param p integer, degrees of freedom.
 #' @param lambda, noncentrality parameter of chi distribution.
@@ -31,7 +30,6 @@ F=function(u,p,lambda) pchisq(u^2,p,lambda^2) # cdf of ncc
 #'
 #' Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 #'
-
 #' @param prob numeric in [0,1], quantile of chi random variable.
 #' @param p integer, degrees of freedom.
 #' @param lambda, noncentrality parameter of chi distribution.
@@ -110,11 +108,11 @@ gr=function(u,nu,lambda) {
 #'
 #' Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 #'
-#' @export
 #' @param y numeric, value of chi random variable.
 #' @param p integer, degrees of freedom.
 #' @param alpha probability for confidence interval.
 #' @return xxxx
+#' @export
 ncc.ci.central=function(y,p,alpha=0.05) {
   u1=Finv(alpha/2,p,0); u2=Finv(1-alpha/2,p,0)
   if(y<=u1) {ll=0; lu=0}
@@ -137,11 +135,11 @@ ncc.ci.central=function(y,p,alpha=0.05) {
 #'
 #' Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 #'
-#' @export
 #' @param y numeric, value of chi random variable.
 #' @param p integer, degrees of freedom.
 #' @param alpha probability for confidence interval.
 #' @return xxxx
+#' @export
 ncc.ci.sr=function(y,p,alpha=0.05) {
   u0=Finv(1-alpha,p,0)
   if(y<=u0) ll=0
@@ -165,15 +163,14 @@ ncc.ci.sr=function(y,p,alpha=0.05) {
 
 
 #' MD Bessel confidence interval for chi-square noncentrality parameter.
-#'
 #' Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 #'
-#' @export
 #' @param y numeric, value of chi random variable.
 #' @param p integer, degrees of freedom.
 #' @param alpha probability for confidence interval.
 #' @importFrom stats constrOptim
 #' @return xxx
+#' @export
 ncc.ci.mdb=function(y,p,alpha=0.05) {
   u0=Finv(1-alpha,p,0); nu=(p-2)/2; zz=-qnorm(alpha/2)
   if(y<=u0) ll=0
@@ -202,15 +199,14 @@ ncc.ci.mdb=function(y,p,alpha=0.05) {
 }
 
 #' MD radial confidence interval for chi-square noncentrality parameter.
-#'
 #' Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 #'
-#' @export
 #' @param y numeric, value of chi random variable.
 #' @param p integer, degrees of freedom.
 #' @param alpha probability for confidence interval.
 #' @importFrom stats constrOptim qnorm
 #' @return xxx
+#' @export
 ncc.ci.mdr=function(y,p,alpha=0.05) {
   u0=Finv(1-alpha,p,0); nu=(p-2)/2; zz=-qnorm(alpha/2)
   if(y<=u0) ll=0

@@ -2,26 +2,31 @@
 # different version of estimated RESI will be outputted,
 # along with the specified version of CIs
 
+# Note:
+# 1) I don't know how to call the fucntion in another R file.
+# 2) The design matrix used in bootstraps should accomodate to the model w/ or w/o intercept
+# import the whole package
+# import the funcitons used form other packages
+
 #' Robust Effect Size index (RESI) estimation for linear regression models
 #' @param model model formula for
 #' @param model0 the comparison model
 #' @param data the data frame containing the variables speficiedd in the model formula(s)
 #' @param .vcov the covariance estimator for coefficient tested, by default, HC3 will be used (according to the help document of sandwich::vcovHC)
-#' @param method The method constructing CI. "wild.norml" = the wild bootstrapping with standard normal multiplier;
-#' "wild.rademacher" = wild bootstrapping with multiplier following rademacher distribution; "f" = F distribution; "chisq" = Chi-square distribution
+#' @param method The method constructing CI. "wild.norml" = the wild bootstrapping with standard normal multiplier; "wild.rademacher" = wild bootstrapping with multiplier following rademacher distribution; "f" = F distribution; "chisq" = Chi-square distribution
 #' @param alpha The type I error rate for the constructed CI
 #' @param nboot if a bootstrapping method were specified to construct the CI, nboot = the number of bootstraps that will be implemented.
+#' @importFrom stats coefficients hatvalues pf quantile residuals update
 #' @return sssss
 #' @export
-#'
-# Note:
-# 1) I don't know how to call the fucntion in another R file.
-# 2) The design matrix used in bootstraps should accomodate to the model w/ or w/o intercept
+
 
 anoes.lm <- function(model, model0 = NULL, data,
                      .vcov = sandwich::vcovHC,
                      method = c("f", "chisq", "wild.normal", "wild.rademacher", "nonparametric.boots"),
                      nboot = 1000, alpha = 0.05){
+
+
 
   # Computing estimated RESI
 
@@ -112,20 +117,20 @@ anoes.lm <- function(model, model0 = NULL, data,
               )
   rownames(CIs) = c("F", "Chi-sq", "Wild.Rademacher", "Wild.Normal", "Non-parametric")
   # colnames(CIs) = c("LB", "UB")
-  output = list(est = S_hat,
+  output = list(est = S.hat,
                 CI = CIs)
   return(output)
 }
 
 
 
-## test
-y = sample(20:100, 100, replace = TRUE)
-x1 = rnorm(100, mean = 20)
-x2 = runif(100)*5 - 20
-data = data.frame(y, x1, x2)
-
-anoes.lm(model = y ~ x1+x2, data = data)
-
-fit  = lm(y ~ -1 + x1 + x2)
+# ## test
+# y = sample(20:100, 100, replace = TRUE)
+# x1 = rnorm(100, mean = 20)
+# x2 = runif(100)*5 - 20
+# data = data.frame(y, x1, x2)
+#
+# anoes.lm(model = y ~ x1+x2, data = data)
+#
+# fit  = lm(y ~ -1 + x1 + x2)
 
