@@ -1,167 +1,188 @@
 #######
-# Function to construct the CIs for
-# different versions of RESI via Wild Bootstrap and non-parametric bootstrap.
+# Function to construct CI for
+# RESI in linear models via Wild Bootstrap or non-parametric bootstrap .
 ######
 
 #' function generating CIS via bootstrap
 #' @export
-#' @param r numeric, the number of boostrap replicates
-#' @param x data frame containing covariates
-#' @param y outcome variable
-#' @param m1 the number of target parameter(s)
-# Note: for now, it only works for m1 = 1 and the target x are the first m1 columns;
-# maybe we can ask the users to specify which columns are target covariates later
-#' @param func the function used to compute the Chi-sq statistics. Corresponds to different versions of RESI. By default, HC3 (Long & Ervin, 2000) will be used.
+#' @param model.full the full `lm()` model
+#' @param model.reduced the reduced `lm()` model to compare with
+#' @param r numeric, the number of boostrap replicates. By default, 1000 bootstraps will be implemented.
+#' @param method method used to compute the statistics. "F" corresponds to using var-cov estimator `vcov`, and the resulting statistic will be F-statistic; "Chisq" corresponds to using "sandwich::vcovHC" and results a Chi-squared statistics
 #' @param multi the distribution from which the multipliers will be drawn: 'none' = the multipliers equal constant 1 (default); 'rad' = rademacher; 'normal' = Std Normal distribution
 #' @param boot.type which type of bootstrap to use.
 # 1: resampling covariates along with residuals;
 # 2: fixing covariates and only bootstrapping residulas;
 # 3: resampling covariates and residuals independently w/ replacements
 # 4. no sampling, just multipliers
+#' @param alpha significance level used to compute the CIs. By default, 0.05 will be used
 #' @param correct whether the residuals with bias correction will be used, by default, TRUE.
-#'
-# linear model w/o intercept?
-# what about m = m1 = 1?
+
+# Note: should we test the interaction terms?
 
 
 
-boot.ci <- function(r = 1000, x, y, m1, func = sandwich::vcovHC, multi = 'none', boot.type = 1, alpha = 0.05, correct = TRUE){
-  # check input
-  ## ncol(x) >= m1
-  ## nrow(x) == nrow(y)
 
-  x <- as.data.frame(x)
-  # no intercept
-  fit0 <- lm(as.formula(paste0('y ~ -1 + ', paste0("V", 1:ncol(x), collapse = '+'))), data = x)
+boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", multi = 'none', boot.type = 1, alpha = 0.05, correct = TRUE){
+
+  # data frame
+  data = model.full$model
+  # model forms
+  form.full <- formula(model.full)
+  if (is.null(model.reduced)){
+    model.reduced <- lm(as.formula(paste0(all.vars(form.full)[1], " ~ 1")), data = data)
+  }
+  form.reduced <- formula(model.reduced)
+
+  # check whether the two models are nested
+  if (!(length((setdiff(all.vars(form.full), all.vars(form.reduced)))) > 0 &
+  length(setdiff(all.vars(form.reduced), all.vars(form.full))) == 0 )) {
+    stop("The models are not nested")
+  }
+
+  # covariance estimator
+  if (tolower(method) == 'f'){ # assuming homoskedasticity
+    vcovfunc <- vcov
+  } else {
+    if (tolower(method) == "chisq"){ # using robust var-cov estimator
+      vcovfunc <- sandwich::vcovHC
+    } else {stop("Please correctly specify the method to be used to compute the var-cov estimate (i.e., 'F' or 'Chisq')")}
+  }
+
 
   S_hat = NULL
 
-  dat = cbind(y, x)
-
-  # model output: covariates & (jack-knife version of HC3) estimates of residuals
+  # residual estimates (corrected or not)
   if (correct == TRUE) {
-    mod.out = cbind(x, res = residuals(fit0)/(1-hatvalues(fit0)))
+    data$resid = residuals(model.full)/(1-hatvalues(model.full))
   } else {
-    mod.out = cbind(x, res = residuals(fit0))
+    data$resid = residuals(model.full)
   }
 
-    for (b in 1:r){
+  # bootstraps
+  temp <- simplify2array(lapply(1:r,
+                       function(ind, boot.data, form.full, form.reduced, multi, vcovfunc) {
+                         # version 1: resample X along with residuals non-parametrically
+                         if (boot.type == 1) {
+                           boot.ind <- sample(1:nrow(boot.data), replace = TRUE)
+                           boot.data <- boot.data[boot.ind, ]
+                         }
+                         # version 2: fix X and only resample residuals (w/ replacement)
+                         if (boot.type == 2) {
+                           # bootstrap indicator
+                           boot.ind <- sample(1:nrow(boot.data), replace = TRUE)
+                           resid <- boot.data[boot.ind, 'resid']
+                           boot.data <- cbind(boot.data[, names(boot.data) != 'resid'],
+                                              resid)
+                         }
+                         # version 3: resampling covariates and residuals independently w/ replacements
+                         if (boot.type == 3) {
+                           # bootstrap indicator
+                           boot.ind1 <- sample(1:nrow(boot.data), replace = TRUE)
+                           boot.ind2 <- sample(1:nrow(boot.data), replace = TRUE)
+                           resid <- boot.data[boot.ind2, 'resid'] # bootstrapped residuals
+                           boot.data <- cbind(boot.data[boot.ind1, names(boot.data) != 'resid'],
+                                              resid)
+                         }
+                         # version 4: no resampling, just multipliers
+                         if (boot.type == 4){
+                           boot.data = boot.data
+                         }
 
-      # version 1: resample X along with residuals non-parametrically
-      if (boot.type == 1) {
-        # bootstrap indicator
-        boot.ind <- sample(1:nrow(x), replace = TRUE)
-        boot.x <- mod.out[boot.ind, m1]
-        boot.res <- mod.out[boot.ind, ncol(mod.out)] # last column
-      }
+                         # obtain multiplers
+                         n = nrow(boot.data)
+                         if (multi == "none") w <- rep(1, n)
+                         if (multi == "rad") w <- sample(x = c(-1, 1), size = n, replace = TRUE)
+                         if (multi == "normal") w <- rnorm(n)
 
-      # version 2: fix X and only resample residuals (w/ replacement)
-      if (boot.type == 2) {
-        # bootstrap indicator
-        boot.ind <- sample(1:nrow(x), replace = TRUE)
-        boot.x <- x
-        boot.res <- mod.out[boot.ind, ncol(mod.out)] # last column
-      }
+                         # calculate the bootstrapped outcome values
+                         ## note: replace the observed y with wild-bootstrapped y (so that I don't need to re-specify the model formula)
+                         boot.data$y <- predict(model.full, newdata = boot.data) + boot.data$resid * w
 
-      # version 3: resampling covariates and residuals independently w/ replacements
-      if (boot.type == 3) {
-        # bootstrap indicator
-        boot.ind1 <- sample(1:nrow(x), replace = TRUE)
-        boot.x <- mod.out[boot.ind1, m1]
-        boot.ind2 <- sample(1:nrow(x), replace = TRUE)
-        boot.res <- mod.out[boot.ind2, ncol(mod.out)] # last column
-      }
+                         # fit lm on the bootstrapped data
+                         ## full model
+                         boot.model.full <- lm(form.full, data = boot.data)
+                         ## reduced model
+                         if(!is.null(form.reduced)){
+                           boot.model.reduced <- lm(form.reduced, data = boot.data)
+                           # individual effects
+                           individual.anova <- suppressMessages(car::Anova(boot.model.full, test.statistics = "Wald", vcov. = vcovfunc))
+                           individual.stats <- individual.anova$F
+                           names(individual.stats) <- rownames(individual.anova)
 
-      # version 4: no resampling, just multipliers
-      if (boot.type == 4){
-        boot.x <- x
-        boot.res <- mod.out[, ncol(mod.out)]
-      }
+                           var.list <- setdiff(all.vars(form.full), all.vars(form.reduced))
+                           individual.stats <- individual.stats[var.list]
+                           # overall effect
+                           overall.stats <- lmtest::waldtest(boot.model.reduced, boot.model.full, vcov =  vcovfunc(boot.model.full), test = "Chisq")$Chisq[2]
+                           names(overall.stats) <- "Overall"
+                           stats <- c(individual.stats, overall.stats)
+                           stats
+                         } else {
+                           boot.model.reduced <- lm(form.reduced, data = boot.data)
+                           # directly compute the statistics based on full model
+                           # individual effects
+                           individual.anova <- suppressMessages(car::Anova(boot.model.full, test.statistics = "Wald", vcov. = vcovfunc))
+                           individual.stats <- individual.anova$F
+                           names(individual.stats) <- rownames(individual.anova)
+                           individual.stats <- individual.stats[names(individual.stats) != "Residuals"]
+                           # overall effect
+                           overall.stats <- lmtest::waldtest(boot.model.reduced, boot.model.full, vcov = vcovfunc(boot.model.full), test = "Chisq")$Chisq[2]
+                           names(overall.stats) <- "Overall"
+                           stats <- c(individual.stats, overall.stats)
+                           stats
+                         }
+                       } # end of function in `lapply`
+                       , boot.data = data, form.full = form.full, form.reduced = form.reduced, multi = multi, vcovfunc = vcovfunc
+                       ))
+  boot.stats = as.data.frame(t(temp))
 
-      boot.x <- data.frame(boot.x)
-      colnames(boot.x) <- paste0("V", 1:ncol(boot.x))
+  # covert (F or Chisq) statistics RESI
 
-      # Obtain multiplier
-      n = nrow(x)
-      if (multi == "none") w <- rep(1, n)
-      if (multi == "rad") w <- sample(x = c(-1, 1), size = n, replace = TRUE)
-      if (multi == "normal") w <- rnorm(n)
+  ### individual effects
+  original.anova <- suppressMessages(car::Anova(model.full, test.statistics = "Wald", vcov. = vcovfunc))
+  ### overall effect
+  original.overall <- lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc, test = "Chisq")
 
-      # design matrix
-      dsgn.mtx = as.matrix(boot.x) #cbind(1, x) %>% as.matrix
+  dfs <- original.anova$Df
+  names(dfs) <- rownames(original.anova)
+  overall.df <- sum(dfs[names(dfs) != "Residuals"])
+  dfs <- c(dfs, Overall = overall.df)
 
-      # computing bootstrapped outcome values
-      boot.y <- dsgn.mtx %*% coefficients(fit0) + boot.res * w
+  ## conversion
+  ### define conversion function
+  if (tolower(method) == 'chisq') { # when they are Chisq statistics
+    stat2S <- function (chisq, df, rdf) {
+      S = (chisq - df)/rdf
+      sqrt(ifelse(S<0, 0, S))
+    }
+  } else { # when it's F statistic
+    stat2S <- function (f, df, rdf) {
+      S = (f*df*(rdf-2)/rdf - df)/rdf
+      sqrt(ifelse(S<0, 0, S))
+    }
+  }
 
-      # compute chi-sq statistics
-      modelfull <- lm(as.formula(paste0('boot.y ~ -1 + ', paste0('V', 1:ncol(x), collapse='+') )), data = boot.x )
+  boot.S <- boot.stats # define boot.S which has the same frame as `boot.stats`
 
-      if (ncol(x) > m1){ # when there is nuisance covariates
-        modelreduced <- lm( as.formula(paste0('boot.y ~ -1 + ', paste0('V', (m1+1):ncol(x), collapse='+') ) ), data=boot.x )
-        # chi-square test statistics
-        chi.test <- lmtest::waldtest(modelreduced, modelfull, vcov = func(modelfull), test = "Chisq")
-      }
-      if (ncol(x) == m1) { # when there is no nuisance covariates
-        # modelreduced <- lm(boot.y ~ -1, data=boot.x )
-        # chi.test <- lmtest::waldtest(modelreduced, modelfull, vcov = func(modelfull), test = "Chisq")
-        chi.stat <- coefficients(modelfull) %*% solve(func(modelfull)) %*% coefficients(modelfull)
-      }
-      # residual d.f.
-      res.df = n - m1
-      df = m1
+  for (i in 1:ncol(boot.stats)) {
+    boot.S[, i] <- stat2S(boot.stats[, i], dfs[names(boot.stats)[i]], dfs['Residuals'])
+  } # end of loop `i`
 
-      # computing the estimated RESI
-      S_hat[b] = sqrt(max((chi.stat - df)/res.df, 0) )
-
-
-      # ## 1) rademacher
-      #
-      # y_boot_rade = dsgn.mtx%*%coefficients(fit0) + boot.res * z_rade
-      #
-      # modelfull = lm( as.formula(paste0('y_boot_rade ~ -1 + ', paste0('V', 1:ncol(x), collapse='+') )), data = boot.x )
-      #
-      # if (m1 == ncol(x)) {
-      #
-      # }
-      #
-      # modelreduced = lm( as.formula(paste0('y_boot_rade ~ -1 + ', paste0('V', (m1+1):ncol(x), collapse='+') ) ), data=boot.x )
-      # chi.test = lmtest::waldtest(modelreduced, modelfull, vcov = func(modelfull), test = "Chisq")
-      #
-      # chi.stat = chi.test[2, 'Chisq']
-      # resdf = chi.test[2, 'Res.Df']
-      # df = chi.test[2, 'Df']
-      # # compute the estimated RESI
-      # S_hat_boot_rade[b] = sqrt(max((chi.stat - df)/resdf, 0) )
-      #
-      #
-      # ## 2) Normal dist
-      # y_boot_norm = dsgn.mtx%*%coefficients(fit0) + residuals(fit0)/(1-hatvalues(fit0)) *z_norm
-      # modelfull = lm( as.formula(paste0('y_boot_norm ~ -1 + ', paste0('V', 1:ncol(x), collapse='+') )), data=x )
-      # modelreduced = lm( as.formula(paste0('y_boot_norm ~ -1 + ', paste0('V', (m1+1):ncol(x), collapse='+') ) ), data=x )
-      # chi.test = lmtest::waldtest(modelreduced, modelfull, vcov = func(modelfull), test = "Chisq")
-      # chi.stat = chi.test[2, 'Chisq']
-      # resdf = chi.test[2, 'Res.Df']
-      # df = chi.test[2, 'Df']
-      # # compute the estimated RESI
-      # S_hat_boot_norm[b] = sqrt(max((chi.stat - df)/resdf, 0) )
-      #
-      # ## 3) non-parametric bootstrap
-      # ind = sample(1:nrow(x), size = nrow(x), replace = TRUE)
-      # dat.boot = dat[ind,]
-      # modelfull = lm( as.formula(paste0('y ~ -1 + ', paste0('V', 1:ncol(x), collapse='+') )), data=dat.boot )
-      # modelreduced = lm( as.formula(paste0('y ~ -1 + ', paste0('V', (m1+1):ncol(x), collapse='+') ) ), data=dat.boot )
-      # chi.test = lmtest::waldtest(modelreduced, modelfull, vcov = func(modelfull), test = "Chisq")
-      # chi.stat = chi.test[2, 'Chisq']
-      # resdf = chi.test[2, 'Res.Df']
-      # df = chi.test[2, 'Df']
-      # # compute the estimated RESI
-      # S_hat_np.boot[b] = sqrt(max((chi.stat - df)/resdf, 0) )
-
-    } # end of loop 'b'
-
-    CI = quantile(S_hat, probs = c(alpha/2, 1-alpha/2))
-    # colnames(CI) = c("LB", "UB")
-    output = list(CI = CI, boot.type = boot.type, multiplier = multi, alpha = alpha, correct = correct)
+    # compute the quantiles for each column (i.e., for each effect)
+    CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
+    CIs = t(CIs)
+    Stats <- c(original.anova$F, original.overall$Chisq[2])
+    p_values <- c(original.anova$`Pr(>F)`, original.overall$`Pr(>Chisq)`[2])
+    Ss <- stat2S(Stats, dfs, dfs['Residuals'])
+    anova.tab <- data.frame(df = dfs, 'Stat' = Stats, 'P-value' = p_values, RESI = Ss)
+    # name list of effects
+    effect.list <- setdiff(all.vars(form.full), all.vars(form.reduced))
+    anova.tab <- anova.tab[c(effect.list, "Overall", "Residuals"), ]
+    anova.tab <- cbind(anova.tab, rbind(CIs[c(effect.list, "Overall"), ],  NA) )
+    colnames(anova.tab) = c("df", "Stat", "P value", "RESI", paste0(alpha/2*100, "% ", c("LB", "UB")) )
+    output = list(model.full = form.full, model.reduced = form.reduced,
+                  boot.type = boot.type, multiplier = multi, method = method,
+                  alpha = alpha, correct = correct, anova = round(anova.tab, 3))
     return(output)
 }
 
