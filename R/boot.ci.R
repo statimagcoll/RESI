@@ -18,12 +18,13 @@
 #' @param alpha significance level used to compute the CIs. By default, 0.05 will be used
 #' @param correct whether the residuals with bias correction will be used, by default, TRUE.
 
-# Note: should we test the interaction terms?
+# Note:
+# 1. should we test the interaction terms?
+# 2. Do we really need reduced model? The ANOVA gives the results that the additional variables account for xx effect size in addition to ....(other variables)
+# 3. if we need a reduced model and it's not empty, how are the residual dfs defined? residual df of the full/reduced model?
 
 
-
-
-boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", multi = 'none', boot.type = 1, alpha = 0.05, correct = TRUE){
+boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", multi = 'none', boot.type = 1, alpha = 0.05, correct = TRUE, num.cores){
 
   # data frame
   data = model.full$model
@@ -59,8 +60,11 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", mu
     data$resid = residuals(model.full)
   }
 
+  # The variables of interest (difference between full & reduced models)
+  var.list <- setdiff(all.vars(form.full), all.vars(form.reduced))
+
   # bootstraps
-  temp <- simplify2array(lapply(1:r,
+  temp <- simplify2array(parallel::mclapply(1:r,
                        function(ind, boot.data, form.full, form.reduced, multi, vcovfunc) {
                          # version 1: resample X along with residuals non-parametrically
                          if (boot.type == 1) {
@@ -110,7 +114,6 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", mu
                            individual.stats <- individual.anova$F
                            names(individual.stats) <- rownames(individual.anova)
 
-                           var.list <- setdiff(all.vars(form.full), all.vars(form.reduced))
                            individual.stats <- individual.stats[var.list]
                            # overall effect
                            overall.stats <- lmtest::waldtest(boot.model.reduced, boot.model.full, vcov =  vcovfunc(boot.model.full), test = "Chisq")$Chisq[2]
@@ -132,23 +135,23 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", mu
                            stats
                          }
                        } # end of function in `lapply`
-                       , boot.data = data, form.full = form.full, form.reduced = form.reduced, multi = multi, vcovfunc = vcovfunc
-                       ))
+                       , boot.data = data, form.full = form.full, form.reduced = form.reduced, multi = multi, vcovfunc = vcovfunc, mc.cores = num.cores)
+                      )
   boot.stats = as.data.frame(t(temp))
 
-  # covert (F or Chisq) statistics RESI
-
+  # calculate the statistics for the data
   ### individual effects
   original.anova <- suppressMessages(car::Anova(model.full, test.statistics = "Wald", vcov. = vcovfunc))
+  original.anova <- original.anova[c(var.list, "Residuals"), ]
   ### overall effect
   original.overall <- lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc, test = "Chisq")
 
   dfs <- original.anova$Df
   names(dfs) <- rownames(original.anova)
-  overall.df <- sum(dfs[names(dfs) != "Residuals"])
+  overall.df <- sum(dfs[names(dfs) %in% var.list])
   dfs <- c(dfs, Overall = overall.df)
 
-  ## conversion
+  ## conversion from stats to RESI
   ### define conversion function
   if (tolower(method) == 'chisq') { # when they are Chisq statistics
     stat2S <- function (chisq, df, rdf) {
