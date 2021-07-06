@@ -24,7 +24,7 @@
 # 3. if we need a reduced model and it's not empty, how are the residual dfs defined? residual df of the full/reduced model?
 
 
-boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", multi = 'none', boot.type = 1, alpha = 0.05, correct = TRUE, num.cores){
+boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", multi = 'none', boot.type = 1, alpha = 0.05, correct = TRUE, num.cores = 1){
 
   # data frame
   data = model.full$model
