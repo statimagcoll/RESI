@@ -1,0 +1,159 @@
+---
+title: "RESI_CI_bootstraps"
+author: "Kaidi Kang"
+date: "6/29/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Abstract
+This report is used to summarize the performances of CIs for RESI constructed via different bootstraps.\
+Simple case situations will be considered:
+  + only 1 covariate and no nuisance covariates
+  + Std Normal distribution
+
+```{r}
+# packages
+library(magrittr)
+library(lattice)
+# source functions
+# source("../RESI-master/R/nccd.R") 
+# ## read function for CI for non-central F distribution
+# source("ncf.R")
+source("../R/boot.ci.R")
+```
+
+
+## Simulations
+
+```{r}
+SimFunc <- function(n = 100, r = 1000, alpha = 0.05, m = 1, S = 0.6, multi, boot.type, num.cores = 10){
+  beta = sqrt(S^2) # true beta
+  # simulate x and y
+  x = rnorm(n*m) %>% matrix(ncol = m)
+  y = x %*% beta + rnorm(n)
+  model <- lm(y ~ x)
+  beta.hat <- coef(model)
+  
+  xTx = sum(x^2)
+  
+  # 1. when sigma is known (sigma = 1)
+  # S.hat.norm <- sqrt(beta.hat^2)
+  # bias.norm <- S.hat.norm - S
+  
+  # Constructing the CIs for 
+  # z = beta.hat/sqrt(1/sum(x^2)) # normal dist
+  # chi = z^2 # Chi-sq (1)
+  # # CI for RESI
+  # varcovx = solve(t(x) %*% x)
+
+  # when sigma in unknwon
+  # 2. naive estimator for sigma^2
+  result.t <- boot.ci(model.full = lm(y ~ x) , r = r, method  = "F", multi = multi, boot.type = boot.type, num.cores = num.cores)$anova %>% as.matrix
+  S.CI.t = c(result.t[1, 5:6])
+  S.hat.t = result.t[1, 4]
+  bias.t <- S.hat.t - S
+  
+  # 3. using HC3 estimator
+  result.robust = boot.ci(model.full = lm(y ~ x) , r = r, method  = "Chisq", multi = multi, boot.type = boot.type, num.cores = num.cores)$anova %>% as.matrix
+  S.CI.robust = result.robust[1, 5:6]
+  S.hat.robust = result.robust[1, 4]
+  bias.robust <- S.hat.robust - S
+  
+
+  output = c(
+             # t or F-dist
+             S.hat.t, bias.t,
+             S.CI.t,
+             coverage.t = (S >= S.CI.t[1] & S <= S.CI.t[2]),
+             # the probabilty/proportion of true S failling on the left or right of the CI
+             LL.t.prob = S < S.CI.t[1],
+             UL.t.prob = S > S.CI.t[2],
+             # beta.cvg.t, 
+             # robust
+             S.hat.robust, bias.robust,
+             S.CI.robust,
+             coverage.robust = (S >= S.CI.robust[1] & S <= S.CI.robust[2]),
+             # the probabilty/proportion of true S failling on the left or right of the CI
+             LL.prob.robust = S < S.CI.robust[1],
+             UL.prob.robust = S > S.CI.robust[2]
+             # beta.cvg.robust
+             )
+  
+  name_list1 = c("S.hat.", "Bias.", "LL.", "UL.", "coverage.", "LL.prob.", "UL.prob.")
+  name_list2 = c("t", "robust")
+  
+  names(output) = c(paste0(rep(name_list1, times = length(name_list2)), 
+                           rep(name_list2, each = length(name_list1))) )
+  return(output)
+} # end of SimFunc()
+
+# test
+SimFunc(multi = 'none', boot.type = 1)
+```
+
+
+```{r}
+set.seed(1213)
+nsim = 1000
+alpha = 0.05
+ns = c(50, 100, 150, 250, 500)
+Ss = seq(0, 0.9, by = 0.1)
+multis = c('none', 'rad', 'normal')
+boot.types = 1:4
+
+# n = 50; S = 0; multi = 'none'; boot.type = 1
+
+out = expand.grid(n = ns, S = Ss, multi = multis, boot.type = boot.types)
+names <- SimFunc(n = 10, S = 0.1, multi = 'none', boot.type = 1) %>% names()
+
+for (n in ns){
+  for (S in Ss){
+    for (multi in multis) {
+      for (boot.type in boot.types){
+        
+        message(paste(n, S, multi, boot.type), collapse = ",")
+        temp = replicate(nsim, SimFunc(n = n, S = S, multi = multi, boot.type = boot.type, num.cores = 10))  %>% t()
+        out[which(out$n == n & out$S == S & 
+                    out$multi == multi & out$boot.type == boot.type), names] <- colMeans(temp)
+      }
+    }
+  }
+}
+```
+
+```{r}
+# write.csv(out, "Simulation outputs/CIs_Simple_Case_bootstrap_Jun29.csv")
+```
+
+
+# Plots
+```{r}
+out = read.csv("Simulation outputs/CIs_Simple_Case_bootstrap_Jun29.csv", header = TRUE)
+out$S_lab = paste("S =", out$S) # convert to label string
+```
+
+
+```{r}
+trellis.device(color=FALSE, new=FALSE)
+
+test = xyplot(coverage.norm + coverage.t + coverage.robust ~ n | S_lab , 
+              data=out, 
+              type='b', lwd=2,
+              ylab='Coverage', xlab = 'Sample size',
+              panel= function(x, y, ...){
+                panel.grid()
+                panel.xyplot(x, y, ..., col='black')
+                panel.abline(h=0.95, col='gray', ..., lty=2)
+                }, 
+              main='CI coverage',
+              key = list(columns = 3,
+                         text = list(lab = c("normal", "t", "robust")),
+                         points = list(pch =c(1, 3, 6)))
+              )
+print(test)
+```
+
