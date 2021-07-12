@@ -1,8 +1,16 @@
 ---
-title: "RESI_CI_bootstraps"
+title: "Simulation analysis evaluating bootstrapped CIs for RESI in a simple scenario"
 author: "Kaidi Kang"
 date: "6/29/2021"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    number_sections: true
+    use_bookdown: yes
+    code_folding: hide
+    toc_float: 
+      collapsed: false
+
 ---
 
 ```{r setup, include=FALSE}
@@ -11,7 +19,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Abstract
 This report is used to summarize the performances of CIs for RESI constructed via different bootstraps.\
-Simple case situations will be considered:
+
+Simple case situations will be considered:\
+
   + only 1 covariate and no nuisance covariates
   + Std Normal distribution
 
@@ -19,6 +29,8 @@ Simple case situations will be considered:
 # packages
 library(magrittr)
 library(lattice)
+# devtools::install_github("cran/car")
+library(car)
 # source functions
 # source("../RESI-master/R/nccd.R") 
 # ## read function for CI for non-central F distribution
@@ -29,16 +41,34 @@ source("../R/boot.ci.R")
 
 ## Simulations
 
-```{r}
-SimFunc <- function(n = 100, r = 1000, alpha = 0.05, m = 1, S = 0.6, multi, boot.type, num.cores = 10){
-  beta = sqrt(S^2) # true beta
+```{r,eval=FALSE}
+SimFunc <- function(n = 100, r = 1000, alpha = 0.05, m = 1, S = 0.6, shape, hetero = TRUE, multi, boot.type, fixed_covariate, pi = 0.3, num.cores = 10){
+  
   # simulate x and y
-  x = rnorm(n*m) %>% matrix(ncol = m)
-  y = x %*% beta + rnorm(n)
-  model <- lm(y ~ x)
-  beta.hat <- coef(model)
+  if (fixed_covariate == TRUE) {
+    sequence = rep(0:1, times = m*c(n - ceiling(n*pi), ceiling(n*pi)))
+    x = sample(sequence, replace = FALSE) %>% matrix(nrow = n, ncol = m)
+  } else {
+    x = rbinom(n*m, 1, pi) %>% matrix(nrow = n, ncol = m)
+  }
+  
+  if (hetero == TRUE) {
+    sigma2 = 0.2 # the true var of errors
+    errors = rgamma(n, shape = sigma2* shape, rate = sqrt(shape / (x[,1] + 0.5) ) ) - sigma2*sqrt(shape * (x[,1]+ 0.5) ) # depends on the 1st covariate
+  } else {
+    errors = rgamma(n, shape = sigma2* shape, rate = sqrt(shape) ) - sigma2* sqrt(shape)
+  }
   
   xTx = sum(x^2)
+  # true beta
+  beta = sqrt( sigma2 * n * S^2 / xTx ) 
+  # generate values of y
+  y = x %*% beta + errors
+  
+  # fit the model
+  model <- lm(y ~ x)
+  # estimated beta
+  beta.hat <- coef(model)
   
   # 1. when sigma is known (sigma = 1)
   # S.hat.norm <- sqrt(beta.hat^2)
@@ -92,31 +122,45 @@ SimFunc <- function(n = 100, r = 1000, alpha = 0.05, m = 1, S = 0.6, multi, boot
 } # end of SimFunc()
 
 # test
-SimFunc(multi = 'none', boot.type = 1)
+SimFunc(multi = 'none', shape = 100, boot.type = 1, num.cores = 1, fixed_covariate = FALSE)
 ```
 
 
-```{r}
+```{r, eval=FALSE}
 set.seed(1213)
-nsim = 1000
+nsim = 100 # outter loop
+r = 500 # inner loop
 alpha = 0.05
-ns = c(50, 100, 150, 250, 500)
-Ss = seq(0, 0.9, by = 0.1)
+ns = c(50, 100, 250)
+Ss = c(0, 0.1, 0.4, 0.6)
+heteros = c(TRUE, FALSE) # hetero/homo-skedasticity
+shape = c(0.1, 100) # skewness
+
 multis = c('none', 'rad', 'normal')
 boot.types = 1:4
+num.cores = 16
 
 # n = 50; S = 0; multi = 'none'; boot.type = 1
 
 out = expand.grid(n = ns, S = Ss, multi = multis, boot.type = boot.types)
-names <- SimFunc(n = 10, S = 0.1, multi = 'none', boot.type = 1) %>% names()
+names <- SimFunc(n = 10, S = 0.1, multi = 'none', boot.type = 1, num.cores = 1) %>% names()
 
 for (n in ns){
   for (S in Ss){
     for (multi in multis) {
       for (boot.type in boot.types){
         
+        if (multi == 'none' & boot.type == 4) next
+        
         message(paste(n, S, multi, boot.type), collapse = ",")
-        temp = replicate(nsim, SimFunc(n = n, S = S, multi = multi, boot.type = boot.type, num.cores = 10))  %>% t()
+        
+        temp <- simplify2array(
+          mclapply(1:nsim, function(simInd, n, S, multi, boot.type){ 
+                                    SimFunc(n = n, S = S, multi = multi, boot.type = boot.type, num.cores = 1) 
+                                    }, 
+                   mc.cores = num.cores, n = n, S = S, multi = multi, boot.type = boot.type )
+        ) %>% t()
+        
         out[which(out$n == n & out$S == S & 
                     out$multi == multi & out$boot.type == boot.type), names] <- colMeans(temp)
       }
@@ -126,34 +170,115 @@ for (n in ns){
 ```
 
 ```{r}
-# write.csv(out, "Simulation outputs/CIs_Simple_Case_bootstrap_Jun29.csv")
+# write.csv(out, "CIs_Simple_Case_bootstrap_Jul6.csv")
 ```
 
 
 # Plots
 ```{r}
-out = read.csv("Simulation outputs/CIs_Simple_Case_bootstrap_Jun29.csv", header = TRUE)
+out <- read.csv("CIs_Simple_Case_bootstrap_Jul6.csv", header = TRUE)
 out$S_lab = paste("S =", out$S) # convert to label string
+out$boot.type_lab <- paste("Bootstrap = ", out$boot.type)
 ```
 
-
-```{r}
+## S = 0
+```{r, fig.height=7}
+# S = 0
 trellis.device(color=FALSE, new=FALSE)
 
-test = xyplot(coverage.norm + coverage.t + coverage.robust ~ n | S_lab , 
-              data=out, 
+test = xyplot(coverage.t + coverage.robust ~ n | multi*boot.type_lab , 
+              data= subset(out, S == 0),
               type='b', lwd=2,
               ylab='Coverage', xlab = 'Sample size',
+              ylim = c(0.85, 1.02),
               panel= function(x, y, ...){
                 panel.grid()
                 panel.xyplot(x, y, ..., col='black')
                 panel.abline(h=0.95, col='gray', ..., lty=2)
                 }, 
-              main='CI coverage',
-              key = list(columns = 3,
-                         text = list(lab = c("normal", "t", "robust")),
-                         points = list(pch =c(1, 3, 6)))
+              main='CI coverage (S = 0)',
+              key = list(columns = 2,
+                         text = list(lab = c( "t", "robust")),
+                         points = list(pch =c(3, 6)))
               )
 print(test)
 ```
 
+## S = 0.1
+
+```{r, fig.height=7}
+# S = 0.1
+trellis.device(color=FALSE, new=FALSE)
+
+test = xyplot(coverage.t + coverage.robust ~ n | multi*boot.type_lab , 
+              data= subset(out, S == 0.1),
+              type='b', lwd=2,
+              ylab='Coverage', xlab = 'Sample size',
+              ylim = c(0.85, 1.02),
+              panel= function(x, y, ...){
+                panel.grid()
+                panel.xyplot(x, y, ..., col='black')
+                panel.abline(h=0.95, col='gray', ..., lty=2)
+                }, 
+              main='CI coverage (S = 0.1)',
+              key = list(columns = 2,
+                         text = list(lab = c( "t", "robust")),
+                         points = list(pch =c(3, 6)))
+              )
+print(test)
+```
+
+## S = 0.4
+
+```{r, fig.height=7}
+# S = 0.4
+trellis.device(color=FALSE, new=FALSE)
+
+test = xyplot(coverage.t + coverage.robust ~ n | multi*boot.type_lab , 
+              data= subset(out, S == 0.4),
+              type='b', lwd=2,
+              ylab='Coverage', xlab = 'Sample size',
+              ylim = c(0.85, 1.02),
+              panel= function(x, y, ...){
+                panel.grid()
+                panel.xyplot(x, y, ..., col='black')
+                panel.abline(h=0.95, col='gray', ..., lty=2)
+                }, 
+              main='CI coverage (S = 0.4)',
+              key = list(columns = 2,
+                         text = list(lab = c( "t", "robust")),
+                         points = list(pch =c(3, 6)))
+              )
+print(test)
+```
+
+
+
+
+
+
+
+
+## S = 0.6
+
+```{r, fig.height=7}
+# S = 0.6
+trellis.device(color=FALSE, new=FALSE)
+
+test = xyplot(coverage.t + coverage.robust ~ n | multi*boot.type_lab , 
+              data= subset(out, S == 0.6),
+              type='b', lwd=2,
+              ylab='Coverage', xlab = 'Sample size',
+              ylim = c(0.85, 1.02),
+              panel= function(x, y, ...){
+                panel.grid()
+                panel.xyplot(x, y, ..., col='black')
+                panel.abline(h=0.95, col='gray', ..., lty=2)
+                }, 
+              main='CI coverage (S = 0.6)',
+              key = list(columns = 2,
+                         text = list(lab = c( "t", "robust")),
+                         points = list(pch =c(1, 3)))
+              )
+print(test)
+```
