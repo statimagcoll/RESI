@@ -42,7 +42,7 @@ source("../R/ncf.R")
 ## Simulations
 
 ```{r,eval=FALSE}
-SimFunc <- function(n = 100, r = 1000, alpha = 0.05, m = 1, S = 0.6, shape, hetero = TRUE, sigma2 = 0.2, method, multi, boot.type, fixed_rv, pi = 0.3, num.cores = 10){
+SimFunc <- function(n = 100, r = 1000, alpha = 0.05, m = 1, S = 0.6, shape, hetero = TRUE, sigma2 = 0.5, method, multi, boot.type, fixed_rv, pi = 0.5, num.cores = 10){
   
   # simulate x and y
   if (fixed_rv == TRUE) {
@@ -53,8 +53,7 @@ SimFunc <- function(n = 100, r = 1000, alpha = 0.05, m = 1, S = 0.6, shape, hete
   }
   
   if (hetero == TRUE) {
-    sigma2 = 0.2 # the true var of errors
-    errors = rgamma(n, shape = sigma2* shape, rate = sqrt(shape / (x[,1] + 0.5) ) ) - sigma2*sqrt(shape * (x[,1]+ 0.5) ) # depends on the 1st covariate
+    errors = rgamma(n, shape = sigma2* shape, rate = sqrt(shape )/ (x[,1] + 0.5) ) - sigma2*sqrt(shape) * (x[,1]+ 0.5)  # depends on the 1st covariate
   } else {
     errors = rgamma(n, shape = sigma2* shape, rate = sqrt(shape) ) - sigma2* sqrt(shape)
   }
@@ -141,6 +140,9 @@ SimFunc <- function(n = 100, r = 1000, alpha = 0.05, m = 1, S = 0.6, shape, hete
 
 # test
 SimFunc(multi = 'none', shape = 100, method = "F", boot.type = 1, num.cores = 1, fixed_rv = FALSE)
+
+# 50 0 none 1 Chisq TRUE TRUE 0.1
+SimFunc(n = 50, S = 0, multi = "none", boot.type = 1, method = "Chisq", fixed_rv = TRUE, hetero = TRUE, shape = 0.1)
 ```
 
 
