@@ -31,21 +31,21 @@ library(magrittr)
 library(lattice)
 # devtools::install_github("cran/car")
 library(car)
+library(parallel)
 # source functions
-# source("../RESI-master/R/nccd.R") 
-# ## read function for CI for non-central F distribution
-# source("ncf.R")
 source("../R/boot.ci.R")
+source("../R/nccd.R")
+source("../R/ncf.R")
 ```
 
 
 ## Simulations
 
 ```{r,eval=FALSE}
-SimFunc <- function(n = 100, r = 1000, alpha = 0.05, m = 1, S = 0.6, shape, hetero = TRUE, multi, boot.type, fixed_covariate, pi = 0.3, num.cores = 10){
+SimFunc <- function(n = 100, r = 1000, alpha = 0.05, m = 1, S = 0.6, shape, hetero = TRUE, sigma2 = 0.2, method, multi, boot.type, fixed_rv, pi = 0.3, num.cores = 10){
   
   # simulate x and y
-  if (fixed_covariate == TRUE) {
+  if (fixed_rv == TRUE) {
     sequence = rep(0:1, times = m*c(n - ceiling(n*pi), ceiling(n*pi)))
     x = sample(sequence, replace = FALSE) %>% matrix(nrow = n, ncol = m)
   } else {
@@ -71,98 +71,149 @@ SimFunc <- function(n = 100, r = 1000, alpha = 0.05, m = 1, S = 0.6, shape, hete
   beta.hat <- coef(model)
   
   # 1. when sigma is known (sigma = 1)
-  # S.hat.norm <- sqrt(beta.hat^2)
+  # S.hat.norm <- sqrt(beta.hat^2/(n*xTx*sigma2))
   # bias.norm <- S.hat.norm - S
-  
-  # Constructing the CIs for 
-  # z = beta.hat/sqrt(1/sum(x^2)) # normal dist
-  # chi = z^2 # Chi-sq (1)
-  # # CI for RESI
-  # varcovx = solve(t(x) %*% x)
+  # 
+  # # CIs
+  # ## 1. thru non-central Chi-sq
+  # S.CI.
 
   # when sigma in unknwon
   # 2. naive estimator for sigma^2
-  result.t <- boot.ci(model.full = lm(y ~ x) , r = r, method  = "F", multi = multi, boot.type = boot.type, num.cores = num.cores)$anova %>% as.matrix
-  S.CI.t = c(result.t[1, 5:6])
-  S.hat.t = result.t[1, 4]
-  bias.t <- S.hat.t - S
+  ## obtain CI by using a bootstrap method
+  result <- boot.ci(model.full = lm(y ~ x) , r = r, method  = method, multi = multi, boot.type = boot.type, num.cores = num.cores)$anova %>% as.matrix
+  S.CI.boot = c(result[1, 5:6])
+  S.hat = result[1, 4]
+  bias <- S.hat - S
+  # the statistic
+  stat = result[1, 2]
+  df = result[1, 1]
+  res.df = result[3, 1]
+  # obtain CI by using non-central Chi-sq dist
+  S.CI.chi <- ncc.ints(sqrt(stat), df, alpha = alpha)[1, ]/sqrt(res.df)
+  # CI via non-central F dist
+  S.CI.f <- sqrt(ncf.ci(stat, df1 = df, df2 = res.df)/res.df)
   
-  # 3. using HC3 estimator
-  result.robust = boot.ci(model.full = lm(y ~ x) , r = r, method  = "Chisq", multi = multi, boot.type = boot.type, num.cores = num.cores)$anova %>% as.matrix
-  S.CI.robust = result.robust[1, 5:6]
-  S.hat.robust = result.robust[1, 4]
-  bias.robust <- S.hat.robust - S
-  
+  # # 3. using HC3 estimator
+  # result.robust = boot.ci(model.full = lm(y ~ x) , r = r, method  = "Chisq", multi = multi, boot.type = boot.type, num.cores = num.cores)$anova %>% as.matrix
+  # S.CI.robust = result.robust[1, 5:6]
+  # S.hat.robust = result.robust[1, 4]
+  # bias.robust <- S.hat.robust - S
 
   output = c(
-             # t or F-dist
-             S.hat.t, bias.t,
-             S.CI.t,
-             coverage.t = (S >= S.CI.t[1] & S <= S.CI.t[2]),
+             S.hat, bias,
+             S.CI.boot,
+             coverage.boot = (S >= S.CI.boot[1] & S <= S.CI.boot[2]),
              # the probabilty/proportion of true S failling on the left or right of the CI
-             LL.t.prob = S < S.CI.t[1],
-             UL.t.prob = S > S.CI.t[2],
+             LL.boot.prob = S < S.CI.boot[1],
+             UL.boot.prob = S > S.CI.boot[2],
+             
+             S.CI.chi,
+             coverage.chi = (S >= S.CI.chi[1] & S <= S.CI.chi[2]),
+             # the probabilty/proportion of true S failling on the left or right of the CI
+             LL.chi.prob = S < S.CI.chi[1],
+             UL.chi.prob = S > S.CI.chi[2],
+             
+             S.CI.f,
+             coverage.f = (S >= S.CI.f[1] & S <= S.CI.f[2]),
+             # the probabilty/proportion of true S failling on the left or right of the CI
+             LL.f.prob = S < S.CI.f[1],
+             UL.f.prob = S > S.CI.f[2]
              # beta.cvg.t, 
              # robust
-             S.hat.robust, bias.robust,
-             S.CI.robust,
-             coverage.robust = (S >= S.CI.robust[1] & S <= S.CI.robust[2]),
-             # the probabilty/proportion of true S failling on the left or right of the CI
-             LL.prob.robust = S < S.CI.robust[1],
-             UL.prob.robust = S > S.CI.robust[2]
+             # S.hat.robust, bias.robust,
+             # S.CI.robust,
+             # coverage.robust = (S >= S.CI.robust[1] & S <= S.CI.robust[2]),
+             # # the probabilty/proportion of true S failling on the left or right of the CI
+             # LL.prob.robust = S < S.CI.robust[1],
+             # UL.prob.robust = S > S.CI.robust[2]
              # beta.cvg.robust
              )
   
-  name_list1 = c("S.hat.", "Bias.", "LL.", "UL.", "coverage.", "LL.prob.", "UL.prob.")
-  name_list2 = c("t", "robust")
+  name_list1 = c("LL.", "UL.", "coverage.", "LL.prob.", "UL.prob.")
+  name_list2 = c("boot", "chi", "f")
   
-  names(output) = c(paste0(rep(name_list1, times = length(name_list2)), 
-                           rep(name_list2, each = length(name_list1))) )
+  names(output) = c("S.hat", "Bias", paste0(rep(name_list1, times = length(name_list2)),
+                    rep(name_list2, each = length(name_list1))) )
+  
   return(output)
 } # end of SimFunc()
 
 # test
-SimFunc(multi = 'none', shape = 100, boot.type = 1, num.cores = 1, fixed_covariate = FALSE)
+SimFunc(multi = 'none', shape = 100, method = "F", boot.type = 1, num.cores = 1, fixed_rv = FALSE)
 ```
 
 
 ```{r, eval=FALSE}
 set.seed(1213)
-nsim = 100 # outter loop
-r = 500 # inner loop
+nsim = 10 # outter loop
+r = 100 # inner loop
 alpha = 0.05
 ns = c(50, 100, 250)
-Ss = c(0, 0.1, 0.4, 0.6)
+Ss = c(0, 0.33, 0.66, 1)
+shapes = c(0.1, 100) # skewness
 heteros = c(TRUE, FALSE) # hetero/homo-skedasticity
-shape = c(0.1, 100) # skewness
 
+methods = c("F", "Chisq") # F -> naive estimator for S; Chisq -> HC3 estimator for S
 multis = c('none', 'rad', 'normal')
 boot.types = 1:4
-num.cores = 16
+fixeds = c(TRUE, FALSE) # simulate fixed covariates?
+
+num.cores = 1
 
 # n = 50; S = 0; multi = 'none'; boot.type = 1
 
-out = expand.grid(n = ns, S = Ss, multi = multis, boot.type = boot.types)
-names <- SimFunc(n = 10, S = 0.1, multi = 'none', boot.type = 1, num.cores = 1) %>% names()
+out = expand.grid(n = ns, S = Ss, shape = shapes, hetero = heteros, 
+                  method = methods, multi = multis, boot.type = boot.types,
+                  fixed_rv = fixeds)
+names <- SimFunc(n = 100, S = 0.1, r = 100, shape = shapes[1], hetero = FALSE,
+                 multi = 'none', method = "F", boot.type = 1, num.cores = 1, fixed_rv = FALSE) %>% names()
+
+# function(n = 100, r = 1000, alpha = 0.05, m = 1, S = 0.6, shape, hetero = TRUE, sigma2 = 0.2, method, multi, boot.type, fixed_covariate, pi = 0.3, num.cores = 10){
 
 for (n in ns){
   for (S in Ss){
     for (multi in multis) {
       for (boot.type in boot.types){
+        for (method in methods) {
+          for (fixed in fixeds){
+            for (hetero in heteros){
+              for (shape in shapes){
+                
+                if (multi == 'none' & boot.type == 4) next
         
-        if (multi == 'none' & boot.type == 4) next
-        
-        message(paste(n, S, multi, boot.type), collapse = ",")
-        
-        temp <- simplify2array(
-          mclapply(1:nsim, function(simInd, n, S, multi, boot.type){ 
-                                    SimFunc(n = n, S = S, multi = multi, boot.type = boot.type, num.cores = 1) 
-                                    }, 
-                   mc.cores = num.cores, n = n, S = S, multi = multi, boot.type = boot.type )
-        ) %>% t()
-        
-        out[which(out$n == n & out$S == S & 
-                    out$multi == multi & out$boot.type == boot.type), names] <- colMeans(temp)
+                message(paste(n, S, multi, boot.type, method, fixed, hetero, shape), collapse = ";")
+                
+                temp <- simplify2array(
+                  mclapply(1:nsim, function(simInd, n, r, S, shape, hetero, method, multi, boot.type, fixed_rv){ 
+                                            SimFunc(n = n, r = r, S = S, shape = shape,  
+                                                    hetero = hetero,
+                                                    method = method,
+                                                    multi = multi, boot.type = boot.type, 
+                                                    fixed_rv = fixed,
+                                                    num.cores = 1) 
+                                            }, 
+                           n = n, r = r, S = S, shape = shape, 
+                           hetero = hetero,
+                           method = method,
+                           multi = multi, boot.type = boot.type,
+                           fixed = fixed, 
+                           mc.cores = num.cores)
+                ) %>% t()
+                
+                out[which(out$n == n 
+                          & out$S == S
+                          & out$multi == multi 
+                          & out$boot.type == boot.type 
+                          & out$method == method
+                          & out$fixed_rv == fixed
+                          & out$hetero == hetero
+                          & out$shape == shape), names] <- colMeans(temp)
+              }
+              
+            }
+          }
+        }
       }
     }
   }

@@ -8,7 +8,11 @@
 #' @param model.full the full `lm()` model
 #' @param model.reduced the reduced `lm()` model to compare with
 #' @param r numeric, the number of boostrap replicates. By default, 1000 bootstraps will be implemented.
-#' @param method method used to compute the statistics. "F" corresponds to using var-cov estimator `vcov`, and the resulting statistic will be F-statistic; "Chisq" corresponds to using "sandwich::vcovHC" and results a Chi-squared statistics
+#' @param method method used to compute the statistics.
+#' "F" corresponds to using var-cov estimator `vcov`, and the resulting statistic will be F-statistic;
+#' "Chisq" corresponds to using "sandwich::vcovHC" and results a Chi-squared statistics;
+#' "Known" corresponds to knowing the true error of the linear model with homoskedasticity. With method = "Known", sigma2 need to be specified.
+#' @param sigma2 the true variance of error under homoskedasticity assumption.
 #' @param multi the distribution from which the multipliers will be drawn: 'none' = the multipliers equal constant 1 (default); 'rad' = rademacher; 'normal' = Std Normal distribution
 #' @param boot.type which type of bootstrap to use.
 # 1: resampling covariates along with residuals;
@@ -51,7 +55,7 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", mu
   } else {
     if (tolower(method) == "chisq"){ # using robust var-cov estimator (allowing heteroskedasticity)
       vcovfunc <- sandwich::vcovHC
-    } else {stop("Please correctly specify the method to be used to compute the var-cov estimate (i.e., 'F' or 'Chisq')")}
+    }  else {stop("Please correctly specify the method to be used to compute the var-cov estimate (i.e., 'F' or 'Chisq')")}
   }
 
   S_hat = NULL
