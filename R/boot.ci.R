@@ -217,7 +217,8 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", mu
   } # end of loop `i`
 
   # compute the quantiles for each column (i.e., for each effect)
-  CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
+  ## na.rm == TRUE?? Why are there missing values??
+  CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
   CIs = t(CIs)
   # Stats <- c(original.anova$F, original.overall$Chisq[2])
   # p_values <- c(original.anova$`Pr(>F)`, original.overall$`Pr(>Chisq)`[2])
