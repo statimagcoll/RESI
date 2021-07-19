@@ -72,86 +72,88 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", mu
 
   # bootstraps
   temp <- simplify2array(parallel::mclapply(1:r,
-                       function(ind, boot.data, form.full, form.reduced, multi, vcovfunc) {
+                                            function(ind, boot.data, form.full, form.reduced, multi, vcovfunc) {
 
-                         # needs further modification. for now, only works for 1 covariates whose name is `x`
-                         repeat {
-                           # version 1: resample X along with residuals non-parametrically
-                           if (boot.type == 1) {
-                             boot.ind <- sample(1:nrow(boot.data), replace = TRUE)
-                             boot.data <- boot.data[boot.ind, ]
-                           }
-                           # version 2: fix X and only resample residuals (w/ replacement)
-                           if (boot.type == 2) {
-                             # bootstrap indicator
-                             boot.ind <- sample(1:nrow(boot.data), replace = TRUE)
-                             resid <- boot.data[boot.ind, 'resid']
-                             boot.data <- cbind(boot.data[, names(boot.data) != 'resid'],
-                                                resid)
-                           }
-                           # version 3: resampling covariates and residuals independently w/ replacements
-                           if (boot.type == 3) {
-                             # bootstrap indicator
-                             boot.ind1 <- sample(1:nrow(boot.data), replace = TRUE)
-                             boot.ind2 <- sample(1:nrow(boot.data), replace = TRUE)
-                             resid <- boot.data[boot.ind2, 'resid'] # bootstrapped residuals
-                             boot.data <- cbind(boot.data[boot.ind1, names(boot.data) != 'resid'],
-                                                resid)
-                           }
-                           # version 4: no resampling, just multipliers
-                           if (boot.type == 4){
-                             boot.data = boot.data
-                           }
+                                              # needs further modification. for now, only works for 1 covariates whose name is `x`
+                                              temp.data = boot.data # inputted version (before any re-sampling)
+                                              repeat {
+                                                boot.data = temp.data
+                                                # version 1: resample X along with residuals non-parametrically
+                                                if (boot.type == 1) {
+                                                  boot.ind <- sample(1:nrow(boot.data), replace = TRUE)
+                                                  boot.data <- boot.data[boot.ind, ]
+                                                }
+                                                # version 2: fix X and only resample residuals (w/ replacement)
+                                                if (boot.type == 2) {
+                                                  # bootstrap indicator
+                                                  boot.ind <- sample(1:nrow(boot.data), replace = TRUE)
+                                                  resid <- boot.data[boot.ind, 'resid']
+                                                  boot.data <- cbind(boot.data[, names(boot.data) != 'resid'],
+                                                                     resid)
+                                                }
+                                                # version 3: resampling covariates and residuals independently w/ replacements
+                                                if (boot.type == 3) {
+                                                  # bootstrap indicator
+                                                  boot.ind1 <- sample(1:nrow(boot.data), replace = TRUE)
+                                                  boot.ind2 <- sample(1:nrow(boot.data), replace = TRUE)
+                                                  resid <- boot.data[boot.ind2, 'resid'] # bootstrapped residuals
+                                                  boot.data <- cbind(boot.data[boot.ind1, names(boot.data) != 'resid'],
+                                                                     resid)
+                                                }
+                                                # version 4: no resampling, just multipliers
+                                                if (boot.type == 4){
+                                                  boot.data = boot.data
+                                                }
 
-                           if (unique(boot.data$x) > 1) break
-                         }
+                                                if (length(unique(boot.data$x)) > 1) break
+                                              }
 
 
 
-                         # obtain multiplers
-                         n = nrow(boot.data)
-                         if (multi == "none") w <- rep(1, n)
-                         if (multi == "rad") w <- sample(x = c(-1, 1), size = n, replace = TRUE)
-                         if (multi == "normal") w <- rnorm(n)
+                                              # obtain multiplers
+                                              n = nrow(boot.data)
+                                              if (multi == "none") w <- rep(1, n)
+                                              if (multi == "rad") w <- sample(x = c(-1, 1), size = n, replace = TRUE)
+                                              if (multi == "normal") w <- rnorm(n)
 
-                         # calculate the bootstrapped outcome values
-                         ## note: replace the observed y with wild-bootstrapped y (so that I don't need to re-specify the model formula)
-                         boot.data$y <- predict(model.full, newdata = boot.data) + boot.data$resid * w
+                                              # calculate the bootstrapped outcome values
+                                              ## note: replace the observed y with wild-bootstrapped y (so that I don't need to re-specify the model formula)
+                                              boot.data$y <- predict(model.full, newdata = boot.data) + boot.data$resid * w
 
-                         # fit lm on the bootstrapped data
-                         ## full model
-                         boot.model.full <- lm(form.full, data = boot.data)
-                         ## reduced model
-                         if(!is.null(model.reduced)){
-                           boot.model.reduced <- lm(form.reduced, data = boot.data)
-                           # individual effects
-                           # individual.anova <- suppressMessages(car::Anova(boot.model.full, test.statistics = "Wald", vcov. = vcovfunc))
-                           # individual.stats <- individual.anova$F
-                           # names(individual.stats) <- rownames(individual.anova)
-                           #
-                           # individual.stats <- individual.stats[var.list]
-                           # overall effect
-                           overall.stats <- lmtest::waldtest(boot.model.reduced, boot.model.full, vcov =  vcovfunc, test = "Chisq")$Chisq[2]
-                           names(overall.stats) <- "Overall"
-                           stats <- c(overall.stats)
-                           stats
-                         } else {
-                           boot.model.reduced <- lm(as.formula(paste0(all.vars(form.full)[1], " ~ 1")), data = boot.data) # y ~ 1
-                           # directly compute the statistics based on full model
-                           # individual effects
-                           individual.anova <- suppressMessages(car::Anova(boot.model.full, test.statistics = "Wald", vcov. = vcovfunc))
-                           individual.stats <- individual.anova$F
-                           names(individual.stats) <- rownames(individual.anova)
-                           individual.stats <- individual.stats[names(individual.stats) != "Residuals"]
-                           # overall effect
-                           overall.stats <- lmtest::waldtest(boot.model.reduced, boot.model.full, vcov = vcovfunc(boot.model.full), test = "Chisq")$Chisq[2]
-                           names(overall.stats) <- "Overall"
-                           stats <- c(individual.stats, overall.stats)
-                           stats
-                         }
-                       } # end of function in `lapply`
-                       , boot.data = data, form.full = form.full, form.reduced = form.reduced, multi = multi, vcovfunc = vcovfunc, mc.cores = num.cores)
-                      )
+                                              # fit lm on the bootstrapped data
+                                              ## full model
+                                              boot.model.full <- lm(form.full, data = boot.data)
+                                              ## reduced model
+                                              if(!is.null(model.reduced)){
+                                                boot.model.reduced <- lm(form.reduced, data = boot.data)
+                                                # individual effects
+                                                # individual.anova <- suppressMessages(car::Anova(boot.model.full, test.statistics = "Wald", vcov. = vcovfunc))
+                                                # individual.stats <- individual.anova$F
+                                                # names(individual.stats) <- rownames(individual.anova)
+                                                #
+                                                # individual.stats <- individual.stats[var.list]
+                                                # overall effect
+                                                overall.stats <- lmtest::waldtest(boot.model.reduced, boot.model.full, vcov =  vcovfunc, test = "Chisq")$Chisq[2]
+                                                names(overall.stats) <- "Overall"
+                                                stats <- c(overall.stats)
+                                                stats
+                                              } else {
+                                                boot.model.reduced <- lm(as.formula(paste0(all.vars(form.full)[1], " ~ 1")), data = boot.data) # y ~ 1
+                                                # directly compute the statistics based on full model
+                                                # individual effects
+                                                individual.anova <- suppressMessages(car::Anova(boot.model.full, test.statistics = "Wald", vcov. = vcovfunc))
+                                                individual.stats <- individual.anova$F
+                                                names(individual.stats) <- rownames(individual.anova)
+                                                individual.stats <- individual.stats[names(individual.stats) != "Residuals"]
+                                                # overall effect
+                                                overall.stats <- lmtest::waldtest(boot.model.reduced, boot.model.full, vcov = vcovfunc(boot.model.full), test = "Chisq")$Chisq[2]
+                                                names(overall.stats) <- "Overall"
+                                                stats <- c(individual.stats, overall.stats)
+                                                stats
+                                              }
+                                            } # end of function in `lapply`
+                                            , boot.data = data, form.full = form.full, form.reduced = form.reduced, multi = multi, vcovfunc = vcovfunc, mc.cores = num.cores)
+  )
   temp2 = temp # temp still has the row names!
   dim(temp2) = c(length(temp2)/r, r)
   boot.stats = as.data.frame(t(temp2))
@@ -214,21 +216,21 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", mu
     boot.S[, i] <- stat2S(boot.stats[, i], dfs[names(boot.stats)[i]], dfs['Residuals'])
   } # end of loop `i`
 
-    # compute the quantiles for each column (i.e., for each effect)
-    CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
-    CIs = t(CIs)
-    # Stats <- c(original.anova$F, original.overall$Chisq[2])
-    # p_values <- c(original.anova$`Pr(>F)`, original.overall$`Pr(>Chisq)`[2])
-    dfs = anova.tab$Df
-    names(dfs) = rownames(anova.tab)
-    Ss <- stat2S(anova.tab$Stat, dfs, dfs['Residuals'])
-    anova.tab <- cbind(anova.tab, RESI = Ss, rbind(CIs,  NA))
+  # compute the quantiles for each column (i.e., for each effect)
+  CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
+  CIs = t(CIs)
+  # Stats <- c(original.anova$F, original.overall$Chisq[2])
+  # p_values <- c(original.anova$`Pr(>F)`, original.overall$`Pr(>Chisq)`[2])
+  dfs = anova.tab$Df
+  names(dfs) = rownames(anova.tab)
+  Ss <- stat2S(anova.tab$Stat, dfs, dfs['Residuals'])
+  anova.tab <- cbind(anova.tab, RESI = Ss, rbind(CIs,  NA))
 
-    # colnames(anova.tab) = c("df", "Stat", "P value", "RESI", paste0(alpha/2*100, "% ", c("LB", "UB")) )
-    output = list(model.full = form.full, model.reduced = form.reduced,
-                  boot.type = boot.type, multiplier = multi, method = method,
-                  alpha = alpha, correct = correct, anova = round(anova.tab, 3))
-    return(output)
+  # colnames(anova.tab) = c("df", "Stat", "P value", "RESI", paste0(alpha/2*100, "% ", c("LB", "UB")) )
+  output = list(model.full = form.full, model.reduced = form.reduced,
+                boot.type = boot.type, multiplier = multi, method = method,
+                alpha = alpha, correct = correct, anova = round(anova.tab, 3))
+  return(output)
 }
 
 
