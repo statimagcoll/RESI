@@ -73,32 +73,40 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", mu
   # bootstraps
   temp <- simplify2array(parallel::mclapply(1:r,
                        function(ind, boot.data, form.full, form.reduced, multi, vcovfunc) {
-                         # version 1: resample X along with residuals non-parametrically
-                         if (boot.type == 1) {
-                           boot.ind <- sample(1:nrow(boot.data), replace = TRUE)
-                           boot.data <- boot.data[boot.ind, ]
+
+                         # needs further modification. for now, only works for 1 covariates whose name is `x`
+                         repeat {
+                           # version 1: resample X along with residuals non-parametrically
+                           if (boot.type == 1) {
+                             boot.ind <- sample(1:nrow(boot.data), replace = TRUE)
+                             boot.data <- boot.data[boot.ind, ]
+                           }
+                           # version 2: fix X and only resample residuals (w/ replacement)
+                           if (boot.type == 2) {
+                             # bootstrap indicator
+                             boot.ind <- sample(1:nrow(boot.data), replace = TRUE)
+                             resid <- boot.data[boot.ind, 'resid']
+                             boot.data <- cbind(boot.data[, names(boot.data) != 'resid'],
+                                                resid)
+                           }
+                           # version 3: resampling covariates and residuals independently w/ replacements
+                           if (boot.type == 3) {
+                             # bootstrap indicator
+                             boot.ind1 <- sample(1:nrow(boot.data), replace = TRUE)
+                             boot.ind2 <- sample(1:nrow(boot.data), replace = TRUE)
+                             resid <- boot.data[boot.ind2, 'resid'] # bootstrapped residuals
+                             boot.data <- cbind(boot.data[boot.ind1, names(boot.data) != 'resid'],
+                                                resid)
+                           }
+                           # version 4: no resampling, just multipliers
+                           if (boot.type == 4){
+                             boot.data = boot.data
+                           }
+
+                           if (unique(boot.data$x) > 1) break
                          }
-                         # version 2: fix X and only resample residuals (w/ replacement)
-                         if (boot.type == 2) {
-                           # bootstrap indicator
-                           boot.ind <- sample(1:nrow(boot.data), replace = TRUE)
-                           resid <- boot.data[boot.ind, 'resid']
-                           boot.data <- cbind(boot.data[, names(boot.data) != 'resid'],
-                                              resid)
-                         }
-                         # version 3: resampling covariates and residuals independently w/ replacements
-                         if (boot.type == 3) {
-                           # bootstrap indicator
-                           boot.ind1 <- sample(1:nrow(boot.data), replace = TRUE)
-                           boot.ind2 <- sample(1:nrow(boot.data), replace = TRUE)
-                           resid <- boot.data[boot.ind2, 'resid'] # bootstrapped residuals
-                           boot.data <- cbind(boot.data[boot.ind1, names(boot.data) != 'resid'],
-                                              resid)
-                         }
-                         # version 4: no resampling, just multipliers
-                         if (boot.type == 4){
-                           boot.data = boot.data
-                         }
+
+
 
                          # obtain multiplers
                          n = nrow(boot.data)
