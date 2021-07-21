@@ -29,7 +29,7 @@
 # 3. if we need a reduced model and it's not empty, how are the residual dfs defined? residual df of the full/reduced model?
 
 
-boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", multi = 'none', boot.type = 1, alpha = 0.05, correct = TRUE, num.cores = 1){
+boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", sigma2 = NA, multi = 'none', boot.type = 1, alpha = 0.05, correct = TRUE, num.cores = 1){
 
   # data frame
   data = model.full$model
@@ -55,7 +55,13 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", mu
   } else {
     if (tolower(method) == "chisq"){ # using robust var-cov estimator (allowing heteroskedasticity)
       vcovfunc <- sandwich::vcovHC
-    }  else {stop("Please correctly specify the method to be used to compute the var-cov estimate (i.e., 'F' or 'Chisq')")}
+    }  else {
+      if (tolower(method) == "known" ) { # using estimator with known var-cov
+        vcovfunc <- sandwich::vcovHC # just b/c the `mclapply` needs an inpu of `vcovfunc` (it won't be used)
+        if (is.na(sigma2)) stop("Please specify the residual variance `sigma2` as it was assumed to be `known`")
+      } else {
+        stop("Please correctly specify the method to be used to compute the var-cov estimate (i.e., 'F', 'Chisq' or 'Known')")}
+      }
   }
 
   S_hat = NULL
@@ -126,18 +132,17 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", mu
                                               ## reduced model
                                               if(!is.null(model.reduced)){
                                                 boot.model.reduced <- lm(form.reduced, data = boot.data)
-                                                # individual effects
-                                                # individual.anova <- suppressMessages(car::Anova(boot.model.full, test.statistics = "Wald", vcov. = vcovfunc))
-                                                # individual.stats <- individual.anova$F
-                                                # names(individual.stats) <- rownames(individual.anova)
-                                                #
-                                                # individual.stats <- individual.stats[var.list]
                                                 # overall effect
                                                 overall.stats <- lmtest::waldtest(boot.model.reduced, boot.model.full, vcov =  vcovfunc, test = "Chisq")$Chisq[2]
                                                 names(overall.stats) <- "Overall"
                                                 stats <- c(overall.stats)
                                                 stats
                                               } else {
+                                                if (tolower(method) == "known"){
+                                                  beta.hat <- coefficients(boot.model.full)[2] # it only works for model w/ single covariate and intercept
+                                                  stats <- beta.hat^2/sigma2
+                                                  names(stats) <- "Overall"
+                                                }
                                                 boot.model.reduced <- lm(as.formula(paste0(all.vars(form.full)[1], " ~ 1")), data = boot.data) # y ~ 1
                                                 # directly compute the statistics based on full model
                                                 # individual effects
@@ -198,7 +203,7 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", mu
 
   ## conversion from stats to RESI
   ### define conversion function
-  if (tolower(method) == 'chisq') { # when they are Chisq statistics
+  if (tolower(method) == 'chisq' | tolower(method) == "known") { # when they are Chisq statistics
     stat2S <- function (chisq, df, rdf) {
       S = (chisq - df)/rdf
       sqrt(ifelse(S<0, 0, S))
