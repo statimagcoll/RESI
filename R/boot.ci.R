@@ -29,7 +29,7 @@
 # 3. if we need a reduced model and it's not empty, how are the residual dfs defined? residual df of the full/reduced model?
 
 
-boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", sigma2 = NA, multi = 'none', boot.type = 1, alpha = 0.05, correct = TRUE, num.cores = 1){
+boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", sigma2 = 1, multi = 'none', boot.type = 1, alpha = 0.05, correct = TRUE, num.cores = 1){
 
   # data frame
   data = model.full$model
@@ -40,8 +40,6 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", si
   } else {
     form.reduced <- formula(model.reduced)
   }
-
-
 
   # check whether the two models are nested
   # if (!(length((setdiff(all.vars(form.full), all.vars(form.reduced)))) > 0 &
@@ -74,7 +72,9 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", si
   }
 
   # # The variables of interest (difference between full & reduced models)
-  # var.list <- setdiff(all.vars(form.full), all.vars(form.reduced))
+  # var.list <- intersect(all.vars(form.full)[-1], all.vars(form.reduced)[-1])
+
+
 
   # bootstraps
   temp <- simplify2array(parallel::mclapply(1:r,
@@ -110,8 +110,8 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", si
                                                 if (boot.type == 4){
                                                   boot.data = boot.data
                                                 }
-
-                                                if (length(unique(boot.data$x)) > 1) break
+                                                f = function(x) {length(unique(x))}
+                                                if (all(apply(X = boot.data, MARGIN = 2, FUN = f)  > 1) ) break
                                               }
 
 
@@ -139,9 +139,10 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", si
                                                 stats
                                               } else {
                                                 if (tolower(method) == "known"){
-                                                  beta.hat <- coefficients(boot.model.full)[2] # it only works for model w/ single covariate and intercept
-                                                  stats <- beta.hat^2/sigma2
-                                                  names(stats) <- "Overall"
+                                                  # beta.hat <- coefficients(boot.model.full)[var.list]
+                                                  # Sigma = diag(3) # the true covariance of target covariates
+                                                  # stats <- beta.hat %*% Sigma %*% beta.hat
+                                                  # names(stats) <- "Overall"
                                                 }
                                                 boot.model.reduced <- lm(as.formula(paste0(all.vars(form.full)[1], " ~ 1")), data = boot.data) # y ~ 1
                                                 # directly compute the statistics based on full model
