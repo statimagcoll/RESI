@@ -57,6 +57,11 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRU
     data$resid = residuals(model.full, type = "response")
   }
 
+  # variable names of interest
+  # var.names = all.vars(form.full)[-1]
+  var.names = names(coef(model.full))
+  var.names = var.names[var.names != "(Intercept)"]
+
   # Bootstraps
   temp <- simplify2array(parallel::mclapply(1:r,
                                             function(ind, boot.data, form.full, form.reduced, multi) {
@@ -119,8 +124,7 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRU
                                               if (is.null(model.reduced)){
                                                 ## Individual (Wald) test stats
                                                 ## note: the results from car:Anova look wield when using glm()...so I calculate the stats manually
-                                                var.names = all.vars(form.full)[-1]
-                                                ind.stats <- (coef(boot.model.full)[var.names])^2/diag(vcovfunc(boot.model.full)[var.names, var.names])
+                                                ind.stats <- (coef(boot.model.full)[var.names])^2/diag(as.matrix(vcovfunc(boot.model.full)[var.names, var.names]))
                                                 stats <- c(stats, ind.stats)
                                                 names(stats) <- c("Overall", var.names)
                                               }
@@ -167,8 +171,7 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRU
   if (is.null(model.reduced)){
     ## Individual (Wald) test stats
     ## note: the results from car:Anova look wield when using glm()...so I calculate the stats manually
-    var.names = all.vars(form.full)[-1]
-    ind.stats <- (coef(model.full)[var.names])^2/diag(vcovfunc(model.full)[var.names, var.names])
+    ind.stats <- (coef(model.full)[var.names])^2/diag(as.matrix(vcovfunc(model.full)[var.names, var.names]))
     ind.resi.hat <- if(robust.var) {chisq2S(ind.stats, 1, res.df)} else {f2S(ind.stats, 1, res.df)}
     rownames(anoes.tab) = c("Overall", "Residual")
     anoes.tab = rbind(cbind(ind.resi.hat, 1, NA, NA), anoes.tab)
@@ -194,7 +197,7 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRU
                  multiplier = multi,
                  alpha = alpha,
                  `number of bootstraps` = r,
-                 correct = TRUE,
+                 correct = correct,
                  ANOES = anoes.tab
                  )
   return(output)
