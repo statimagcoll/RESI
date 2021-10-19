@@ -1,21 +1,21 @@
 #######
 # Function to construct CI for
-# RESI in linear models via Wild Bootstrap or non-parametric bootstrap .
+# RESI in generalized linear models
 ######
 
-#' function generating CIS via bootstrap
+#' function generating CIS for the RESI either via bootstraps
 #' @export
-#' @param model.full the full `lm()` model
-#' @param model.reduced the reduced `lm()` model to compare with
+#' @param model.full the full `glm()` model
+#' @param model.reduced the reduced `glm()` model to compare with
 #' @param r numeric, the number of boostrap replicates. By default, 1000 bootstraps will be implemented.
-#' @param method method used to compute the statistics.
+#' @param robust.var default to TRUE, whether to use the robust (sandwich) variance estimator when construct the Wald test statistic
 #' "F" corresponds to using var-cov estimator `vcov`, and the resulting statistic will be F-statistic;
 #' "Chisq" corresponds to using "sandwich::vcovHC" and results a Chi-squared statistics;
 #' "Known" corresponds to knowing the true error of the linear model with homoskedasticity. With method = "Known", sigma2 need to be specified.
-#' @param sigma2 the true variance of error under homoskedasticity assumption.
+#' @param sigma2 the true variance of error under homoskedasticity assumption (added for simulations).
 #' @param multi the distribution from which the multipliers will be drawn: 'none' = the multipliers equal constant 1 (default); 'rad' = rademacher; 'normal' = Std Normal distribution
 #' @param boot.type which type of bootstrap to use.
-# 1: resampling covariates along with residuals;
+# 1: resampling covariates along with residuals (default);
 # 2: fixing covariates and only bootstrapping residulas;
 # 3: resampling covariates and residuals independently w/ replacements
 # 4. no sampling, just multipliers
@@ -25,63 +25,44 @@
 
 # Note:
 # 1. should we test the interaction terms?
-# 2. Do we really need reduced model? The ANOVA gives the results that the additional variables account for xx effect size in addition to ....(other variables)
-# 3. if we need a reduced model and it's not empty, how are the residual dfs defined? residual df of the full/reduced model?
 
 
-boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", sigma2 = 1, multi = 'none', boot.type = 1, alpha = 0.05, correct = TRUE, num.cores = 1){
+boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRUE, multi = 'none', boot.type = 1, alpha = 0.05, correct = FALSE, num.cores = 1){
 
   # data frame
   data = model.full$model
   # model forms
   form.full <- formula(model.full)
   if (is.null(model.reduced)){
-    form.reduced = NULL
+    form.reduced = as.formula(paste0(all.vars(form.full)[1], " ~ 1"))
   } else {
     form.reduced <- formula(model.reduced)
   }
 
-  # check whether the two models are nested
-  # if (!(length((setdiff(all.vars(form.full), all.vars(form.reduced)))) > 0 &
-  # length(setdiff(all.vars(form.reduced), all.vars(form.full))) == 0 )) {
-  #   stop("The models are not nested")
-  # }
+  # glm family
+  family = model.full$family$family
 
   # covariance estimator
-  if (tolower(method) == 'f'){ # assuming homoskedasticity
-    vcovfunc <- vcov
-  } else {
-    if (tolower(method) == "chisq"){ # using robust var-cov estimator (allowing heteroskedasticity)
-      vcovfunc <- sandwich::vcovHC
-    }  else {
-      if (tolower(method) == "known" ) { # using estimator with known var-cov
-        vcovfunc <- sandwich::vcovHC # just b/c the `mclapply` needs an inpu of `vcovfunc` (it won't be used)
-        if (is.na(sigma2)) stop("Please specify the residual variance `sigma2` as it was assumed to be `known`")
-      } else {
-        stop("Please correctly specify the method to be used to compute the var-cov estimate (i.e., 'F', 'Chisq' or 'Known')")}
-      }
-  }
-
-  S_hat = NULL
+  if (robust.var) {
+    vcovfunc = sandwich::vcovHC
+    } else {
+      vcovfunc = vcov
+    }
 
   # residual estimates (corrected or not)
+  # I think this correction is for linear models??
   if (correct == TRUE) {
-    data$resid = residuals(model.full)/(1-hatvalues(model.full))
+    data$resid = residuals(model.full, type = "response")/(1-hatvalues(model.full))
   } else {
-    data$resid = residuals(model.full)
+    data$resid = residuals(model.full, type = "response")
   }
 
-  # # The variables of interest (difference between full & reduced models)
-  # var.list <- intersect(all.vars(form.full)[-1], all.vars(form.reduced)[-1])
-
-
-
-  # bootstraps
+  # Bootstraps
   temp <- simplify2array(parallel::mclapply(1:r,
-                                            function(ind, boot.data, form.full, form.reduced, multi, vcovfunc) {
+                                            function(ind, boot.data, form.full, form.reduced, multi) {
 
-                                              # needs further modification. for now, only works for 1 covariates whose name is `x`
-                                              temp.data = boot.data # inputted version (before any re-sampling)
+                                              temp.data = boot.data # the input data
+
                                               repeat {
                                                 boot.data = temp.data
                                                 # version 1: resample X along with residuals non-parametrically
@@ -91,11 +72,9 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", si
                                                 }
                                                 # version 2: fix X and only resample residuals (w/ replacement)
                                                 if (boot.type == 2) {
-                                                  # bootstrap indicator
                                                   boot.ind <- sample(1:nrow(boot.data), replace = TRUE)
                                                   resid <- boot.data[boot.ind, 'resid']
-                                                  boot.data <- cbind(boot.data[, names(boot.data) != 'resid'],
-                                                                     resid)
+                                                  boot.data <- cbind(boot.data[, names(boot.data) != 'resid'], resid)
                                                 }
                                                 # version 3: resampling covariates and residuals independently w/ replacements
                                                 if (boot.type == 3) {
@@ -110,11 +89,10 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", si
                                                 if (boot.type == 4){
                                                   boot.data = boot.data
                                                 }
+                                                # to detect whether the re-sample covariates have constant value, if yes, skip to next loop
                                                 f = function(x) {length(unique(x))}
                                                 if (all(apply(X = boot.data, MARGIN = 2, FUN = f)  > 1) ) break
                                               }
-
-
 
                                               # obtain multiplers
                                               n = nrow(boot.data)
@@ -124,127 +102,101 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, method = "F", si
 
                                               # calculate the bootstrapped outcome values
                                               ## note: replace the observed y with wild-bootstrapped y (so that I don't need to re-specify the model formula)
-                                              boot.data$y <- predict(model.full, newdata = boot.data) + boot.data$resid * w
+                                              boot.data$y <- predict(model.full, newdata = boot.data, type = "response") + boot.data$resid * w
 
-                                              # fit lm on the bootstrapped data
+                                              # fit glm on the bootstrapped data
                                               ## full model
-                                              boot.model.full <- lm(form.full, data = boot.data)
+                                              boot.model.full <- glm(form.full, data = boot.data, family = family)
                                               ## reduced model
-                                              if(!is.null(model.reduced)){
-                                                boot.model.reduced <- lm(form.reduced, data = boot.data)
-                                                # overall effect
-                                                overall.stats <- lmtest::waldtest(boot.model.reduced, boot.model.full, vcov =  vcovfunc, test = "Chisq")$Chisq[2]
-                                                names(overall.stats) <- "Overall"
-                                                stats <- c(overall.stats)
-                                                stats
-                                              } else {
-                                                if (tolower(method) == "known"){
-                                                  # beta.hat <- coefficients(boot.model.full)[var.list]
-                                                  # Sigma = diag(3) # the true covariance of target covariates
-                                                  # stats <- beta.hat %*% Sigma %*% beta.hat
-                                                  # names(stats) <- "Overall"
-                                                }
-                                                boot.model.reduced <- lm(as.formula(paste0(all.vars(form.full)[1], " ~ 1")), data = boot.data) # y ~ 1
-                                                # directly compute the statistics based on full model
-                                                # individual effects
-                                                individual.anova <- suppressMessages(car::Anova(boot.model.full, test.statistics = "Wald", vcov. = vcovfunc))
-                                                individual.stats <- individual.anova$F
-                                                names(individual.stats) <- rownames(individual.anova)
-                                                individual.stats <- individual.stats[names(individual.stats) != "Residuals"]
-                                                # overall effect
-                                                overall.stats <- lmtest::waldtest(boot.model.reduced, boot.model.full, vcov = vcovfunc(boot.model.full), test = "Chisq")$Chisq[2]
-                                                names(overall.stats) <- "Overall"
-                                                stats <- c(individual.stats, overall.stats)
-                                                stats
+                                              boot.model.reduced <- glm(form.reduced, data = boot.data, family = family)
+
+                                              ## Overall (Wald) test stat
+                                              wald.test = lmtest::waldtest(boot.model.reduced, boot.model.full, vcov = vcovfunc, test = 'Chisq')
+                                              stats = wald.test$Chisq[2]
+                                              names(stats) <- "Overall"
+
+                                              # when `model.reduced = NULL`, output the wald test stat for each effect
+                                              if (is.null(model.reduced)){
+                                                ## Individual (Wald) test stats
+                                                ## note: the results from car:Anova look wield when using glm()...so I calculate the stats manually
+                                                var.names = all.vars(form.full)[-1]
+                                                ind.stats <- (coef(boot.model.full)[var.names])^2/diag(vcovfunc(boot.model.full)[var.names, var.names])
+                                                stats <- c(stats, ind.stats)
+                                                names(stats) <- c("Overall", var.names)
                                               }
+                                              stats
                                             } # end of function in `lapply`
-                                            , boot.data = data, form.full = form.full, form.reduced = form.reduced, multi = multi, vcovfunc = vcovfunc, mc.cores = num.cores)
+                                            ,
+                                            boot.data = data,
+                                            form.full = form.full,
+                                            form.reduced = form.reduced,
+                                            multi = multi,
+                                            mc.cores = num.cores)
   )
+
   temp2 = temp # temp still has the row names!
   dim(temp2) = c(length(temp2)/r, r)
-  boot.stats = as.data.frame(t(temp2))
+  boot.stats = t(temp2)
   # use the row names of `temp`
   colnames(boot.stats) = if(is.null(rownames(temp))) "Overall" else {rownames(temp)}
 
-  # calculate the statistics for the data
-  if (!is.null(form.reduced)){
-    # ### individual effects
-    # original.anova <- suppressMessages(car::Anova(model.full, test.statistics = "Wald", vcov. = vcovfunc))
-    ### overall effect
-    original.overall <- lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc, test = "Chisq")
-    ### d.f
-    dfs <- c(original.overall$Df[2], original.overall$Res.Df[2])
-    names(dfs) <- c("Overall", "Residuals")
-    # names(dfs) <- rownames(original.overall)
-    # overall.df <- sum(dfs[names(dfs) != "Residuals"])
-    # dfs <- c(dfs, Overall = overall.df)
-    anova.tab = data.frame(Df = dfs,
-                           Stat = c(original.overall$Chisq[2], NA),
-                           'P-value' = c(original.overall$`Pr(>Chisq)`[2], NA))
-  }  else {
-    ### individual effects
-    original.anova <- suppressMessages(car::Anova(model.full, test.statistics = "Wald", vcov. = vcovfunc))
-    ### overall effect
-    model.reduced <- lm(as.formula(paste0(all.vars(form.full)[1], " ~ 1")), data = data)
-    original.overall <- lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc, test = "Chisq")
-    ### d.f
-    dfs <- original.anova$Df
-    names(dfs) <- rownames(original.anova)
-    overall.df <- original.overall$Df[2]
-    dfs <- c(dfs, Overall = overall.df)
 
-    anova.tab = data.frame(Df = dfs,
-                           Stat = c(original.anova$F, original.overall$Chisq[2]),
-                           'P-value' = c(original.anova$`Pr(>F)`, original.overall$`Pr(>Chisq)`[2]))
+  # Deriving the point estimates for RESI
+  # fit glm on the data
+  ## full model
+  mod1 <- glm(form.full, data = data, family = family)
+  ## reduced model
+  mod0 <- glm(form.reduced, data = data, family = family)
 
-    # list of effects of interest
-    effect.list <- all.vars(form.full)[-1]
-    anova.tab = anova.tab[c(effect.list, "Overall", "Residuals"), ]
+  ## Overall (Wald) test stat
+  wald.test = lmtest::waldtest(mod0, mod1, vcov = vcovfunc, test = 'Chisq')
+  stats = wald.test$Chisq[2]
+  overall.df = wald.test$Df[2]
+  res.df = wald.test$Res.Df[2]
+
+  overall.resi.hat = ifelse(robust.var, chisq2S(stats, overall.df, res.df), f2S(stats, overall.df, res.df))
+
+  # set up ANOES table
+  anoes.tab = matrix(rep(NA, 2*4), nrow = 2, ncol = 4)
+
+  anoes.tab[1, ] = c(overall.resi.hat, overall.df, NA, NA)
+  anoes.tab[2, ] = c(NA, res.df, NA, NA)
+  rownames(anoes.tab) = c("Tested", "Residual")
+
+  # when `model.reduced = NULL`, output the wald test stat for each effect
+  if (is.null(model.reduced)){
+    ## Individual (Wald) test stats
+    ## note: the results from car:Anova look wield when using glm()...so I calculate the stats manually
+    var.names = all.vars(form.full)[-1]
+    ind.stats <- (coef(model.full)[var.names])^2/diag(vcovfunc(model.full)[var.names, var.names])
+    ind.resi.hat <- if(robust.var) {chisq2S(ind.stats, 1, res.df)} else {f2S(ind.stats, 1, res.df)}
+    rownames(anoes.tab) = c("Overall", "Residual")
+    anoes.tab = rbind(cbind(ind.resi.hat, 1, NA, NA), anoes.tab)
+
   }
+  colnames(anoes.tab) = c("RESI", "df", "LL", "UL")
 
-  ## conversion from stats to RESI
-  ### define conversion function
-  if (tolower(method) == 'chisq' | tolower(method) == "known") { # when they are Chisq statistics
-    stat2S <- function (chisq, df, rdf) {
-      S = (chisq - df)/rdf
-      sqrt(ifelse(S<0, 0, S))
-    }
-  } else { # when it's F statistic
-    stat2S <- function (f, df, rdf) {
-      S = (f*df*(rdf-2)/rdf - df)/rdf
-      sqrt(ifelse(S<0, 0, S))
-    }
-  }
-
+  # Deriving the bootstrap CI for the RESI
   boot.S <- boot.stats # define boot.S which has the same frame as `boot.stats`
-
+  ## converting statistics to RESI
   for (i in 1:ncol(boot.stats)) {
-    boot.S[, i] <- stat2S(boot.stats[, i], dfs[names(boot.stats)[i]], dfs['Residuals'])
+    boot.S[, i] <- if(robust.var) {chisq2S(boot.stats[, i], 1, res.df)} else {f2S(boot.stats[ , i], 1, res.df)}
   } # end of loop `i`
-
-  # compute the quantiles for each column (i.e., for each effect)
-  ## na.rm == TRUE?? Why are there missing values??
-  CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+  CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
   CIs = t(CIs)
-  # Stats <- c(original.anova$F, original.overall$Chisq[2])
-  # p_values <- c(original.anova$`Pr(>F)`, original.overall$`Pr(>Chisq)`[2])
-  dfs = anova.tab$Df
-  names(dfs) = rownames(anova.tab)
-  Ss <- stat2S(anova.tab$Stat, dfs, dfs['Residuals'])
-  anova.tab <- cbind(anova.tab, RESI = Ss, rbind(CIs,  NA))
+  if (nrow(CIs) == 1) rownames(CIs) = "Tested"
+  anoes.tab[rownames(CIs), c("LL", "UL")] = CIs
 
-  # colnames(anova.tab) = c("df", "Stat", "P value", "RESI", paste0(alpha/2*100, "% ", c("LB", "UB")) )
-  output = list(model.full = form.full, model.reduced = form.reduced,
-                boot.type = boot.type, multiplier = multi, method = method,
-                alpha = alpha, correct = correct, anova = round(anova.tab, 3))
+  output <- list(model.full = formula(model.full),
+                 model.reduced = form.reduced,
+                 model.family = family,
+                 boot.type = boot.type,
+                 multiplier = multi,
+                 alpha = alpha,
+                 `number of bootstraps` = r,
+                 correct = TRUE,
+                 ANOES = anoes.tab
+                 )
   return(output)
-}
-
-
-
-
-
-
-
-
+  }
 
