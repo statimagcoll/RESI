@@ -4,7 +4,7 @@ Title: Robust Effect Size Index (RESI) Estimation
 Version: 0.1.2
 Authors@R: 
   c(person('Simon', 'Vandekar', email='simon.vandekar@vanderbilt.edu', role=c('aut', 'cre')),
-    person(given = 'Kaidi', family = 'Kang'), email = 'kaidi.kang@vanderbilt.edu', role = c('aut', 'cre'))
+    person('Kaidi', 'Kang', email = 'kaidi.kang@vanderbilt.edu', role = c('aut', 'cre')))
 Description: Tools to summarize model output using a robust effect size index. The index is introduced in Vandekar, Rao, \& Blume (2020).
 License: GPL-3
 Encoding: UTF-8
