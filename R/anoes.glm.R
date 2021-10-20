@@ -47,7 +47,7 @@ anoes.glm <- function(model.full, model.reduced = NULL,
   df = wald.test$Df[2]
 
   ## point estimate of the RESI
-  S.hat = chisq2S(chisq = chistat, df = df, rdf = res.df)
+  S.hat = chisq2S(chisq = chi2stat, df = df, rdf = res.df)
 
   # CIs
   if (tolower(method) %in% c('wild.normal', 'wild.rad', 'f', 'chisq', 'bootstrap')){
