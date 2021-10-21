@@ -3,29 +3,18 @@
 # RESI in generalized linear models
 ######
 
-#' function generating CIS for the RESI either via bootstraps
+#' Function generating CIs for the RESI via various bootstrap methods
 #' @export
-#' @param model.full the full `glm()` model
-#' @param model.reduced the reduced `glm()` model to compare with
+#' @param model.full the full model. It should be a `glm` object.
+#' @param model.reduced the reduced `glm()` model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param r numeric, the number of boostrap replicates. By default, 1000 bootstraps will be implemented.
-#' @param robust.var default to TRUE, whether to use the robust (sandwich) variance estimator when construct the Wald test statistic
-#' "F" corresponds to using var-cov estimator `vcov`, and the resulting statistic will be F-statistic;
-#' "Chisq" corresponds to using "sandwich::vcovHC" and results a Chi-squared statistics;
-#' "Known" corresponds to knowing the true error of the linear model with homoskedasticity. With method = "Known", sigma2 need to be specified.
+#' @param robust.var default to TRUE, whether to use the robust (sandwich) variance estimator when construct the Wald test statistic. If `TRUE`, the variance of the estimator will be obtained by using `sandwich::vcovHC()`` and the HC3 will be applied.
 #' @param sigma2 the true variance of error under homoskedasticity assumption (added for simulations).
 #' @param multi the distribution from which the multipliers will be drawn: 'none' = the multipliers equal constant 1 (default); 'rad' = rademacher; 'normal' = Std Normal distribution
-#' @param boot.type which type of bootstrap to use.
-# 1: resampling covariates along with residuals (default);
-# 2: fixing covariates and only bootstrapping residulas;
-# 3: resampling covariates and residuals independently w/ replacements
-# 4. no sampling, just multipliers
-#' @param alpha significance level used to compute the CIs. By default, 0.05 will be used
-#' @param correct whether the residuals with bias correction will be used, by default, TRUE.
+#' @param boot.type which type of bootstrap to use. 1: resampling covariates along with residuals (default); 2: fixing covariates and only bootstrapping residulas; 3: resampling covariates and residuals independently w/ replacements; 4. no sampling, just multipliers
+#' @param alpha significance level of the constructed CIs. By default, 0.05 will be used0
+#' @param correct for the linear regression models (i.e., `family = 'gaussian'` in the `glm()` function) whether the residuals with bias correction will be used, by default, FALSE.
 #' @param num.cores The number of CPU cores to be used for calculating bootstrapped CIs, by default, only 1 core will be used.
-
-# Note:
-# 1. should we test the interaction terms?
-
 
 boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRUE, multi = 'none', boot.type = 1, alpha = 0.05, correct = FALSE, num.cores = 1){
 
