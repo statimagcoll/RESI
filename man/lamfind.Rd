@@ -13,6 +13,9 @@ lamfind(y, p, alpha)
 
 \item{alpha}{probability.}
 }
+\value{
+xxxx
+}
 \description{
 Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 }

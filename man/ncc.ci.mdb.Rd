@@ -2,7 +2,8 @@
 % Please edit documentation in R/nccd.R
 \name{ncc.ci.mdb}
 \alias{ncc.ci.mdb}
-\title{MD Bessel confidence interval for chi-square noncentrality parameter.}
+\title{MD Bessel confidence interval for chi-square noncentrality parameter.
+Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.}
 \usage{
 ncc.ci.mdb(y, p, alpha = 0.05)
 }
@@ -13,6 +14,10 @@ ncc.ci.mdb(y, p, alpha = 0.05)
 
 \item{alpha}{probability for confidence interval.}
 }
+\value{
+xxx
+}
 \description{
+MD Bessel confidence interval for chi-square noncentrality parameter.
 Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 }
