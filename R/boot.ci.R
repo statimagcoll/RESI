@@ -170,8 +170,9 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRU
     ind.resi.hat <- if(robust.var) {chisq2S(ind.stats, 1, res.df)} else {f2S(ind.stats, 1, res.df)}
     rownames(anoes.tab) = c("Overall", "Residual")
     anoes.tab = rbind(cbind(ind.est, ind.rob.se, ind.stats, 1, NA, ind.resi.hat, NA, NA), anoes.tab)
+    colnames(anoes.tab) = c("estimate", "robust s.e.", "Chi-squared", "df", "p-val", "RESI", "LL", "UL")
   }
-  colnames(anoes.tab) = c("estimate", "robust s.e.", "Chi-squared", "df", "p-val", "RESI", "LL", "UL")
+  colnames(anoes.tab) = c("Chi-squared", "df", "p-val", "RESI", "LL", "UL")
   # calculate p-values form Chi-sq dist
   anoes.tab[, 'p-val'] = pchisq(anoes.tab[, "Chi-squared"], df = anoes.tab[, "df"], lower.tail = FALSE)
 
