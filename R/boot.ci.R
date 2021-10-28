@@ -150,23 +150,26 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRU
   overall.resi.hat = ifelse(robust.var, chisq2S(stats, overall.df, res.df), f2S(stats, overall.df, res.df))
 
   # set up ANOES table
-  anoes.tab = matrix(rep(NA, 2*4), nrow = 2, ncol = 4)
-
-  anoes.tab[1, ] = c(overall.resi.hat, overall.df, NA, NA)
-  anoes.tab[2, ] = c(NA, res.df, NA, NA)
+  anoes.tab = matrix(rep(NA, 2*8), nrow = 2, ncol = 8)
+  anoes.tab[1, c(3, 4, 6) ] = c(stats, overall.df, overall.resi.hat)
+  anoes.tab[2, 4] = res.df
   rownames(anoes.tab) = c("Tested", "Residual")
 
   # when `model.reduced = NULL`, output the wald test stat for each effect
   if (is.null(model.reduced)){
     ## Individual (Wald) test stats
     ## note: the results from car:Anova look wield when using glm()...so I calculate the stats manually
-    ind.stats <- (coef(model.full)[var.names])^2/diag(as.matrix(vcovfunc(model.full)[var.names, var.names]))
+
+    ind.est <- coef(model.full)[var.names] # coef estiamtes
+    ind.rob.se <- sqrt(diag(as.matrix(vcovfunc(model.full)[var.names, var.names]))) # corresponding robust s.e.
+    ind.stats <- (ind.est/ind.rob.se)^2 # wald test statistics
     ind.resi.hat <- if(robust.var) {chisq2S(ind.stats, 1, res.df)} else {f2S(ind.stats, 1, res.df)}
     rownames(anoes.tab) = c("Overall", "Residual")
-    anoes.tab = rbind(cbind(ind.resi.hat, 1, NA, NA), anoes.tab)
-
+    anoes.tab = rbind(cbind(ind.est, ind.rob.se, ind.stats, 1, NA, ind.resi.hat, NA, NA), anoes.tab)
   }
-  colnames(anoes.tab) = c("RESI", "df", "LL", "UL")
+  colnames(anoes.tab) = c("estimate", "robust s.e.", "Chi-squared", "df", "p-val", "RESI", "LL", "UL")
+  # calculate p-values form Chi-sq dist
+  anoes.tab[, 'p-val'] = pchisq(anoes.tab[, "Chi-squared"], df = anoes.tab[, "df"], lower.tail = FALSE)
 
   # Deriving the bootstrap CI for the RESI
   boot.S <- boot.stats # define boot.S which has the same frame as `boot.stats`
