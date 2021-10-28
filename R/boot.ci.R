@@ -151,8 +151,8 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRU
   overall.resi.hat = ifelse(robust.var, chisq2S(stats, overall.df, res.df), f2S(stats, overall.df, res.df))
 
   # set up ANOES table
-  anoes.tab = matrix(rep(NA, 2*5), nrow = 2, ncol = 5)
-  anoes.tab[1, c(1, 2, 3) ] = c(stats, overall.df, overall.resi.hat)
+  anoes.tab = matrix(rep(NA, 2*6), nrow = 2, ncol = 6)
+  anoes.tab[1, c(1, 2, 4) ] = c(stats, overall.df, overall.resi.hat)
   anoes.tab[2, 2] = res.df
   rownames(anoes.tab) = c("Tested", "Residual")
 
@@ -195,8 +195,8 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRU
                  alpha = alpha,
                  `number of bootstraps` = r,
                  correct = correct,
-                 ANOES = anoes.tab
+                 ANOES = round(anoes.tab, digits = digits)
                  )
-  return(round(output, digits = digits))
+  return(output)
   }
 
