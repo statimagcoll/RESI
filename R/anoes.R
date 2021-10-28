@@ -12,7 +12,7 @@
 #' @export
 
 
-anoes.glm <- function(model.full, model.reduced = NULL,
+anoes <- function(model.full, model.reduced = NULL,
                      robust.var = TRUE,
                      boot.type = 1, multi = 'none',
                      nboot = 1000, alpha = 0.05){
