@@ -15,8 +15,9 @@
 #' @param alpha significance level of the constructed CIs. By default, 0.05 will be used0
 #' @param correct for the linear regression models (i.e., `family = 'gaussian'` in the `glm()` function) whether the residuals with bias correction will be used, by default, FALSE.
 #' @param num.cores The number of CPU cores to be used for calculating bootstrapped CIs, by default, only 1 core will be used.
+#' @param digits the number of decimal digits in the output ANOES table. By default, 3
 
-boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRUE, multi = 'none', boot.type = 1, alpha = 0.05, correct = FALSE, num.cores = 1){
+boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRUE, multi = 'none', boot.type = 1, alpha = 0.05, correct = FALSE, num.cores = 1, digits = 3){
 
   # data frame
   data = model.full$model
@@ -150,16 +151,19 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRU
   overall.resi.hat = ifelse(robust.var, chisq2S(stats, overall.df, res.df), f2S(stats, overall.df, res.df))
 
   # set up ANOES table
-  anoes.tab = matrix(rep(NA, 2*8), nrow = 2, ncol = 8)
-  anoes.tab[1, c(3, 4, 6) ] = c(stats, overall.df, overall.resi.hat)
-  anoes.tab[2, 4] = res.df
+  anoes.tab = matrix(rep(NA, 2*5), nrow = 2, ncol = 5)
+  anoes.tab[1, c(1, 2, 3) ] = c(stats, overall.df, overall.resi.hat)
+  anoes.tab[2, 2] = res.df
   rownames(anoes.tab) = c("Tested", "Residual")
 
   # when `model.reduced = NULL`, output the wald test stat for each effect
   if (is.null(model.reduced)){
+    # set up ANOES table
+    anoes.tab = matrix(rep(NA, 2*8), nrow = 2, ncol = 8)
+    anoes.tab[1, c(3, 4, 6) ] = c(stats, overall.df, overall.resi.hat)
+    anoes.tab[2, 4] = res.df
     ## Individual (Wald) test stats
     ## note: the results from car:Anova look wield when using glm()...so I calculate the stats manually
-
     ind.est <- coef(model.full)[var.names] # coef estiamtes
     ind.rob.se <- sqrt(diag(as.matrix(vcovfunc(model.full)[var.names, var.names]))) # corresponding robust s.e.
     ind.stats <- (ind.est/ind.rob.se)^2 # wald test statistics
@@ -192,6 +196,6 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRU
                  correct = correct,
                  ANOES = anoes.tab
                  )
-  return(output)
+  return(round(output, digits = digits))
   }
 
