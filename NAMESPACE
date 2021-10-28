@@ -3,7 +3,7 @@
 export(F)
 export(Finv)
 export(S2d)
-export(anoes.glm)
+export(anoes)
 export(boot.ci)
 export(chisq2S)
 export(f2S)

@@ -16,7 +16,7 @@ Collate:
   'ncf.R'
   'resi.R'
   'S.R'
-  'anoes.glm.R'
+  'anoes.R'
 Imports:
   lmtest,
   pracma,
