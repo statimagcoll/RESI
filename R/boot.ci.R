@@ -155,6 +155,7 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRU
   anoes.tab[1, c(1, 2, 4) ] = c(stats, overall.df, overall.resi.hat)
   anoes.tab[2, 2] = res.df
   rownames(anoes.tab) = c("Tested", "Residual")
+  colnames(anoes.tab) = c("Chi-squared", "df", "p-val", "RESI", "LL", "UL")
 
   # when `model.reduced = NULL`, output the wald test stat for each effect
   if (is.null(model.reduced)){
@@ -172,7 +173,7 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRU
     anoes.tab = rbind(cbind(ind.est, ind.rob.se, ind.stats, 1, NA, ind.resi.hat, NA, NA), anoes.tab)
     colnames(anoes.tab) = c("estimate", "robust s.e.", "Chi-squared", "df", "p-val", "RESI", "LL", "UL")
   }
-  colnames(anoes.tab) = c("Chi-squared", "df", "p-val", "RESI", "LL", "UL")
+
   # calculate p-values form Chi-sq dist
   anoes.tab[, 'p-val'] = pchisq(anoes.tab[, "Chi-squared"], df = anoes.tab[, "df"], lower.tail = FALSE)
 
