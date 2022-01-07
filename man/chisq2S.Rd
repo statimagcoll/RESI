@@ -2,7 +2,7 @@
 % Please edit documentation in R/S.R
 \name{chisq2S}
 \alias{chisq2S}
-\title{Compute the robust effect size index estimator}
+\title{Compute the robust effect size index estimator from chi-squared statistic}
 \usage{
 chisq2S(chisq, df, rdf)
 }

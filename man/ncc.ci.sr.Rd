@@ -13,6 +13,9 @@ ncc.ci.sr(y, p, alpha = 0.05)
 
 \item{alpha}{probability for confidence interval.}
 }
+\value{
+xxxx
+}
 \description{
 Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 }
