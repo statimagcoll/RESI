@@ -7,13 +7,12 @@ Description: Tools to summarize model output using a robust effect size index. T
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-Collate: 
-  'anoes.lm.R'
-  'boot.ci.R'
+Collate:
   'esSim.R'
   'nccd.R'
   'resi.R'
   'S.R'
+  'anoes.lm.R'
 Imports:
   lmtest,
   pracma,
