@@ -84,9 +84,10 @@ boot.ci.glm <- function(model.full, model.reduced = NULL, r = 1000, robust.var =
                                                 if (boot.type == 4){
                                                   boot.data = boot.data
                                                 }
-                                                # to detect whether the re-sample covariates have constant value, if yes, skip to next loop
+
+                                                # to detect identical value in variables across rows, if yes, skip to next loop
                                                 f = function(x) {length(unique(x))}
-                                                if (all(apply(X = boot.data, MARGIN = 2, FUN = f)  > 1) ) break
+                                                if ( all(apply(X = boot.data, MARGIN = 2, FUN = f)  > 1) ) break
                                               }
 
                                               # obtain multiplers
@@ -96,8 +97,8 @@ boot.ci.glm <- function(model.full, model.reduced = NULL, r = 1000, robust.var =
                                               if (multi == "normal") w <- rnorm(n)
 
                                               # calculate the bootstrapped outcome values
-                                              ## note: replace the observed y with wild-bootstrapped y (so that I don't need to re-specify the model formula)
-                                              boot.data$y <- predict(model.full, newdata = boot.data, type = "response") + boot.data$resid * w
+                                              ## note: replace the observed outcome with wild-bootstrapped outcome (so that I don't need to re-specify the model formula)
+                                              boot.data[ , all.vars(form.full)[1]] <- predict(model.full, newdata = boot.data, type = "response") + boot.data$resid * w
 
                                               # fit glm on the bootstrapped data
                                               ## full model
