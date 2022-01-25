@@ -7,27 +7,42 @@
 anoes(
   model.full,
   model.reduced = NULL,
-  robust.var = TRUE,
-  boot.type = 1,
-  multi = "none",
+  anova = TRUE,
+  summary = TRUE,
   nboot = 1000,
-  alpha = 0.05
+  vcovfunc = sandwich::vcovHC,
+  multi = "none",
+  boot.type = 1,
+  alpha = 0.05,
+  correct = FALSE,
+  num.cores = 1,
+  ...
 )
 }
 \arguments{
-\item{model.full}{model formula for full model. `glm` object}
+\item{model.full}{the full model. It should be a `glm` object.}
 
-\item{model.reduced}{the reduced model or comparison model. By dafult, `NULL`}
+\item{model.reduced}{the reduced `glm()` model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.}
 
-\item{boot.type}{the type of bootstraps used to construct the CIs for the RESI estimates. By default, along with `multi = "none"`, non-parametric bootstraps will be used.}
+\item{anova}{whether to compute an ANOES table based on the Anova function. By default = `TRUE`}
 
-\item{multi}{default to `"none"`. It indicates the distribution from with the multiplers for the wild bootstrapp will be drawn. `"rad"` = Rademacher distribution and `"normal"` = Std Normal distribution.}
+\item{summary}{whether to produce a summary output with the RESI columns added. By default = `TRUE`}
 
-\item{nboot}{the number of bootstraps that will be implemented to construct the CIs. By default, 1000 bootstraps will be applied.}
+\item{nboot}{numeric, the number of bootstrap replicates. By default, 1000 bootstraps will be implemented.}
 
-\item{alpha}{The significance level of the constructed CI. By default, 0.05.}
+\item{vcovfunc}{the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)}
 
-\item{roubst.var}{logic, indicating whether robust (sandwich) variance estimator should be used in the construction of test statistics. Default to `TRUE` and `sandwich::vcovHC` will be used to estimate HC3.}
+\item{multi}{the distribution from which the multipliers will be drawn: 'none' = the multipliers equal constant 1 (default); 'rad' = rademacher; 'normal' = Std Normal distribution}
+
+\item{boot.type}{which type of bootstrap to use. 1: resampling covariates along with residuals (default); 2: fixing covariates and only bootstrapping residulas; 3: resampling covariates and residuals independently w/ replacements; 4. no sampling, just multipliers}
+
+\item{alpha}{significance level of the constructed CIs. By default, 0.05 will be used0}
+
+\item{correct}{for the linear regression models (i.e., `family = 'gaussian'` in the `glm()` function) whether the residuals with bias correction will be used, by default, FALSE.}
+
+\item{num.cores}{The number of CPU cores to be used for calculating bootstrapped CIs, by default, only 1 core will be used.}
+
+\item{...}{Other arguments to be passed to Anova function}
 }
 \value{
 

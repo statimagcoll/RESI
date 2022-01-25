@@ -37,8 +37,6 @@ boot.ci(
 \item{num.cores}{The number of CPU cores to be used for calculating bootstrapped CIs, by default, only 1 core will be used.}
 
 \item{digits}{the number of decimal digits in the output ANOES table. By default, 3}
-
-\item{sigma2}{the true variance of error under homoskedasticity assumption (added for simulations).}
 }
 \description{
 Function generating CIs for the RESI via various bootstrap methods
