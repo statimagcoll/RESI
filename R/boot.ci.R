@@ -2,6 +2,7 @@
 # Function to construct CI for
 # RESI in generalized linear models
 # obsolete with anoes function
+# need to delete
 ######
 
 #' Function generating CIs for the RESI via various bootstrap methods
