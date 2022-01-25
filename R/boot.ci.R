@@ -1,6 +1,7 @@
 #######
 # Function to construct CI for
 # RESI in generalized linear models
+# obsolete with anoes function
 ######
 
 #' Function generating CIs for the RESI via various bootstrap methods
@@ -9,7 +10,6 @@
 #' @param model.reduced the reduced `glm()` model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param r numeric, the number of boostrap replicates. By default, 1000 bootstraps will be implemented.
 #' @param robust.var default to TRUE, whether to use the robust (sandwich) variance estimator when construct the Wald test statistic. If `TRUE`, the variance of the estimator will be obtained by using `sandwich::vcovHC()`` and the HC3 will be applied.
-#' @param sigma2 the true variance of error under homoskedasticity assumption (added for simulations).
 #' @param multi the distribution from which the multipliers will be drawn: 'none' = the multipliers equal constant 1 (default); 'rad' = rademacher; 'normal' = Std Normal distribution
 #' @param boot.type which type of bootstrap to use. 1: resampling covariates along with residuals (default); 2: fixing covariates and only bootstrapping residulas; 3: resampling covariates and residuals independently w/ replacements; 4. no sampling, just multipliers
 #' @param alpha significance level of the constructed CIs. By default, 0.05 will be used0

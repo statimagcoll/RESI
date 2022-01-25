@@ -18,11 +18,11 @@ Collate:
   'S.R'
   'anoes.R'
 Imports:
-  lmtest,
-  pracma,
-  sandwich,
-  parallel
+    lmtest,
+    pracma,
+    sandwich,
+    parallel,
+    car
 Suggests:
   testthat
-RoxygenNote: 7.1.1
-
+RoxygenNote: 7.1.2
