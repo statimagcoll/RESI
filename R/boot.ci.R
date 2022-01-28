@@ -85,9 +85,15 @@ boot.ci.glm <- function(model.full, model.reduced = NULL, r = 1000, robust.var =
                                                   boot.data = boot.data
                                                 }
 
-                                                # to detect identical value in variables across rows, if yes, skip to next loop
+
+                                                flag = FALSE
                                                 f = function(x) {length(unique(x))}
-                                                if ( all(apply(X = boot.data, MARGIN = 2, FUN = f)  > 1) ) break
+                                                flag = all(apply(X = boot.data, MARGIN = 2, FUN = f)  > 1)
+                                                # to detect identical value in variables across rows
+                                                # to detect whether certain columns are identical
+                                                cols = colnames(temp.data)
+
+                                                if (flag) break
                                               }
 
                                               # obtain multiplers
