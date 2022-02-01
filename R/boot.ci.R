@@ -173,12 +173,13 @@ boot.ci.glm <- function(model.full, model.reduced = NULL, r = 1000, robust.var =
     ## Individual (Wald) test stats
     ## note: the results from car:Anova look wield when using glm()...so I calculate the stats manually
     ind.est <- coef(model.full)[var.names] # coef estiamtes
-    ind.rob.se <- sqrt(diag(as.matrix(vcovfunc(model.full)[var.names, var.names]))) # corresponding robust s.e.
-    ind.stats <- (ind.est/ind.rob.se)^2 # wald test statistics
+    ind.se <- sqrt(diag(as.matrix(vcovfunc(model.full)[var.names, var.names]))) # corresponding robust s.e. or regular s.e.
+    ind.stats <- (ind.est/ind.se)^2 # wald test statistics
     ind.resi.hat <- if(robust.var) {chisq2S(ind.stats, 1, res.df)} else {f2S(ind.stats, 1, res.df)}
     rownames(anoes.tab) = c("Overall", "Residual")
-    anoes.tab = rbind(cbind(ind.est, ind.rob.se, ind.stats, 1, NA, ind.resi.hat, NA, NA), anoes.tab)
+    anoes.tab = rbind(cbind(ind.est, ind.se, ind.stats, 1, NA, ind.resi.hat, NA, NA), anoes.tab)
     colnames(anoes.tab) = c("estimate", "robust s.e.", "Chi-squared", "df", "p-val", "RESI", "LL", "UL")
+    if (!robust.var) {colnames(anoes.tab) = c("estimate", "s.e.", "Chi-squared", "df", "p-val", "RESI", "LL", "UL")}
   }
 
   # calculate p-values form Chi-sq dist
