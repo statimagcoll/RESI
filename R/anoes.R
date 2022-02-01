@@ -17,7 +17,7 @@ anoes <- function(model.full, model.reduced = NULL,
                      boot.type = 1, multi = 'none',
                      nboot = 1000, alpha = 0.05){
 
-  output = boot.ci(model.full = model.full, model.reduced = model.reduced,
+  output = boot.ci.glm(model.full = model.full, model.reduced = model.reduced,
                     robust.var = robust.var,
                     boot.type = boot.type, multi = multi,
                     r = nboot,
