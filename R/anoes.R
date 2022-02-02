@@ -20,6 +20,13 @@
 
 
 anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE, nboot = 1000, vcovfunc = sandwich::vcovHC, multi = 'none', boot.type = 1, alpha = 0.05, correct = FALSE, num.cores = 1, ...){
+  browser()
+  # check to make sure anova or summary is specified
+  if (!anova & !summary){
+    options(warn = 1)
+    warning('no RESI output table (summary or anova) specified')
+  }
+
   # data.frame
   data = model.full$data
   # model forms
@@ -95,9 +102,16 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
 
                                               # fit glm on the bootstrapped data
                                               ## full model
+                                              # boot.model.full <- update(model.full, data = boot.data, family = family)
                                               boot.model.full <- glm(form.full, data = boot.data, family = family)
                                               ## reduced model
-                                              boot.model.reduced <- glm(form.reduced, data = boot.data, family = family)
+
+                                              ## BROKEN, might have to split into if m.r = null and not
+                                              #if (is.null(model.reduced)) {
+                                                boot.model.reduced <- glm(form.reduced, data = boot.data, family = family)
+                                              #}
+                                              #else{
+                                                #boot.model.reduced <- update(model.full, formula = form.reduced, data = boot.data, family = family)}
 
                                               ## Overall (Wald) test stat
                                               wald.test = lmtest::waldtest(boot.model.reduced, boot.model.full, vcov = vcovfunc, test = 'Chisq')
@@ -140,14 +154,9 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
 
 
   # Deriving the point estimates for RESI
-  # fit glm on the data
-  ## full model
-  mod1 <- glm(form.full, data = data, family = family)
-  ## reduced model
-  mod0 <- glm(form.reduced, data = data, family = family)
 
   ## Overall (Wald) test stat
-  wald.test = lmtest::waldtest(mod0, mod1, vcov = vcovfunc, test = 'Chisq')
+  wald.test = lmtest::waldtest(model.full, model.reduced, vcov = vcovfunc, test = 'Chisq')
   stats = wald.test$Chisq[2]
   overall.df = wald.test$Df[2]
   res.df = wald.test$Res.Df[2]
@@ -244,8 +253,7 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
                  multiplier = multi,
                  alpha = alpha,
                  `number of bootstraps` = nboot,
-                 correct = correct,
-                 overall = overall.tab)
+                 correct = correct)
 
   if (summary){
     output$summary = summaryES.tab
@@ -254,6 +262,8 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
   if (anova){
     output$anova = anoes.tab
   }
+
+  class(output) = "anoes"
 
   return(output)
 }
