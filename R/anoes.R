@@ -20,7 +20,6 @@
 
 
 anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE, nboot = 1000, vcovfunc = sandwich::vcovHC, multi = 'none', boot.type = 1, alpha = 0.05, correct = FALSE, num.cores = 1, ...){
-  browser()
   # check to make sure anova or summary is specified
   if (!anova & !summary){
     options(warn = 1)
@@ -29,12 +28,15 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
 
   # data.frame
   data = model.full$data
+
   # model forms
   form.full <- formula(model.full)
   if (is.null(model.reduced)){
     form.reduced = as.formula(paste0(all.vars(form.full)[1], " ~ 1"))
+    mod.reduced <- update(model.full, formula = form.reduced, data = model.full$model)
   } else {
     form.reduced <- formula(model.reduced)
+    mod.reduced <- model.reduced
   }
 
   # glm family
@@ -48,10 +50,8 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
     data$resid = residuals(model.full, type = "response")
   }
 
-  # variable names of interest
-  # var.names = all.vars(form.full)[-1]
+  # variable names
   var.names = names(coef(model.full))
-  var.names = var.names[var.names != "(Intercept)"]
 
   # Bootstraps
   temp <- simplify2array(parallel::mclapply(1:nboot,
@@ -102,16 +102,15 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
 
                                               # fit glm on the bootstrapped data
                                               ## full model
-                                              # boot.model.full <- update(model.full, data = boot.data, family = family)
-                                              boot.model.full <- glm(form.full, data = boot.data, family = family)
+                                              boot.model.full <- update(model.full, data = boot.data, family = family)
                                               ## reduced model
+                                              if (is.null(model.reduced)){
+                                                boot.model.reduced = update(model.full, formula = form.reduced,  data = boot.data)
+                                              }
+                                              else{
+                                                boot.model.reduced = update(mod.reduced,  data = boot.data)
+                                              }
 
-                                              ## BROKEN, might have to split into if m.r = null and not
-                                              #if (is.null(model.reduced)) {
-                                                boot.model.reduced <- glm(form.reduced, data = boot.data, family = family)
-                                              #}
-                                              #else{
-                                                #boot.model.reduced <- update(model.full, formula = form.reduced, data = boot.data, family = family)}
 
                                               ## Overall (Wald) test stat
                                               wald.test = lmtest::waldtest(boot.model.reduced, boot.model.full, vcov = vcovfunc, test = 'Chisq')
@@ -119,8 +118,8 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
                                               names.stats <- "Overall"
                                               names(stats) <- names.stats
 
-                                              # when `model.reduced = NULL` & `summary = TRUE`, output the wald test stat for each effect
-                                              if (is.null(model.reduced) & summary){
+                                              # when `summary = TRUE`, output the wald test stat for each effect
+                                              if (summary){
                                                 ## Individual (Wald) test stats
                                                 ## note: the results from car:Anova look wield when using glm()...so I calculate the stats manually
                                                 ind.stats <- (coef(boot.model.full)[var.names])^2/diag(as.matrix(vcovfunc(boot.model.full)[var.names, var.names]))
@@ -129,11 +128,12 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
                                                 names(stats) <- names.stats
 
                                               }
-                                              # if `anova = TRUE`, calculate Wald test stat for each term
-                                              if (anova){
-                                                suppressMessages(term.stats <- Anova(boot.model.full, test.statistic = 'Wald', vcov. = vcovfunc, ...)[,'Chisq'])
+                                              # if (`model.reduced = NULL`) & `anova = TRUE`, calculate Wald test stat for each term
+                                              if (is.null(model.reduced) & anova){
+                                                suppressMessages(anova.tab <- Anova(boot.model.full, test.statistic = 'Wald', vcov. = vcovfunc, ...))
+                                                term.stats <- anova.tab[,'Chisq']
                                                 stats <- c(stats, term.stats)
-                                                names(stats) <- c(names.stats, attr(model.full$terms,"term.labels"))
+                                                names(stats) <- c(names.stats, rownames(anova.tab))
                                               }
 
                                               stats
@@ -156,7 +156,7 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
   # Deriving the point estimates for RESI
 
   ## Overall (Wald) test stat
-  wald.test = lmtest::waldtest(model.full, model.reduced, vcov = vcovfunc, test = 'Chisq')
+  wald.test = lmtest::waldtest(mod.reduced, model.full, vcov = vcovfunc, test = 'Chisq')
   stats = wald.test$Chisq[2]
   overall.df = wald.test$Df[2]
   res.df = wald.test$Res.Df[2]
@@ -168,15 +168,11 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
   overall.stats = if(all.equal(vcovfunc, sandwich::vcovHC)) {chisq2S(boot.stats[,1], overall.df, res.df)} else {f2S(boot.stats[,1], overall.df, res.df)}
   overall.ci = quantile(overall.stats, probs = c(alpha/2, 1-alpha/2))
 
-  # overall table
-  overall.tab = matrix(data = c(overall.resi.hat, overall.ci), ncol = 3)
-  colnames(overall.tab) = c("Overall RESI", "LL", "UL")
-
 
   # compute ANOVA-style table if `anova = TRUE`
-  if (anova){
+  if (is.null(model.reduced) & anova){
     # set up ANOES tab based on Anova
-    suppressMessages(anoes.tab <- Anova(mod1, test.statistic = 'Wald', vcov. = vcovfunc, ...))
+    suppressMessages(anoes.tab <- Anova(model.full, test.statistic = 'Wald', vcov. = vcovfunc, ...))
 
     terms.resi.hat = chisq2S(anoes.tab[,'Chisq'], anoes.tab[,'Df'], res.df)
     anoes.tab = rbind(cbind(anoes.tab, RESI = terms.resi.hat), Overall = c(overall.df, stats, pchisq(stats, df = overall.df, lower.tail = FALSE), overall.resi.hat))
@@ -195,17 +191,8 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
 
   # compute summaryES table if `summary = TRUE`
   if (summary){
-    summaryES.tab = matrix(rep(NA, 2*6), nrow = 2, ncol = 6)
-    summaryES.tab[1, c(1, 2, 4) ] = c(stats, overall.df, overall.resi.hat)
-    summaryES.tab[2, 2] = res.df
-    rownames(summaryES.tab) = c("Tested", "Residual")
-    colnames(summaryES.tab) = c("Chi-squared", "df", "p-val", "RESI", "LL", "UL")
+      summaryES.tab = matrix(nrow = 0, ncol = 8)
 
-    # when `model.reduced = NULL`, output the wald test stat for each effect
-    if (is.null(model.reduced)){
-      # changed from anoes.tab to summaryES.tab
-      summaryES.tab = matrix(rep(NA, 1*8), nrow = 1, ncol = 8)
-      summaryES.tab[1, c(3, 4, 6) ] = c(stats, overall.df, overall.resi.hat)
       ## Individual (Wald) test stats
       ## note: the results from car:Anova look wield when using glm()...so I calculate the stats manually
       ind.est <- coef(model.full)[var.names] # coef estiamtes
@@ -214,35 +201,33 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
       ind.resi.hat <- if(all.equal(vcovfunc, sandwich::vcovHC)) {chisq2S(ind.stats, 1, res.df)} else {f2S(ind.stats, 1, res.df)}
 
       summaryES.tab = rbind(cbind(ind.est, ind.rob.se,ind.stats, 1, NA, ind.resi.hat, NA, NA), summaryES.tab)
-      rownames(summaryES.tab) = c(var.names, "Overall")
+      rownames(summaryES.tab) = c(var.names)
       colnames(summaryES.tab) = c("estimate", "robust s.e.", "Chi-squared", "df", "p-val", "RESI", "LL", "UL")
-    }
+      if (is.null(model.reduced)){
+        summaryES.tab = rbind(summaryES.tab, c(NA, NA, stats, overall.df, NA, overall.resi.hat, overall.ci))
+        rownames(summaryES.tab) = c(var.names, "Overall")
+      }
 
-    # calculate p-values form Chi-sq dist
+      # Deriving the bootstrap CI for the RESI
+      if (ncol(boot.stats) > (1 + length(var.names))){
+        boot.S <- boot.stats[, 2:(ncol(boot.stats) - nrow(anoes.tab) + 1)]
+        ## converting statistics to RESI
+        for (i in 1:ncol(boot.S)) {
+          boot.S[, i] <- if(all.equal(vcovfunc, sandwich::vcovHC)) {chisq2S(boot.S[, i], 1, res.df)} else {f2S(boot.S[ , i], 1, res.df)}
+        } # end of loop `i`
+        CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
+      }
+      else{
+        boot.S <- boot.stats[, 2:ncol(boot.stats)] # define boot.S which has the same frame as `boot.stats`
+        ## converting statistics to RESI
+        for (i in 1:ncol(boot.S)) {
+          boot.S[, i] <- if(all.equal(vcovfunc, sandwich::vcovHC)) {chisq2S(boot.S[, i], 1, res.df)} else {f2S(boot.S[ , i], 1, res.df)}
+        } # end of loop `i`
+        CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
+      }
+      CIs = t(CIs)
+      summaryES.tab[rownames(CIs), c("LL", "UL")] = CIs
     summaryES.tab[, 'p-val'] = pchisq(summaryES.tab[, "Chi-squared"], df = summaryES.tab[, "df"], lower.tail = FALSE)
-
-    # Deriving the bootstrap CI for the RESI
-    if (anova){
-      boot.S <- boot.stats[, 2:(ncol(boot.stats) - nrow(anoes.tab) + 1)]
-      ## converting statistics to RESI
-      for (i in 1:ncol(boot.S)) {
-        boot.S[, i] <- if(all.equal(vcovfunc, sandwich::vcovHC)) {chisq2S(boot.S[, i], 1, res.df)} else {f2S(boot.S[ , i], 1, res.df)}
-      } # end of loop `i`
-      CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
-    }
-    else{
-      boot.S <- boot.stats[, 2:ncol(boot.stats)] # define boot.S which has the same frame as `boot.stats`
-      ## converting statistics to RESI
-      for (i in 1:ncol(boot.S)) {
-        boot.S[, i] <- if(all.equal(vcovfunc, sandwich::vcovHC)) {chisq2S(boot.S[, i], 1, res.df)} else {f2S(boot.S[ , i], 1, res.df)}
-      } # end of loop `i`
-      CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
-    }
-
-    CIs = t(CIs)
-    if (nrow(CIs) == 1) rownames(CIs) = "Tested"
-    summaryES.tab[rownames(CIs), c("LL", "UL")] = CIs
-    summaryES.tab['Overall', c("LL", "UL")] = overall.ci
   }
 
 
@@ -259,8 +244,13 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
     output$summary = summaryES.tab
   }
 
-  if (anova){
+  if (is.null(model.reduced) & anova){
     output$anova = anoes.tab
+  }
+
+  if (!is.null(model.reduced)){
+    wald.test[2, c("RESI", "LL", "UL")] = c(overall.resi.hat, overall.ci)
+    output$waldtest = wald.test
   }
 
   class(output) = "anoes"
