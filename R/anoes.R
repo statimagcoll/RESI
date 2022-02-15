@@ -1,6 +1,7 @@
 #' Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for (generalized) linear regression models
 #' @param model.full the full model. It should be a `glm` object.
 #' @param model.reduced the reduced `glm()` model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
+#' @param data optional data frame or object coercible to data frame of model.full data (required for linear models with splines)
 #' @param anova whether to compute an ANOES table based on the Anova function. By default = `TRUE`
 #' @param summary whether to produce a summary output with the RESI columns added. By default = `TRUE`
 #' @param nboot numeric, the number of bootstrap replicates. By default, 1000 bootstraps will be implemented.
@@ -19,15 +20,25 @@
 #' @return
 
 
-anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE, nboot = 1000, vcovfunc = sandwich::vcovHC, multi = 'none', boot.type = 1, alpha = 0.05, correct = FALSE, num.cores = 1, ...){
+anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE, nboot = 1000, vcovfunc = sandwich::vcovHC, multi = 'none', boot.type = 1, alpha = 0.05, correct = FALSE, num.cores = 1, ...){
+  #browser()
+  options(warn = 1)
+
   # check to make sure anova or summary is specified
   if (!anova & !summary){
-    options(warn = 1)
     warning('no RESI output table (summary or anova) specified')
   }
 
   # data.frame
-  data = model.full$data
+  if (missing(data)){
+    if (class(model.full)[1] == 'glm'){
+      data = model.full$data
+    }
+    else{
+      data = model.full$model
+    }
+  }
+
 
   # model forms
   form.full <- formula(model.full)
@@ -102,7 +113,7 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
 
                                               # fit glm on the bootstrapped data
                                               ## full model
-                                              boot.model.full <- update(model.full, data = boot.data, family = family)
+                                              boot.model.full <- update(model.full, data = boot.data)
                                               ## reduced model
                                               if (is.null(model.reduced)){
                                                 boot.model.reduced = update(model.full, formula = form.reduced,  data = boot.data)
@@ -130,8 +141,15 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
                                               }
                                               # if (`model.reduced = NULL`) & `anova = TRUE`, calculate Wald test stat for each term
                                               if (is.null(model.reduced) & anova){
-                                                suppressMessages(anova.tab <- Anova(boot.model.full, test.statistic = 'Wald', vcov. = vcovfunc, ...))
-                                                term.stats <- anova.tab[,'Chisq']
+                                                if (class(model.full)[1] == 'lm'){
+                                                  suppressMessages(anova.tab <- Anova(boot.model.full, vcov. = vcovfunc, ...))
+                                                  term.stats <- anova.tab[,'F']
+                                                }
+                                                else{
+                                                  suppressMessages(anova.tab <- Anova(boot.model.full, test.statistic = 'Wald', vcov. = vcovfunc, ...))
+                                                  term.stats <- anova.tab[,'Chisq']
+                                                }
+
                                                 stats <- c(stats, term.stats)
                                                 names(stats) <- c(names.stats, rownames(anova.tab))
                                               }
@@ -172,9 +190,15 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
   # compute ANOVA-style table if `anova = TRUE`
   if (is.null(model.reduced) & anova){
     # set up ANOES tab based on Anova
-    suppressMessages(anoes.tab <- Anova(model.full, test.statistic = 'Wald', vcov. = vcovfunc, ...))
+    if (class(model.full)[1] == 'lm'){
+      suppressMessages(anoes.tab <- Anova(model.full, vcov. = vcovfunc, ...))
+      terms.resi.hat = chisq2S(anoes.tab[,'F'], anoes.tab[,'Df'], res.df)
+    }
+    else{
+      suppressMessages(anoes.tab <- Anova(model.full, test.statistic = 'Wald', vcov. = vcovfunc, ...))
+      terms.resi.hat = chisq2S(anoes.tab[,'Chisq'], anoes.tab[,'Df'], res.df)
+    }
 
-    terms.resi.hat = chisq2S(anoes.tab[,'Chisq'], anoes.tab[,'Df'], res.df)
     anoes.tab = rbind(cbind(anoes.tab, RESI = terms.resi.hat), Overall = c(overall.df, stats, pchisq(stats, df = overall.df, lower.tail = FALSE), overall.resi.hat))
 
     boot.S <- boot.stats[,c(((ncol(boot.stats) - nrow(anoes.tab) + 2):ncol(boot.stats)))]
@@ -183,7 +207,7 @@ anoes <- function(model.full, model.reduced = NULL, anova = TRUE, summary = TRUE
       boot.S[, i] <- if(all.equal(vcovfunc, sandwich::vcovHC)) {chisq2S(boot.S[, i], anoes.tab[i, 'Df'], res.df)} else {f2S(boot.S[ , i], anoes.tab[i, 'Df'], res.df)}
     } # end of loop `i`
 
-    CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
+    CIs = apply(boot.S[,which(colnames(boot.S) != "Residuals")], 2,  quantile, probs = c(alpha/2, 1-alpha/2))
     CIs = t(CIs)
     anoes.tab[rownames(CIs), c("LL", "UL")] = CIs
     anoes.tab['Overall', c("LL", "UL")] = overall.ci
