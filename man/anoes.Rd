@@ -7,6 +7,7 @@
 anoes(
   model.full,
   model.reduced = NULL,
+  data,
   anova = TRUE,
   summary = TRUE,
   nboot = 1000,
@@ -23,6 +24,8 @@ anoes(
 \item{model.full}{the full model. It should be a `glm` object.}
 
 \item{model.reduced}{the reduced `glm()` model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.}
+
+\item{data}{optional data frame or object coercible to data frame of model.full data (required for linear models with splines)}
 
 \item{anova}{whether to compute an ANOES table based on the Anova function. By default = `TRUE`}
 

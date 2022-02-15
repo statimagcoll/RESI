@@ -15,7 +15,7 @@
 #' @importFrom car Anova
 #' @importFrom lmtest waldtest
 #' @importFrom sandwich vcovHC
-#' @importFrom stats coef formula glm hatvalues pf predict quantile residuals vcov
+#' @importFrom stats coef formula glm hatvalues pf predict quantile residuals update vcov
 #' @export
 #' @return
 
