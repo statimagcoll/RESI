@@ -180,10 +180,12 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
   res.df = wald.test$Res.Df[2]
 
   # not sure if this works right with other specifications of robust variance.
-  overall.resi.hat = ifelse(isTRUE(all.equal(vcovfunc, sandwich::vcovHC)), chisq2S(stats, overall.df, res.df), f2S(stats, overall.df, res.df))
+  # overall.resi.hat = ifelse(isTRUE(all.equal(vcovfunc, sandwich::vcovHC)), chisq2S(stats, overall.df, res.df), f2S(stats, overall.df, res.df))
+  overall.resi.hat = chisq2S(stats, overall.df, res.df)
 
   # overall RESI CI
-  overall.stats = if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))) {chisq2S(boot.stats[,1], overall.df, res.df)} else {f2S(boot.stats[,1], overall.df, res.df)}
+  # overall.stats = if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))) {chisq2S(boot.stats[,1], overall.df, res.df)} else {f2S(boot.stats[,1], overall.df, res.df)}
+  overall.stats = chisq2S(boot.stats[,1], overall.df, res.df)
   overall.ci = quantile(overall.stats, probs = c(alpha/2, 1-alpha/2))
 
 
@@ -192,20 +194,23 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
     # set up ANOES tab based on Anova
     if (class(model.full)[1] == 'lm'){
       suppressMessages(anoes.tab <- Anova(model.full, vcov. = vcovfunc, ...))
-      terms.resi.hat = chisq2S(anoes.tab[,'F'], anoes.tab[,'Df'], res.df)
+      terms.resi.hat = f2S(anoes.tab[,'F'], anoes.tab[,'Df'], res.df)
+      ## converting statistics to RESI
+      boot.S <- boot.stats[,c(((ncol(boot.stats) - nrow(anoes.tab) + 1):ncol(boot.stats)))]
+      for (i in 1:ncol(boot.S)) {
+        boot.S[, i] <- f2S(boot.S[ , i], anoes.tab[i, 'Df'], res.df)
+      } # end of loop `i`
     }
     else{
       suppressMessages(anoes.tab <- Anova(model.full, test.statistic = 'Wald', vcov. = vcovfunc, ...))
       terms.resi.hat = chisq2S(anoes.tab[,'Chisq'], anoes.tab[,'Df'], res.df)
+      boot.S <- boot.stats[,c(((ncol(boot.stats) - nrow(anoes.tab) + 1):ncol(boot.stats)))]
+      for (i in 1:ncol(boot.S)) {
+        boot.S[, i] <- chisq2S(boot.S[ , i], anoes.tab[i, 'Df'], res.df)
+      } # end of loop `i`
     }
 
     anoes.tab = rbind(cbind(anoes.tab, RESI = terms.resi.hat), Overall = c(overall.df, stats, pchisq(stats, df = overall.df, lower.tail = FALSE), overall.resi.hat))
-
-    boot.S <- boot.stats[,c(((ncol(boot.stats) - nrow(anoes.tab) + 2):ncol(boot.stats)))]
-    ## converting statistics to RESI
-    for (i in 1:ncol(boot.S)) {
-      boot.S[, i] <- if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))) {chisq2S(boot.S[, i], anoes.tab[i, 'Df'], res.df)} else {f2S(boot.S[ , i], anoes.tab[i, 'Df'], res.df)}
-    } # end of loop `i`
 
     CIs = apply(boot.S[,which(colnames(boot.S) != "Residuals")], 2,  quantile, probs = c(alpha/2, 1-alpha/2))
     CIs = t(CIs)
@@ -220,11 +225,12 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
       ## Individual (Wald) test stats
       ## note: the results from car:Anova look wield when using glm()...so I calculate the stats manually
       ind.est <- coef(model.full)[var.names] # coef estiamtes
-      ind.rob.se <- sqrt(diag(as.matrix(vcovfunc(model.full)[var.names, var.names]))) # corresponding robust s.e.
-      ind.stats <- (ind.est/ind.rob.se)^2 # wald test statistics
-      ind.resi.hat <- if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))) {chisq2S(ind.stats, 1, res.df)} else {f2S(ind.stats, 1, res.df)}
+      ind.se <- sqrt(diag(as.matrix(vcovfunc(model.full)[var.names, var.names]))) # corresponding (robust) s.e.
+      ind.stats <- (ind.est/ind.se)^2 # wald test statistics
+      #ind.resi.hat <- if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))) {chisq2S(ind.stats, 1, res.df)} else {f2S(ind.stats, 1, res.df)}
+      ind.resi.hat <- chisq2S(ind.stats, 1, res.df)
 
-      summaryES.tab = rbind(cbind(ind.est, ind.rob.se,ind.stats, 1, NA, ind.resi.hat, NA, NA), summaryES.tab)
+      summaryES.tab = rbind(cbind(ind.est, ind.se,ind.stats, 1, NA, ind.resi.hat, NA, NA), summaryES.tab)
       rownames(summaryES.tab) = c(var.names)
       colnames(summaryES.tab) = c("estimate", "robust s.e.", "Chi-squared", "df", "p-val", "RESI", "LL", "UL")
       if (is.null(model.reduced)){
@@ -237,7 +243,8 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
         boot.S <- boot.stats[, 2:(ncol(boot.stats) - nrow(anoes.tab) + 1)]
         ## converting statistics to RESI
         for (i in 1:ncol(boot.S)) {
-          boot.S[, i] <- if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))){chisq2S(boot.S[, i], 1, res.df)} else {f2S(boot.S[ , i], 1, res.df)}
+          #boot.S[, i] <- if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))){chisq2S(boot.S[, i], 1, res.df)} else {f2S(boot.S[ , i], 1, res.df)}
+          boot.S[,i] <- chisq2S(boot.S[, i], 1, res.df)
         } # end of loop `i`
         CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
       }
@@ -245,7 +252,8 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
         boot.S <- boot.stats[, 2:ncol(boot.stats)] # define boot.S which has the same frame as `boot.stats`
         ## converting statistics to RESI
         for (i in 1:ncol(boot.S)) {
-          boot.S[, i] <- if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))) {chisq2S(boot.S[, i], 1, res.df)} else {f2S(boot.S[ , i], 1, res.df)}
+          #boot.S[, i] <- if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))) {chisq2S(boot.S[, i], 1, res.df)} else {f2S(boot.S[ , i], 1, res.df)}
+          boot.S[,i] <- chisq2S(boot.S[, i], 1, res.df)
         } # end of loop `i`
         CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
       }
