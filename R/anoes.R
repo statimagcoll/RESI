@@ -98,7 +98,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
                                                 }
                                                 # to detect whether the re-sample covariates have constant value, if yes, skip to next loop
                                                 f = function(x) {length(unique(x))}
-                                                if (all(apply(X = boot.data, MARGIN = 2, FUN = f)  > 1) ) break
+                                                if (any(apply(X = boot.data, MARGIN = 2, FUN = f)  > 1) ) break
                                               }
 
                                               # obtain multiplers
@@ -220,45 +220,45 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
 
   # compute summaryES table if `summary = TRUE`
   if (summary){
-      summaryES.tab = matrix(nrow = 0, ncol = 8)
+    summaryES.tab = matrix(nrow = 0, ncol = 8)
 
-      ## Individual (Wald) test stats
-      ## note: the results from car:Anova look wield when using glm()...so I calculate the stats manually
-      ind.est <- coef(model.full)[var.names] # coef estiamtes
-      ind.se <- sqrt(diag(as.matrix(vcovfunc(model.full)[var.names, var.names]))) # corresponding (robust) s.e.
-      ind.stats <- (ind.est/ind.se)^2 # wald test statistics
-      #ind.resi.hat <- if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))) {chisq2S(ind.stats, 1, res.df)} else {f2S(ind.stats, 1, res.df)}
-      ind.resi.hat <- chisq2S(ind.stats, 1, res.df)
+    ## Individual (Wald) test stats
+    ## note: the results from car:Anova look wield when using glm()...so I calculate the stats manually
+    ind.est <- coef(model.full)[var.names] # coef estiamtes
+    ind.se <- sqrt(diag(as.matrix(vcovfunc(model.full)[var.names, var.names]))) # corresponding (robust) s.e.
+    ind.stats <- (ind.est/ind.se)^2 # wald test statistics
+    #ind.resi.hat <- if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))) {chisq2S(ind.stats, 1, res.df)} else {f2S(ind.stats, 1, res.df)}
+    ind.resi.hat <- chisq2S(ind.stats, 1, res.df)
 
-      summaryES.tab = rbind(cbind(ind.est, ind.se,ind.stats, 1, NA, ind.resi.hat, NA, NA), summaryES.tab)
-      rownames(summaryES.tab) = c(var.names)
-      colnames(summaryES.tab) = c("estimate", "robust s.e.", "Chi-squared", "df", "p-val", "RESI", "LL", "UL")
-      if (is.null(model.reduced)){
-        summaryES.tab = rbind(summaryES.tab, c(NA, NA, stats, overall.df, NA, overall.resi.hat, overall.ci))
-        rownames(summaryES.tab) = c(var.names, "Overall")
-      }
+    summaryES.tab = rbind(cbind(ind.est, ind.se,ind.stats, 1, NA, ind.resi.hat, NA, NA), summaryES.tab)
+    rownames(summaryES.tab) = c(var.names)
+    colnames(summaryES.tab) = c("estimate", "robust s.e.", "Chi-squared", "df", "p-val", "RESI", "LL", "UL")
+    if (is.null(model.reduced)){
+      summaryES.tab = rbind(summaryES.tab, c(NA, NA, stats, overall.df, NA, overall.resi.hat, overall.ci))
+      rownames(summaryES.tab) = c(var.names, "Overall")
+    }
 
-      # Deriving the bootstrap CI for the RESI
-      if (ncol(boot.stats) > (1 + length(var.names))){
-        boot.S <- boot.stats[, 2:(ncol(boot.stats) - nrow(anoes.tab) + 1)]
-        ## converting statistics to RESI
-        for (i in 1:ncol(boot.S)) {
-          #boot.S[, i] <- if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))){chisq2S(boot.S[, i], 1, res.df)} else {f2S(boot.S[ , i], 1, res.df)}
-          boot.S[,i] <- chisq2S(boot.S[, i], 1, res.df)
-        } # end of loop `i`
-        CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
-      }
-      else{
-        boot.S <- boot.stats[, 2:ncol(boot.stats)] # define boot.S which has the same frame as `boot.stats`
-        ## converting statistics to RESI
-        for (i in 1:ncol(boot.S)) {
-          #boot.S[, i] <- if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))) {chisq2S(boot.S[, i], 1, res.df)} else {f2S(boot.S[ , i], 1, res.df)}
-          boot.S[,i] <- chisq2S(boot.S[, i], 1, res.df)
-        } # end of loop `i`
-        CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
-      }
-      CIs = t(CIs)
-      summaryES.tab[rownames(CIs), c("LL", "UL")] = CIs
+    # Deriving the bootstrap CI for the RESI
+    if (ncol(boot.stats) > (1 + length(var.names))){
+      boot.S <- boot.stats[, 2:(ncol(boot.stats) - nrow(anoes.tab) + 1)]
+      ## converting statistics to RESI
+      for (i in 1:ncol(boot.S)) {
+        #boot.S[, i] <- if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))){chisq2S(boot.S[, i], 1, res.df)} else {f2S(boot.S[ , i], 1, res.df)}
+        boot.S[,i] <- chisq2S(boot.S[, i], 1, res.df)
+      } # end of loop `i`
+      CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
+    }
+    else{
+      boot.S <- boot.stats[, 2:ncol(boot.stats)] # define boot.S which has the same frame as `boot.stats`
+      ## converting statistics to RESI
+      for (i in 1:ncol(boot.S)) {
+        #boot.S[, i] <- if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))) {chisq2S(boot.S[, i], 1, res.df)} else {f2S(boot.S[ , i], 1, res.df)}
+        boot.S[,i] <- chisq2S(boot.S[, i], 1, res.df)
+      } # end of loop `i`
+      CIs = apply(boot.S, 2,  quantile, probs = c(alpha/2, 1-alpha/2))
+    }
+    CIs = t(CIs)
+    summaryES.tab[rownames(CIs), c("LL", "UL")] = CIs
     summaryES.tab[, 'p-val'] = pchisq(summaryES.tab[, "Chi-squared"], df = summaryES.tab[, "df"], lower.tail = FALSE)
   }
 
