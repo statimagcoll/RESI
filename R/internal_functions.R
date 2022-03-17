@@ -26,8 +26,4 @@ boot.samp <- function(data, id.var = NULL) {
   }
   return(boot.data)
 }
-tmp = boot.samp(test_data,  id.var = "id")
 
-
-test_data[, "111"]
-which(1 == data[, id.var])
