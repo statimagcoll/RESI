@@ -2,14 +2,16 @@
 #'
 #' This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
 #' Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
+#' For mixed effects models, RESI is conditional on the average correlation
+#' structure within subjects.
 #' @param chisq The chi-square statistic for the parameter of interest.
 #' @param df Number of degrees of freedom of the chi-square statistic.
-#' @param rdf Model residual degrees of freedom or number of independent samples.
+#' @param n Number of independent samples.
 #' @keywords power
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
 #' @export
-chisq2S = function(chisq, df, rdf){
-  S = (chisq - df)/rdf
+chisq2S = function(chisq, df, n){
+  S = (chisq - df)/n
   sqrt(ifelse(S<0, 0, S))
 }
 

@@ -16,6 +16,7 @@ Collate:
   'ncf.R'
   'resi.R'
   'S.R'
+  'summary.anoes.R'
   'anoes.R'
 Imports:
     lmtest,

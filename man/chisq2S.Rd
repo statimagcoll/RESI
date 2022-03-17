@@ -4,14 +4,14 @@
 \alias{chisq2S}
 \title{Compute the robust effect size index estimator from chi-squared statistic}
 \usage{
-chisq2S(chisq, df, rdf)
+chisq2S(chisq, df, n)
 }
 \arguments{
 \item{chisq}{The chi-square statistic for the parameter of interest.}
 
 \item{df}{Number of degrees of freedom of the chi-square statistic.}
 
-\item{rdf}{Model residual degrees of freedom or number of independent samples.}
+\item{n}{Number of independent samples.}
 }
 \value{
 Returns a scalar or vector argument of the the robust effect size index estimate.
@@ -19,5 +19,7 @@ Returns a scalar or vector argument of the the robust effect size index estimate
 \description{
 This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
 Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
+For mixed effects models, RESI is conditional on the average correlation
+structure within subjects.
 }
 \keyword{power}
