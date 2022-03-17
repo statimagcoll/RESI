@@ -17,11 +17,16 @@ Collate:
   'ncf.R'
   'resi.R'
   'S.R'
+  'ess.R'
+  'internal_functions.R'
+  'simulation.R'
 Imports:
   lmtest,
   pracma,
   sandwich,
   parallel
+  clubSandwich
+  mvtnorm
 Suggests:
   testthat
 RoxygenNote: 7.1.1
