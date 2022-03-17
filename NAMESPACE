@@ -25,7 +25,6 @@ export(boot.samp)
 export(chisq2Ssq)
 export(ARMtx)
 export(sim_data_cont)
-
 importFrom(lmtest,coeftest)
 importFrom(lmtest,waldtest)
 importFrom(pracma,sqrtm)

@@ -55,17 +55,17 @@ sim_data_cont = function(N, beta, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e,
                    rho.G*sigma.t*sigma0, sigma.t^2), 2, 2)
 
   # generate random effects
-  gamma = rmvnorm(N, c(0, 0), sigma = G_mat)
+  gamma = mvtnorm::rmvnorm(N, c(0, 0), sigma = G_mat)
   gamma_0 = rep(gamma[, 1], times = ni)
   gamma_t = rep(gamma[, 2], times = ni)
 
   # measurement errors
   if (length(ni_range) == 1 | ni_range[1] == ni_range[2]) { # if balanced design
     t = 0:(max(ni_range)-1)
-    e =  sigma.e * rmvnorm(N, rep(0, length(t)), sigma = ARMtx(t, rho.e))
+    e =  sigma.e * mvtnorm::rmvnorm(N, rep(0, length(t)), sigma = ARMtx(t, rho.e))
   } else { # if unbalanced
     set.seed(111)
-    e =  sigma.e * c(unlist(sapply(time_list, function(x) rmvnorm(1, rep(0, length(x)), sigma = ARMtx(x, rho.e))) ))
+    e =  sigma.e * c(unlist(sapply(time_list, function(x) mvtnorm::rmvnorm(1, rep(0, length(x)), sigma = ARMtx(x, rho.e))) ))
   }
 
   # outcomes
