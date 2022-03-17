@@ -42,7 +42,7 @@ f2S = function(f, df, rdf){
 #' The default is set to a natural value 1/2, which corresponds to a case control design, for example, where sampling proportions always are controlled by the experimenter.
 #' @export
 S2d = function(S, pi=0.5){
-  S / sqrt(1/pi + 1/(1-pi) )
+  S * sqrt(1/pi + 1/(1-pi) )
 }
 
 
