@@ -24,8 +24,8 @@ Imports:
   lmtest,
   pracma,
   sandwich,
-  parallel
-  clubSandwich
+  parallel,
+  clubSandwich,
   mvtnorm
 Suggests:
   testthat
