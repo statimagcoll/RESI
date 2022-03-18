@@ -57,7 +57,8 @@ ess.lme <- function(obj, total = TRUE){
   tot_obs = nrow(data)
   w = RESI.sq.ori/RESI.sq.ind
   ess = tot_obs * w
-
+  ess = cbind(tot_obs, w, ess)
+  colnames(ess) = c("Total obs", "weight", "ESS")
   return(ess)
 }
 
@@ -113,6 +114,8 @@ ess.geeglm <- function(obj, total = TRUE){
   tot_obs = nobs(obj)
   w = RESI.sq.ori/RESI.sq.ind
   ess = tot_obs * w
+  ess = cbind(tot_obs, w, ess)
+  colnames(ess) = c("Total obs", "weight", "ESS")
   return(ess)
 }
 
