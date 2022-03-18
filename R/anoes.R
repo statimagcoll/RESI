@@ -10,7 +10,6 @@
 #' @importFrom stats coefficients hatvalues pf quantile residuals update
 #' @return
 #' @export
-
 # anoes <- function(model.full, model.reduced = NULL,
 #                      robust.var = TRUE,
 #                      boot.type = 1, multi = 'none',
@@ -25,7 +24,6 @@
 #   return(output)
 # }
 #
-
 anoes <- function(x, ...){
   UseMethod("anoes")
 }

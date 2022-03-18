@@ -4,7 +4,6 @@
 #' based on linear mixed-effects model.
 #'
 #' Function for the correlation structure for the errors within a subject
-#' @export
 #' @param rho.e the correlation between two errors
 #' @param time the values of time variables for a subject
 ARMtx <- function(time, rho.e){
@@ -18,7 +17,6 @@ ARMtx <- function(time, rho.e){
 }
 
 #' Function for simulating continuous outcomes
-#' @export
 #' @param N total sample size (i.e., num of subjects)
 #' @param beta = fixed effects
 #' @param pi = proportion or probability of being assigned to trt group
