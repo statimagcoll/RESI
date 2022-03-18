@@ -2,9 +2,10 @@
 % Please edit documentation in R/resi.R
 \name{resi.lm}
 \alias{resi.lm}
-\title{Robust effect size add-on for lm objects}
+\title{Robust effect size add-on for lm
+Effect size summary that can compliment your summary output. All conversions are based on the robust effect size index estimator.}
 \usage{
-resi.lm(object, vcov. = sandwich::vcovHC, ...)
+\method{resi}{lm}(object, vcov. = sandwich::vcovHC, ...)
 }
 \arguments{
 \item{object}{The model object.}
@@ -17,6 +18,7 @@ resi.lm(object, vcov. = sandwich::vcovHC, ...)
 Returns a summary of tests and the robust effect size index for linear models.
 }
 \description{
+Robust effect size add-on for lm
 Effect size summary that can compliment your summary output. All conversions are based on the robust effect size index estimator.
 }
 \details{

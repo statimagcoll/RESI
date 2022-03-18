@@ -4,7 +4,7 @@
 \alias{resi.waldtest}
 \title{Robust effect size add-on for Wald tests and anova}
 \usage{
-resi.waldtest(object, ..., vcov. = sandwich::vcovHC)
+\method{resi}{waldtest}(object, ..., vcov. = sandwich::vcovHC)
 }
 \arguments{
 \item{object}{The model object.}

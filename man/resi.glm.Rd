@@ -4,7 +4,7 @@
 \alias{resi.glm}
 \title{Robust effect size add-on for glm}
 \usage{
-resi.glm(object, vcov. = sandwich::vcovHC, ...)
+\method{resi}{glm}(object, vcov. = sandwich::vcovHC, ...)
 }
 \arguments{
 \item{object}{The model object.}
