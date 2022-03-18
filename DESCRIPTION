@@ -10,7 +10,7 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Collate: 
-  'anoes.R'
+  'internal_functions.R'
   'boot.ci.R'
   'esSim.R'
   'nccd.R'
@@ -18,7 +18,7 @@ Collate:
   'resi.R'
   'S.R'
   'ess.R'
-  'internal_functions.R'
+  'anoes.R'
   'simulation.R'
 Imports:
   lmtest,
