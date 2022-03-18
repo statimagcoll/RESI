@@ -11,7 +11,7 @@ UseMethod("ess")
 #' @param constr matrix. The linear constraint used to form an hypothesis regading which the RESI is built. For example, for parameters `beta`, `constr = diag(c(1, 1, 1))` means testing `constr %*% beta = 0`
 #' By default, `constr = NULL` where the ESS for each of the parameters will be computed.
 #' @export
-ess.lme <- function(obj, constr = NULL){
+ess.lme <- function(obj, total = TRUE){
   # dataset
   data = obj$data
   # sample size
