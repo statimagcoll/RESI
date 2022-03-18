@@ -110,7 +110,7 @@ ess.geeglm <- function(obj, total = TRUE){
 
   # 3. EFFECTIVE SAMPLE SIZE (ESS)
   ## total num of observations
-  tot_obs = nrow(data)
+  tot_obs = nobs(obj)
   w = RESI.sq.ori/RESI.sq.ind
   ess = tot_obs * w
   return(ess)
