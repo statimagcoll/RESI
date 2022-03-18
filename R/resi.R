@@ -62,7 +62,7 @@ resi.waldtest = function(object, ..., vcov.=sandwich::vcovHC){
 #' @return returns the ANOVA-type summary table with RESI estimate for each factor
 #' @export
 resi.geeglm <- function(object, ...){
-  x = summary(object)$coefficients
+  x = as.matrix(summary(object)$coefficients)
   #sample size
   N = length(summary(object)$clusz)
   output = cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], 1, N))
