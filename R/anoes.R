@@ -25,6 +25,7 @@ anoes <- function(x, ...){
 #' @param object the model object
 #' @param alpha numeric, the type I error rate based on which CIs were constructed. By default, 0.05.
 #' @param nboot numeric, the number of bootstraps used to construct CIs. By default, 1000.
+#' @export
 #' @return An ANOVA-type model summary output with RESI estimates and CIs added.
 anoes.geeglm <- function(object, alpha = 0.05, nboot = 1000){
   output = resi.geeglm(object) # RESI point estimates
@@ -51,6 +52,7 @@ anoes.geeglm <- function(object, alpha = 0.05, nboot = 1000){
 #' @param object the model object
 #' @param alpha numeric, the type I error rate based on which CIs were constructed. By default, 0.05.
 #' @param nboot numeric, the number of bootstraps used to construct CIs. By default, 1000.
+#' @export
 #' @return An ANOVA-type model summary output with RESI estimates and CIs added.
 anoes.lme <- function(object, alpha = 0.05, nboot = 1000){
   output = resi.lme(object) # RESI point estimates
