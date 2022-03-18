@@ -70,7 +70,7 @@ resi.geeglm <- function(object, ...){
 }
 
 resi.gee <- function(object, ...){
-  x = summary(object)$coefficients
+  x = as.matrix(summary(object)$coefficients)
   #sample size
   N = length(unique(object$id))
   output = cbind(x, RESI = RESI::chisq2S(x[, 'Robust z']^2, 1, N))
@@ -83,7 +83,7 @@ resi.gee <- function(object, ...){
 #' @return returns the ANOVA-type summary table with RESI estimate for each factor
 #' @export
 resi.lme <- function(object, ...){
-  x = summary(object)$tTable
+  x = as.matrix(summary(object)$tTable)
   #sample size
   N = summary(object)$dims$ngrps[1]
   # robust se
