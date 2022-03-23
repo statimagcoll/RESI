@@ -27,7 +27,7 @@ ARMtx <- function(time, rho.e){
 #' @param sigma.e: SD of errors
 #' @param rho.e: correlation coef of the errors within a subject
 #' @param fixed.design: whether the trt assignment is fixed by design (TRUE) or random. use togther with pi
-
+#' @export
 sim_data_cont = function(N, beta, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rho.e, fixed.design = TRUE){
 
   # number of measurements
