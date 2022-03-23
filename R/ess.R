@@ -27,14 +27,14 @@ ess.lme <- function(obj, total = TRUE){
   cov.beta = clubSandwich::vcovCR(obj, type = "CR3")
   ## wald statistics from the full model
   if (total){
-    chisq = beta^2 / diag(cov.beta)
+    chisq.ori = beta^2 / diag(cov.beta)
     # observed RESI from original model
-    RESI.sq.ori = chisq2Ssq(chisq, 1, N)
+    # RESI.sq.ori = chisq2Ssq(chisq, 1, N)
   } else {
     C = diag(rep(1, length(beta)))
-    chisq = t(C %*% beta) %*% solve(C %*% cov.beta %*% t(C)) %*% (C %*% beta)
+    chisq.ori = t(C %*% beta) %*% solve(C %*% cov.beta %*% t(C)) %*% (C %*% beta)
     # observed RESI from original model
-    RESI.sq.ori = chisq2Ssq(chisq, sum(C), N)
+    # RESI.sq.ori = chisq2Ssq(chisq, sum(C), N)
   }
 
   # 2. RESI (from the independence model)
@@ -42,23 +42,23 @@ ess.lme <- function(obj, total = TRUE){
   beta.ind = coef(mod.ind)
   cov.beta.ind = sandwich::vcovHC(mod.ind)
   if (total){
-    chisq = beta.ind^2 / diag(cov.beta.ind)
+    chisq.ind = beta.ind^2 / diag(cov.beta.ind)
     # observed RESI from original model
-    RESI.sq.ind = chisq2Ssq(chisq, 1, N)
+    # RESI.sq.ind = chisq2Ssq(chisq, 1, N)
   } else {
     C = diag(rep(1, length(beta)))
-    chisq = t(C %*% beta) %*% solve(C %*% cov.beta %*% t(C)) %*% (C %*% beta)
+    chisq.ind = t(C %*% beta) %*% solve(C %*% cov.beta %*% t(C)) %*% (C %*% beta)
     # observed RESI from original model
-    RESI.sq.ind = chisq2Ssq(chisq, sum(C), N)
+    # RESI.sq.ind = chisq2Ssq(chisq, sum(C), N)
   }
 
   # 3. EFFECTIVE SAMPLE SIZE (ESS)
   ## total num of observations
   tot_obs = nrow(data)
-  w = RESI.sq.ori/RESI.sq.ind
+  w = chisq.ori/chisq.ind
   ess = tot_obs * w
-  ess = cbind(tot_obs, w, ess)
-  colnames(ess) = c("Total obs", "weight", "ESS")
+  ess = cbind(tot_obs, chisq.ori, chisq.ind, w, ess)
+  colnames(ess) = c("Total obs", "Original Wald", "Ind Wald", "weight", "ESS")
   return(ess)
 }
 
@@ -83,14 +83,14 @@ ess.geeglm <- function(obj, total = TRUE){
   cov.beta = vcov(obj)
   ## wald statistics from the full model
   if (total){
-    chisq = beta^2 / diag(cov.beta)
+    chisq.ori = beta^2 / diag(cov.beta)
     # observed RESI from original model
-    RESI.sq.ori = chisq2Ssq(chisq, 1, N)
+    # RESI.sq.ori = chisq2Ssq(chisq, 1, N)
   } else {
     C = diag(rep(1, length(beta)))
-    chisq = t(C %*% beta) %*% solve(C %*% cov.beta %*% t(C)) %*% (C %*% beta)
+    chisq.ori = t(C %*% beta) %*% solve(C %*% cov.beta %*% t(C)) %*% (C %*% beta)
     # observed RESI from original model
-    RESI.sq.ori = chisq2Ssq(chisq, sum(C), N)
+    # RESI.sq.ori = chisq2Ssq(chisq, sum(C), N)
   }
 
   # 2. RESI (from independence model)
@@ -101,21 +101,21 @@ ess.geeglm <- function(obj, total = TRUE){
   if (total){
     chisq.ind = beta.ind^2 / diag(cov.beta.ind)
     # observed RESI from independence model
-    RESI.sq.ind = chisq2Ssq(chisq.ind, 1, N)
+    # RESI.sq.ind = chisq2Ssq(chisq.ind, 1, N)
   } else {
     C = diag(rep(1, length(beta.ind)))
     chisq.ind = t(C %*% beta.ind) %*% solve(C %*% cov.beta.ind %*% t(C)) %*% (C %*% beta.ind)
     # observed RESI from independence model
-    RESI.sq.ind = chisq2Ssq(chisq.ind, sum(C), N)
+    # RESI.sq.ind = chisq2Ssq(chisq.ind, sum(C), N)
     }
 
   # 3. EFFECTIVE SAMPLE SIZE (ESS)
   ## total num of observations
   tot_obs = nobs(obj)
-  w = RESI.sq.ori/RESI.sq.ind
+  w = chisq.ori/chisq.ind
   ess = tot_obs * w
-  ess = cbind(tot_obs, w, ess)
-  colnames(ess) = c("Total obs", "weight", "ESS")
+  ess = cbind(tot_obs, chisq.ori, chisq.ind, w, ess)
+  colnames(ess) = c("Total obs", "Original Wald", "Ind Wald", "weight", "ESS")
   return(ess)
 }
 
