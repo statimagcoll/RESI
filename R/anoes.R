@@ -23,7 +23,6 @@
 
 anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE, nboot = 1000, vcovfunc = sandwich::vcovHC, multi = 'none', boot.type = 1, alpha = 0.05, correct = FALSE, num.cores = 1, ...){
   #browser()
-  options(warn = 1)
 
   # check to make sure anova or summary is specified
   if (!anova & !summary){
@@ -31,7 +30,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
   }
 
   # check for Anova method
-  Anova.method = ifelse(paste("Anova", class(model.full)[1], sep = ".") %in% methods(class = class(model.full)), TRUE, FALSE)
+  Anova.method = ifelse(paste("Anova", class(model.full)[1], sep = ".") %in% methods(class = class(model.full)[1]), TRUE, FALSE)
 
   # data.frame
   if (missing(data)){
@@ -47,8 +46,13 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
   # model forms
   form.full <- formula(model.full)
   if (is.null(model.reduced)){
-    form.reduced = as.formula(paste0(all.vars(form.full)[1], " ~ 1"))
-    if (class(model.full) != "nls"){
+    if (class(model.full)[1] != "survreg"){
+      form.reduced = as.formula(paste0(all.vars(form.full)[1], " ~ 1"))
+    }
+    else{
+      form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
+    }
+    if (class(model.full)[1] != "nls"){
       mod.reduced <- update(model.full, formula = form.reduced, data = data)
     }
   } else {
@@ -65,17 +69,22 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
   if (correct == TRUE) {
     data$resid = residuals(model.full, type = "response")/(1-hatvalues(model.full))
   } else {
-    data$resid = residuals(model.full, type = "response")
+    res = residuals(model.full, type = "response")
+    data[names(res), "resid"] = res
   }
 
   # variable names
   var.names = names(coef(model.full))
 
   # default arg for vcovfunc will not work with (all?) nls
-  if (class(model.full) == "nls" & identical(vcovfunc, sandwich::vcovHC)){
+  if (class(model.full)[1] == "nls" & identical(vcovfunc, sandwich::vcovHC)){
     vcovfunc = regtools::nlshc
     message("Default vcov function not applicable for model type, vcovfunc set to regtools::nlshc")
-    vcovset = TRUE
+  }
+
+  if (class(model.full)[1] == "survreg"){
+    # robust option in model setup
+    vcovfunc = vcov
   }
 
   # Bootstraps
@@ -129,6 +138,13 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
                                               ## full model
                                               boot.model.full <- update(model.full, data = boot.data)
 
+                                              vcovmat = vcovfunc(boot.model.full)
+                                              # nls name correction
+                                              if (identical(vcovfunc, nlshc)){
+                                                rownames(vcovmat) = var.names
+                                                colnames(vcovmat) = var.names
+                                              }
+
                                               ## reduced model
                                               if (class(model.full)[1] %in% c("glm", "lm")){
                                                 if (is.null(model.reduced)){
@@ -142,7 +158,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
                                                 stats = wald.test$Chisq[2]
                                               }
                                               else{
-                                                wald.test = wald.test(vcovfunc(boot.model.full), coef(boot.model.full), Terms = 1:length(coef(boot.model.full)))
+                                                wald.test = wald.test(vcovmat[var.names, var.names], coef(boot.model.full), Terms = 1:length(coef(boot.model.full)))
                                                 stats = wald.test$result$chi2["chi2"]
                                               }
                                               names.stats <- "Overall"
@@ -165,11 +181,6 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
                                               if (summary){
                                                 ## Individual (Wald) test stats
                                                 ## note: the results from car:Anova look wield when using glm()...so I calculate the stats manually
-                                                vcovmat = vcovfunc(boot.model.full)
-                                                if (vcovset){
-                                                  rownames(vcovmat) = var.names
-                                                  colnames(vcovmat) = var.names
-                                                }
                                                 ind.stats <- (coef(boot.model.full)[var.names])^2/diag(as.matrix(vcovmat[var.names, var.names]))
                                                 stats <- c(stats, ind.stats)
                                                 names.stats <- c("Overall", var.names)
@@ -196,6 +207,12 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
 
   # Deriving the point estimates for RESI
 
+  vcovmat = vcovfunc(model.full)
+  if (identical(vcovfunc, nlshc)){
+    rownames(vcovmat) = var.names
+    colnames(vcovmat) = var.names
+  }
+
   ## Overall (Wald) test stat (chi-sq)
   if (class(model.full)[1] %in% c("glm", "lm")){
     wald.test = lmtest::waldtest(mod.reduced, model.full, vcov = vcovfunc, test = 'Chisq')
@@ -204,10 +221,10 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
     res.df = wald.test$Res.Df[2]
   }
   else{
-    wald.test = wald.test(vcovfunc(model.full), coef(model.full), Terms = 1:length(coef(model.full)))
+    wald.test = wald.test(vcovmat[var.names, var.names], coef(model.full), Terms = 1:length(coef(model.full)))
     stats = wald.test$result$chi2["chi2"]
     overall.df = wald.test$result$chi2["df"]
-    res.df = nrow(data) - overall.df
+    res.df = nrow(data) - overall.df - 1
   }
   # overall RESI
   overall.resi.hat = chisq2S(stats, overall.df, res.df)
@@ -254,11 +271,6 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
     ## Individual (Wald) test stats
     ## note: the results from car:Anova look wield when using glm()...so I calculate the stats manually
     ind.est <- coef(model.full)[var.names] # coef estiamtes
-    vcovmat = vcovfunc(model.full)
-    if (vcovset){
-      rownames(vcovmat) = var.names
-      colnames(vcovmat) = var.names
-    }
     ind.se <- sqrt(diag(as.matrix(vcovmat)[var.names, var.names])) # corresponding (robust) s.e.
     ind.stats <- (ind.est/ind.se)^2 # wald test statistics
     #ind.resi.hat <- if(isTRUE(all.equal(vcovfunc, sandwich::vcovHC))) {chisq2S(ind.stats, 1, res.df)} else {f2S(ind.stats, 1, res.df)}
@@ -324,3 +336,4 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
 
   return(output)
 }
+
