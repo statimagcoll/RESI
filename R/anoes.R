@@ -20,7 +20,17 @@ anoes <- function(x, ...){
 }
 
 
-#' Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for (generalized) linear regression models\
+#' Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for (generalized) linear regression models
+#' This function estiamtes RESI and it CIs in a fitted glm model object
+#' The CI are calculated via non-parametric bootstraps
+#' @param model.full the full model. It should be a `glm` object.
+#' @param model.reduced the reduced `glm()` model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
+#' @param nboot numeric, the number of bootstrap replicates. By default, 1000 bootstraps will be implemented.
+#' @param robust.var default to TRUE, whether to use the robust (sandwich) variance estimator when construct the Wald test statistic. If `TRUE`, the variance of the estimator will be obtained by using `sandwich::vcovHC()`` and the HC3 will be applied.
+#' @param multi the distribution from which the multipliers will be drawn: 'none' = the multipliers equal constant 1 (default); 'rad' = rademacher; 'normal' = Std Normal distribution
+#' @param boot.type which type of bootstrap to use. 1: resampling covariates along with residuals (default); 2: fixing covariates and only bootstrapping residulas; 3: resampling covariates and residuals independently w/ replacements; 4. no sampling, just multipliers
+#' @param alpha significance level of the constructed CIs. By default, 0.05 will be used0
+#' @param digits the number of decimal digits in the output ANOES table. By default, 3
 #' @export
 anoes.glm <- function(model.full, model.reduced = NULL,
                       robust.var = TRUE,

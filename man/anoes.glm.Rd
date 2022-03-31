@@ -2,7 +2,9 @@
 % Please edit documentation in R/anoes.R
 \name{anoes.glm}
 \alias{anoes.glm}
-\title{}
+\title{Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for (generalized) linear regression models
+This function estiamtes RESI and it CIs in a fitted glm model object
+The CI are calculated via non-parametric bootstraps}
 \usage{
 \method{anoes}{glm}(
   model.full,
@@ -14,6 +16,25 @@
   alpha = 0.05
 )
 }
-\description{
+\arguments{
+\item{model.full}{the full model. It should be a `glm` object.}
 
+\item{model.reduced}{the reduced `glm()` model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.}
+
+\item{robust.var}{default to TRUE, whether to use the robust (sandwich) variance estimator when construct the Wald test statistic. If `TRUE`, the variance of the estimator will be obtained by using `sandwich::vcovHC()`` and the HC3 will be applied.}
+
+\item{boot.type}{which type of bootstrap to use. 1: resampling covariates along with residuals (default); 2: fixing covariates and only bootstrapping residulas; 3: resampling covariates and residuals independently w/ replacements; 4. no sampling, just multipliers}
+
+\item{multi}{the distribution from which the multipliers will be drawn: 'none' = the multipliers equal constant 1 (default); 'rad' = rademacher; 'normal' = Std Normal distribution}
+
+\item{nboot}{numeric, the number of bootstrap replicates. By default, 1000 bootstraps will be implemented.}
+
+\item{alpha}{significance level of the constructed CIs. By default, 0.05 will be used0}
+
+\item{digits}{the number of decimal digits in the output ANOES table. By default, 3}
+}
+\description{
+Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for (generalized) linear regression models
+This function estiamtes RESI and it CIs in a fitted glm model object
+The CI are calculated via non-parametric bootstraps
 }
