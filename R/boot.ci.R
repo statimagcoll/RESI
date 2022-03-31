@@ -17,7 +17,7 @@
 #' @param num.cores The number of CPU cores to be used for calculating bootstrapped CIs, by default, only 1 core will be used.
 #' @param digits the number of decimal digits in the output ANOES table. By default, 3
 
-boot.ci.glm <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRUE, multi = 'none', boot.type = 1, alpha = 0.05, correct = FALSE, num.cores = 1, digits = 3){
+boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRUE, multi = 'none', boot.type = 1, alpha = 0.05, correct = FALSE, num.cores = 1, digits = 3){
 
   # data frame
   data = model.full$model

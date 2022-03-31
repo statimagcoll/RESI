@@ -19,6 +19,22 @@ anoes <- function(x, ...){
   UseMethod("anoes")
 }
 
+
+anoes.glm <- function(model.full, model.reduced = NULL,
+                      robust.var = TRUE,
+                      boot.type = 1, multi = 'none',
+                      nboot = 1000, alpha = 0.05){
+
+   output = boot.ci(model.full = model.full, model.reduced = model.reduced,
+                     robust.var = robust.var,
+                     boot.type = boot.type, multi = multi,
+                     r = nboot,
+                     alpha = alpha)$ANOES
+
+   return(output)
+}
+
+
 #' Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for GEE models
 #' This function will estimate RESI and its CI for each factor in a fitted GEE model object.
 #' The CIs are calculated via non-parametric bootstraps.
