@@ -89,7 +89,7 @@ resi.lme <- function(object, ...){
   # robust se
   robust.var = diag(clubSandwich::vcovCR(object, type = "CR3"))
   robust.se = sqrt(robust.var)
-  output = cbind(x, 'Robust.SE' = robust.se, 'Robust.t' = x[, 'Value']/robust.se, RESI = RESI::chisq2S(x[, 'Value']^2/robust.var, 1, N))
+  output = cbind(x, 'Robust.SE' = robust.se, 'Robust Wald' = (x[, 'Value']^2/robust.var), RESI = RESI::chisq2S(x[, 'Value']^2/robust.var, 1, N))
   return(output)
 }
 
