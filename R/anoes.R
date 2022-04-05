@@ -15,6 +15,7 @@
 #' @importFrom aod wald.test
 #' @importFrom car Anova
 #' @importFrom lmtest waldtest
+#' @importFrom regtools nlshc
 #' @importFrom sandwich vcovHC
 #' @importFrom stats coef formula glm hatvalues pf predict quantile residuals update vcov
 #' @export
@@ -46,7 +47,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
   # model forms
   form.full <- formula(model.full)
   if (is.null(model.reduced)){
-    if (class(model.full)[1] != "survreg"){
+    if (!(class(model.full)[1] %in% c("survreg", "coxph"))){
       form.reduced = as.formula(paste0(all.vars(form.full)[1], " ~ 1"))
     }
     else{
@@ -70,7 +71,13 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
     data$resid = residuals(model.full, type = "response")/(1-hatvalues(model.full))
   } else {
     res = residuals(model.full, type = "response")
-    data[names(res), "resid"] = res
+    # check if can just make this [,'resid'] (thinking about missing data)
+    if (!is.null(names(res))){
+      data[names(res), "resid"] = res
+    }
+    else{
+      data[,"resid"] = res
+    }
   }
 
   # variable names
@@ -133,6 +140,8 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
                                               # calculate the bootstrapped outcome values
                                               ## note: replace the observed y with wild-bootstrapped y (so that I don't need to re-specify the model formula)
                                               boot.data$y <- predict(model.full, newdata = boot.data, type = "response") + boot.data$resid * w
+                                              colnames(boot.data)[colnames(boot.data) == all.vars(form.full)[1]] = "old y"
+                                              colnames(boot.data)[colnames(boot.data) == "y"] = all.vars(form.full)[1]
 
                                               # fit model on the bootstrapped data
                                               ## full model
