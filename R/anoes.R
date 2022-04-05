@@ -67,16 +67,18 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
 
   # residual estimates (corrected or not)
   # I think this correction is for linear models??
-  if (correct == TRUE) {
-    data$resid = residuals(model.full, type = "response")/(1-hatvalues(model.full))
-  } else {
-    res = residuals(model.full, type = "response")
-    # check if can just make this [,'resid'] (thinking about missing data)
-    if (!is.null(names(res))){
-      data[names(res), "resid"] = res
-    }
-    else{
-      data[,"resid"] = res
+  if (class(model.full)[1] != "coxph"){
+    if (correct == TRUE) {
+      data$resid = residuals(model.full, type = "response")/(1-hatvalues(model.full))
+    } else {
+      res = residuals(model.full, type = "response")
+      # check if can just make this [,'resid'] (thinking about missing data)
+      if (!is.null(names(res))){
+        data[names(res), "resid"] = res
+      }
+      else{
+        data[,"resid"] = res
+      }
     }
   }
 
@@ -89,7 +91,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
     message("Default vcov function not applicable for model type, vcovfunc set to regtools::nlshc")
   }
 
-  if (class(model.full)[1] == "survreg"){
+  if (class(model.full)[1] %in% c("survreg", "coxph")){
     # robust option in model setup
     vcovfunc = vcov
   }
@@ -139,9 +141,11 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
 
                                               # calculate the bootstrapped outcome values
                                               ## note: replace the observed y with wild-bootstrapped y (so that I don't need to re-specify the model formula)
-                                              boot.data$y <- predict(model.full, newdata = boot.data, type = "response") + boot.data$resid * w
-                                              colnames(boot.data)[colnames(boot.data) == all.vars(form.full)[1]] = "old y"
-                                              colnames(boot.data)[colnames(boot.data) == "y"] = all.vars(form.full)[1]
+                                              if (class(model.full)[1] != "coxph"){
+                                                boot.data$y <- predict(model.full, newdata = boot.data, type = "response") + boot.data$resid * w
+                                                colnames(boot.data)[colnames(boot.data) == all.vars(form.full)[1]] = "old y"
+                                                colnames(boot.data)[colnames(boot.data) == "y"] = all.vars(form.full)[1]
+                                              }
 
                                               # fit model on the bootstrapped data
                                               ## full model
@@ -287,7 +291,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
 
     summaryES.tab = rbind(cbind(ind.est, ind.se,ind.stats, 1, NA, ind.resi.hat, NA, NA), summaryES.tab)
     rownames(summaryES.tab) = c(var.names)
-    colnames(summaryES.tab) = c("estimate", "robust s.e.", "Chi-squared", "df", "p-val", "RESI", "LL", "UL")
+    colnames(summaryES.tab) = c("estimate", "s.e.", "Chi-squared", "df", "p-val", "RESI", "LL", "UL")
 
     # Deriving the bootstrap CI for the RESI
     if (ncol(boot.stats) > (1 + length(var.names))){
