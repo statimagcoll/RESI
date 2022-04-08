@@ -45,15 +45,16 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
 
 
   # model forms
+  cl <- class(model.full)[1]
   form.full <- formula(model.full)
   if (is.null(model.reduced)){
-    if (!(class(model.full)[1] %in% c("survreg", "coxph"))){
+    if (!(cl %in% c("survreg", "coxph"))){
       form.reduced = as.formula(paste0(all.vars(form.full)[1], " ~ 1"))
     }
     else{
       form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
     }
-    if (class(model.full)[1] != "nls"){
+    if (cl != "nls"){
       mod.reduced <- update(model.full, formula = form.reduced, data = data)
     }
   } else {
@@ -67,7 +68,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
 
   # residual estimates (corrected or not)
   # I think this correction is for linear models??
-  if (class(model.full)[1] != "coxph"){
+  if (cl != "coxph"){
     if (correct == TRUE) {
       data$resid = residuals(model.full, type = "response")/(1-hatvalues(model.full))
     } else {
@@ -86,12 +87,12 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
   var.names = names(coef(model.full))
 
   # default arg for vcovfunc will not work with (all?) nls
-  if (class(model.full)[1] == "nls" & identical(vcovfunc, sandwich::vcovHC)){
+  if (cl == "nls" & identical(vcovfunc, sandwich::vcovHC)){
     vcovfunc = regtools::nlshc
     message("Default vcov function not applicable for model type, vcovfunc set to regtools::nlshc")
   }
 
-  if (class(model.full)[1] %in% c("survreg", "coxph")){
+  if (cl %in% c("survreg", "coxph")){
     # robust option in model setup
     vcovfunc = vcov
   }
@@ -141,7 +142,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
 
                                               # calculate the bootstrapped outcome values
                                               ## note: replace the observed y with wild-bootstrapped y (so that I don't need to re-specify the model formula)
-                                              if (class(model.full)[1] != "coxph"){
+                                              if (cl != "coxph"){
                                                 boot.data[,all.vars(form.full)[1]] <- predict(model.full, newdata = boot.data, type = "response") + boot.data$resid * w
                                                 # colnames(boot.data)[colnames(boot.data) == all.vars(form.full)[1]] = "old y"
                                                 # colnames(boot.data)[colnames(boot.data) == "y"] = all.vars(form.full)[1]
@@ -159,7 +160,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
                                               }
 
                                               ## reduced model
-                                              if (class(model.full)[1] %in% c("glm", "lm")){
+                                              if (cl %in% c("glm", "lm")){
                                                 if (is.null(model.reduced)){
                                                   boot.model.reduced = update(model.full, formula = form.reduced,  data = boot.data)
                                                 }
@@ -181,7 +182,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
                                               anova.tab = NULL
                                               # if (`model.reduced = NULL`) & `anova = TRUE` & there is an Anova method, calculate Wald test stat for each term
                                               if (is.null(model.reduced) & anova & Anova.method){
-                                                if (class(model.full)[1] == 'lm'){
+                                                if (cl == 'lm'){
                                                   suppressMessages(anova.tab <- Anova(boot.model.full, vcov. = vcovfunc, ...))
                                                   term.stats <- anova.tab[,'F']
                                                 }
@@ -227,7 +228,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
   }
 
   ## Overall (Wald) test stat (chi-sq)
-  if (class(model.full)[1] %in% c("glm", "lm")){
+  if (cl %in% c("glm", "lm")){
     wald.test = lmtest::waldtest(mod.reduced, model.full, vcov = vcovfunc, test = 'Chisq')
     stats = wald.test$Chisq[2]
     overall.df = wald.test$Df[2]
@@ -237,7 +238,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
     wald.test = wald.test(vcovmat[var.names, var.names], coef(model.full), Terms = 2:length(coef(model.full)))
     stats = wald.test$result$chi2["chi2"]
     overall.df = wald.test$result$chi2["df"]
-    res.df = nrow(data) - overall.df - 1
+    res.df = nrow(data) - overall.df
   }
   # overall RESI
   overall.resi.hat = chisq2S(stats, overall.df, res.df)
@@ -249,7 +250,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
   # compute ANOVA-style table if `anova = TRUE`
   if (is.null(model.reduced) & anova & Anova.method){
     # set up ANOES tab based on Anova
-    if (class(model.full)[1] == 'lm'){
+    if (cl == 'lm'){
       suppressMessages(anoes.tab <- Anova(model.full, vcov. = vcovfunc, ...))
       terms.resi.hat = f2S(anoes.tab[,'F'], anoes.tab[,'Df'], res.df)
       ## converting statistics to RESI
@@ -337,7 +338,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
     output$anova = anoes.tab
   }
 
-  if (class(model.full)[1] %in% c("glm", "lm")){
+  if (cl %in% c("glm", "lm")){
     wald.test[2, c("RESI", "LL", "UL")] = c(overall.resi.hat, overall.ci)}
   else{
     wald.test$result$chi2[c("RESI", "LL", "UL")] = c(overall.resi.hat, overall.ci)
