@@ -142,9 +142,9 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
                                               # calculate the bootstrapped outcome values
                                               ## note: replace the observed y with wild-bootstrapped y (so that I don't need to re-specify the model formula)
                                               if (class(model.full)[1] != "coxph"){
-                                                boot.data$y <- predict(model.full, newdata = boot.data, type = "response") + boot.data$resid * w
-                                                colnames(boot.data)[colnames(boot.data) == all.vars(form.full)[1]] = "old y"
-                                                colnames(boot.data)[colnames(boot.data) == "y"] = all.vars(form.full)[1]
+                                                boot.data[,all.vars(form.full)[1]] <- predict(model.full, newdata = boot.data, type = "response") + boot.data$resid * w
+                                                # colnames(boot.data)[colnames(boot.data) == all.vars(form.full)[1]] = "old y"
+                                                # colnames(boot.data)[colnames(boot.data) == "y"] = all.vars(form.full)[1]
                                               }
 
                                               # fit model on the bootstrapped data
@@ -171,7 +171,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
                                                 stats = wald.test$Chisq[2]
                                               }
                                               else{
-                                                wald.test = wald.test(vcovmat[var.names, var.names], coef(boot.model.full), Terms = 1:length(coef(boot.model.full)))
+                                                wald.test = wald.test(vcovmat[var.names, var.names], coef(boot.model.full), Terms = 2:length(coef(boot.model.full)))
                                                 stats = wald.test$result$chi2["chi2"]
                                               }
                                               names.stats <- "Overall"
@@ -234,7 +234,7 @@ anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary 
     res.df = wald.test$Res.Df[2]
   }
   else{
-    wald.test = wald.test(vcovmat[var.names, var.names], coef(model.full), Terms = 1:length(coef(model.full)))
+    wald.test = wald.test(vcovmat[var.names, var.names], coef(model.full), Terms = 2:length(coef(model.full)))
     stats = wald.test$result$chi2["chi2"]
     overall.df = wald.test$result$chi2["df"]
     res.df = nrow(data) - overall.df - 1
