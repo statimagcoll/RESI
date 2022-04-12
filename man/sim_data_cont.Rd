@@ -6,7 +6,7 @@
 \usage{
 sim_data_cont(
   N,
-  beta,
+  S,
   pi,
   ni_range,
   rho.G,
@@ -20,7 +20,7 @@ sim_data_cont(
 \arguments{
 \item{N}{total sample size (i.e., num of subjects)}
 
-\item{beta}{= fixed effects}
+\item{S}{= the values of RESI for the fixed effects}
 
 \item{pi}{= proportion or probability of being assigned to trt group}
 

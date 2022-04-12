@@ -70,24 +70,24 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
   ## The covariance matrix of Yi
   Sigma_y = matrix(NA, nrow = ni_range[2], ncol = ni_range[2])
   # Design matrix for random effects
-  time = (0:(ni_range[2]-1))
-  Z = cbind(1, time)
+  time_points = (0:(ni_range[2]-1))
+  Z = cbind(1, time_points)
   # Cov(Y_i) = Z^T G Z + R_i
-  Sigma_y = Z %*% G_mat %*% t(Z) + ARMtx(time = time, rho.e = rho.e)
+  Sigma_y = Z %*% G_mat %*% t(Z) + ARMtx(time = time_points, rho.e = rho.e)
 
   # The true cov of \hat{beta} given X
   ## 1. for variable 'trt'
 
 
   # the variance of \hat{\beta}_{trt} when trt = 1
-  X_1 = cbind(1, time = time, trt = 1) # design matrix
+  X_1 = cbind(1, time = time_points, trt = 1) # design matrix
   info_beta_1 = t(X_1) %*% Sigma_y %*% X_1 * N # the whole info matrix
   var_int_1 = solve(info_beta_1[1, 1]) # for the intercept
   var_time_1 = solve(info_beta_1[2, 2]) # for time variable
   var_trt_1 = solve(info_beta_1[3, 3]) # for trt
 
   # the variance of \hat{\beta}_{trt} when trt = 0
-  X_0 = cbind(1, time = time, trt = 0) # design matrix
+  X_0 = cbind(1, time = time_points, trt = 0) # design matrix
   info_beta_0 = t(X_0) %*% Sigma_y %*% X_0 * N # the whole info matrix
   var_int_0 = solve(info_beta_0[1, 1]) # for the intercept
   var_time_0 = solve(info_beta_0[2, 2]) # for the time variable
@@ -115,7 +115,7 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
   data_sim = data.frame(id = id, num_obs = rep(ni, times = ni), time = time, trt = trt,
                         gamma_0 = gamma_0, gamma_t = gamma_t, error = e, y = y )
 
-  return(list(data = data_sim, G = G_mat, N = N, ni = ni))
+  return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta))
 }
 
 
