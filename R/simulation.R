@@ -100,9 +100,9 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
   var_time = var_time_1 * pi + var_time_0 * (1-pi)
 
   # the beta's for a given RESI
-  beta_int = sqrt(N * S^2 * var_int)
-  beta_trt = sqrt(N * S^2 * var_trt)
-  beta_time = sqrt(N * S^2 * var_time)
+  beta_int = sqrt(N * S[1]^2 * var_int)
+  beta_trt = sqrt(N * S[2]^2 * var_trt)
+  beta_time = sqrt(N * S[3]^2 * var_time)
   beta = c(beta_int, beta_time, beta_trt) # YEAH!!!!
 
 # 3. CALCULATING THE OUTCOME VALUES
