@@ -59,9 +59,9 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
   gamma_t = rep(gamma[, 2], times = ni)
 
   # measurement errors
+  t = 0:(max(ni_range)-1)
   if (length(ni_range) == 1 | ni_range[1] == ni_range[2]) { # if balanced design
-    t = 0:(max(ni_range)-1)
-    e =  sigma.e * mvtnorm::rmvnorm(N, rep(0, length(t)), sigma = ARMtx(t, rho.e))
+    e =  sigma.e * mvtnorm::rmvnorm(N, rep(0, length(t)), sigma = ARMtx(t, rho.e)) %>% t() %>% c()
   } else { # if unbalanced
     e =  sigma.e * c(unlist(sapply(time_list, function(x) mvtnorm::rmvnorm(1, rep(0, length(x)), sigma = ARMtx(x, rho.e))) ))
   }
@@ -76,34 +76,34 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
   Sigma_y = Z %*% G_mat %*% t(Z) + ARMtx(time = time_points, rho.e = rho.e)
 
   # The true cov of \hat{beta} given X
-  ## 1. for variable 'trt'
+  # Using numeric methods to find the variance of each parameter estimator
+  # (assuming the model is correctly specified)
+  # The covariance matrix of \hat{beta}
+  sum = 0
+  rep = 1e5
+  for (i in 1:rep){
+    # X_i^T Sigma^{-1} T
+    X = cbind(1, time = time_points, trt = rbinom(1, 1, pi))
+    sum = sum + t(X) %*% solve(Sigma_y) %*% X
+  }
+  COV_beta = solve(sum) * rep # N * (the asymptotic cov of beta hat)
 
+  var_int = COV_beta[1, 1] / N
+  var_time = COV_beta[2, 2] / N
+  var_trt = COV_beta[3, 3] / N
 
-  # the variance of \hat{\beta}_{trt} when trt = 1
-  X_1 = cbind(1, time = time_points, trt = 1) # design matrix
-  info_beta_1 = t(X_1) %*% Sigma_y %*% X_1 * N # the whole info matrix
-  var_int_1 = solve(info_beta_1[1, 1]) # for the intercept
-  var_time_1 = solve(info_beta_1[2, 2]) # for time variable
-  var_trt_1 = solve(info_beta_1[3, 3]) # for trt
-
-  # the variance of \hat{\beta}_{trt} when trt = 0
-  X_0 = cbind(1, time = time_points, trt = 0) # design matrix
-  info_beta_0 = t(X_0) %*% Sigma_y %*% X_0 * N # the whole info matrix
-  var_int_0 = solve(info_beta_0[1, 1]) # for the intercept
-  var_time_0 = solve(info_beta_0[2, 2]) # for the time variable
-  # for \beta_trt, the var is just ZERO?
-  var_trt_0 = 0
-
-  # unconditional variances
-  var_int = var_int_1 * pi + var_int_0 * (1-pi)
-  var_trt = var_trt_1 * pi
-  var_time = var_time_1 * pi + var_time_0 * (1-pi)
+  # true SD's
+  sd_int = sqrt(var_int)
+  sd_time = sqrt(var_time)
+  sd_trt = sqrt(var_trt)
+  sd = c(sd_int, sd_time, sd_trt)
 
   # the beta's for a given RESI
   beta_int = sqrt(N * S[1]^2 * var_int)
-  beta_trt = sqrt(N * S[2]^2 * var_trt)
-  beta_time = sqrt(N * S[3]^2 * var_time)
+  beta_time = sqrt(N * S[2]^2 * var_time)
+  beta_trt = sqrt(N * S[3]^2 * var_trt)
   beta = c(beta_int, beta_time, beta_trt) # YEAH!!!!
+
 
 # 3. CALCULATING THE OUTCOME VALUES
   ## design matrix for fixed effects
@@ -113,9 +113,9 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
 
 # 4. RETURNING SIMULATED DATA
   data_sim = data.frame(id = id, num_obs = rep(ni, times = ni), time = time, trt = trt,
-                        gamma_0 = gamma_0, gamma_t = gamma_t, error = e, y = y )
+                        gamma_0 = gamma_0, gamma_t = gamma_t, error = e, y = y)
 
-  return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta))
+  return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta, true_sd = sd))
 }
 
 
