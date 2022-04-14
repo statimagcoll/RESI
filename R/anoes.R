@@ -59,7 +59,7 @@ anoes.geeglm <- function(object, alpha = 0.05, nboot = 1000){
   output = resi.geeglm(object) # RESI point estimates
   data = object$data
   # id variable name
-  id_var = as.character(mod.gee$call$id)
+  id_var = as.character(object$call$id)
   # bootstrap
   output.boot = as.matrix(output[, 'RESI'])
   for (i in 1:nboot){
