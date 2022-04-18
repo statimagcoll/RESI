@@ -32,17 +32,32 @@ anoes <- function(x, ...){
 #' @param alpha significance level of the constructed CIs. By default, 0.05 will be used0
 #' @param digits the number of decimal digits in the output ANOES table. By default, 3
 #' @export
-anoes.glm <- function(model.full, model.reduced = NULL,
+anoes.glm <- function(object = NULL, model.full = NULL, model.reduced = NULL,
                       robust.var = TRUE,
                       boot.type = 1, multi = 'none',
                       nboot = 1000, alpha = 0.05){
-
+  if (is.na(model.reduced)){
+    output = resi.glm(object)
+    data = object$model
+    # bootstrap
+    output.boot = as.matrix(output[, 'RESI'])
+    for (i in 1:nboot){
+      boot.data = boot.samp(data)
+      # re-fit the model
+      boot.mod = update(object, data = boot.data)
+      output.boot = cbind(output.boot, resi.glm(boot.mod)[, 'RESI'])
+    }
+    output.boot = output.boot[, -1]
+    RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+    output = cbind(output, t(RESI.ci))
+    return(output)
+  }
+  }
    output = boot.ci(model.full = model.full, model.reduced = model.reduced,
                      robust.var = robust.var,
                      boot.type = boot.type, multi = multi,
                      r = nboot,
                      alpha = alpha)$ANOES
-
    return(output)
 }
 
