@@ -36,7 +36,7 @@ anoes.glm <- function(object = NULL, model.full = NULL, model.reduced = NULL,
                       robust.var = TRUE,
                       boot.type = 1, multi = 'none',
                       nboot = 1000, alpha = 0.05){
-  if (is.na(model.reduced)){
+  if (is.null(model.reduced)){
     output = resi.glm(object)
     data = object$model
     # bootstrap

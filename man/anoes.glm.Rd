@@ -7,7 +7,8 @@ This function estiamtes RESI and it CIs in a fitted glm model object
 The CI are calculated via non-parametric bootstraps}
 \usage{
 \method{anoes}{glm}(
-  model.full,
+  object = NULL,
+  model.full = NULL,
   model.reduced = NULL,
   robust.var = TRUE,
   boot.type = 1,
