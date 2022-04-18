@@ -17,7 +17,7 @@ resi <- function(x, ...){
 #' @importFrom stats pt qnorm
 #' @export
 resi.lm = function(object, vcov.=sandwich::vcovHC, ...){
-  x = coeftest(object, vcov.=vcov., ...)
+  x = as.matrix(summary(object)$coefficients)
   cbind(x, S = RESI::chisq2S(qnorm(pt(x[,'t value'], df = object$df.residual))^2, 1, object$df.residual))
 }
 
@@ -34,8 +34,17 @@ resi.lm = function(object, vcov.=sandwich::vcovHC, ...){
 #' @importFrom lmtest coeftest
 #' @export
 resi.glm = function(object, vcov.=sandwich::vcovHC, ...){
-  x = coeftest(object, vcov.=vcov., ...)
-  cbind(x, S = RESI::chisq2S(x[,'z value']^2, 1, object$df.residual))
+  x = as.matrix(summary(object)$coefficients)
+  robust.se = sqrt(diag(vcov.(object)))
+  x[, 'Std. Error'] = robust.se
+  x[, 't value'] = x[, "Estimate"]^2/x[, 'Std. Error']^2 # wald stat using robust se
+  x[, 'Pr(>|t|)'] = pchisq(x[, "t value"], df = 1, lower.tail = FALSE)
+  col_names = colnames(x)
+  col_names[col_names == 'Std. Error'] = "Robust S.E."
+  col_names[col_names == 't value'] = "Robust Wald"
+  col_names[col_names == 'Pr(>|t|)'] = "p-value"
+  colnames(x) = col_names
+  cbind(x, RESI = RESI::chisq2S(x[,'Robust Wald'], 1, object$df.residual))
 }
 
 #' Robust effect size add-on for Wald tests and anova
