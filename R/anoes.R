@@ -51,13 +51,13 @@ anoes.glm <- function(object = NULL, model.full = NULL, model.reduced = NULL,
     RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
     output = cbind(output, t(RESI.ci))
     return(output)
-  }
-  }
+  } else{
    output = boot.ci(model.full = model.full, model.reduced = model.reduced,
                      robust.var = robust.var,
                      boot.type = boot.type, multi = multi,
                      r = nboot,
                      alpha = alpha)$ANOES
+  }
    return(output)
 }
 
