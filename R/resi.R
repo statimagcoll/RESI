@@ -36,14 +36,9 @@ resi.lm = function(object, vcov.=sandwich::vcovHC, ...){
 resi.glm = function(object, vcov.=sandwich::vcovHC, ...){
   x = as.matrix(summary(object)$coefficients)
   robust.se = sqrt(diag(vcov.(object)))
-  x[, 'Std. Error'] = robust.se
-  x[, 't value'] = x[, "Estimate"]^2/x[, 'Std. Error']^2 # wald stat using robust se
-  x[, 'Pr(>|t|)'] = pchisq(x[, "t value"], df = 1, lower.tail = FALSE)
-  col_names = colnames(x)
-  col_names[col_names == 'Std. Error'] = "Robust S.E."
-  col_names[col_names == 't value'] = "Robust Wald"
-  col_names[col_names == 'Pr(>|t|)'] = "p-value"
-  colnames(x) = col_names
+  x = cbind('Estimate' = x[, 1], 'Std. Error' = robust.se)
+  x = cbind(x, 'Robust Wald' = (x[, "Estimate"]/x[, 'Std. Error'])^2)
+  x = cbind(x, 'p-value'= pchisq(x[, "Robust Wald"], df = 1, lower.tail = FALSE))
   cbind(x, RESI = RESI::chisq2S(x[,'Robust Wald'], 1, object$df.residual))
 }
 
