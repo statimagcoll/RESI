@@ -48,7 +48,7 @@ anoes.glm <- function(object = NULL, model.full = NULL, model.reduced = NULL,
       output.boot = cbind(output.boot, resi.glm(boot.mod)[, 'RESI'])
     }
     output.boot = output.boot[, -1]
-    RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+    RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
     output = cbind(output, t(RESI.ci))
     return(output)
   } else{
