@@ -29,3 +29,23 @@ boot.samp <- function(data, id.var = NULL) {
   return(boot.data)
 }
 
+#' Bayesian bootstrap sampling (Rubin, 1981)
+#' @export
+#' @param data data frame; The data frame that need bootstrapping
+#' @return Returns a data frame containing weights generated via Bayesian bootstraps.
+bayes.samp <- function(data) {
+  if (is.matrix(data)) data = as.data.frame(data)
+  # Generate the random numbers from unif(0, 1)
+  n = nrow(data)
+  u = runif(n-1)
+  u.sort = sort(u)
+  g = c(u.sort, 1) - c(0, u.sort)
+  boot.data = cbind(data, g)
+  return(boot.data)
+}
+
+
+
+
+
+
