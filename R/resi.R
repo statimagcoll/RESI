@@ -35,7 +35,7 @@ resi.lm = function(object, vcov.=sandwich::vcovHC, ...){
 #' @export
 resi.glm = function(object, vcov.=sandwich::vcovHC, ...){
   x = as.matrix(summary(object)$coefficients)
-  robust.se = sqrt(diag(vcov.(object)))
+  robust.se = sqrt(diag(vcov.(object, ...)))
   x = cbind('Estimate' = x[, 1], 'Robust s.e.' = robust.se)
   x = cbind(x, 'Robust Wald' = (x[, "Estimate"]/x[, 'Robust s.e.'])^2)
   x = cbind(x, 'p-value'= pchisq(x[, "Robust Wald"], df = 1, lower.tail = FALSE))
