@@ -2,7 +2,7 @@
 % Please edit documentation in R/simulation.R
 \name{sim_data_cont}
 \alias{sim_data_cont}
-\title{Function for simulating continuous outcomes}
+\title{Function for simulating longitudinal continuous outcomes}
 \usage{
 sim_data_cont(
   N,
@@ -39,5 +39,5 @@ sim_data_cont(
 \item{fixed.design:}{whether the trt assignment is fixed by design (TRUE) or random. use togther with pi}
 }
 \description{
-Function for simulating continuous outcomes
+Function for simulating longitudinal continuous outcomes
 }

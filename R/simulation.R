@@ -16,7 +16,7 @@ ARMtx <- function(time, rho.e){
   return(mtx)
 }
 
-#' Function for simulating continuous outcomes
+#' Function for simulating longitudinal continuous outcomes
 #' @param N total sample size (i.e., num of subjects)
 #' @param S = the values of RESI for the fixed effects
 #' @param pi = proportion or probability of being assigned to trt group
@@ -86,7 +86,7 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
     X = cbind(1, time = time_points, trt = rbinom(1, 1, pi))
     sum = sum + t(X) %*% solve(Sigma_y) %*% X
   }
-  COV_beta = solve(sum) * rep # N * (the asymptotic cov of beta hat)
+  COV_beta = solve(sum) * rep # = N * (the asymptotic cov of beta hat)
 
   var_int = COV_beta[1, 1] / N
   var_time = COV_beta[2, 2] / N
@@ -116,6 +116,32 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
                         gamma_0 = gamma_0, gamma_t = gamma_t, error = e, y = y)
 
   return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta, true_sd = sd))
+}
+
+
+
+#' Function for the simulations with logistic regression models
+#' @param n total sample size (i.e., num of subjects)
+#' @param S = the values of RESI for the grouping parameter x: logit(P) = alpha + x beta
+#' @param p = the probability of the outcome being 1
+#' @param pi = proportion or probability of being assigned to trt group
+#' @param fixed.design: whether the trt assignment is fixed by design (TRUE) or random. use togther with pi
+#' @export
+
+sim_data_cs_binary <- function(n, S, r, alpha, m, p, pi, fixed.design, num.cores){
+  # 1. DATA GENERATION
+  # simulate x and y
+  if (fixed.design) {
+    sequence = rep(0:1, times = m*c(n - ceiling(n*pi), ceiling(n*pi)))
+    x = sample(sequence, replace = FALSE) %>% matrix(nrow = n, ncol = m)
+  } else {
+    x = rbinom(n*m, 1, pi) %>% matrix(nrow = n, ncol = m)
+  }
+
+
+
+
+  #
 }
 
 

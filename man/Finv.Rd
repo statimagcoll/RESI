@@ -7,11 +7,11 @@
 Finv(prob, p, lambda)
 }
 \arguments{
-\item{prob}{numeric in [0,1], quantile of chi random variable.}
+\item{prob}{numeric in [0,1], quantile of Chi-square random variable.}
 
 \item{p}{integer, degrees of freedom.}
 
-\item{lambda, }{noncentrality parameter of chi distribution.}
+\item{lambda, }{noncentrality parameter of Chi-square distribution.}
 }
 \value{
 xxxx

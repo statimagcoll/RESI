@@ -4,14 +4,14 @@
 \alias{F}
 \title{Chi distribution function.}
 \usage{
-F(u, p, lambda)
+F(chisq, p, lambda)
 }
 \arguments{
-\item{u}{numeric, value of chi random variable.}
-
 \item{p}{integer, degrees of freedom.}
 
-\item{lambda, }{noncentrality parameter of chi distribution.}
+\item{lambda, }{noncentrality parameter of Chi-sq distribution.}
+
+\item{u}{numeric, value of Chi-sq random variable.}
 }
 \description{
 Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.

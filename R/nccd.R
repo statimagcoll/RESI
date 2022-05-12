@@ -18,29 +18,30 @@
 #'
 #' Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 #'
-#' @param u numeric, value of chi random variable.
+#' @param u numeric, value of Chi-sq random variable.
 #' @param p integer, degrees of freedom.
-#' @param lambda, noncentrality parameter of chi distribution.
+#' @param lambda, noncentrality parameter of Chi-sq distribution.
 #' @importFrom stats pchisq
 #' @export
 #'
-F=function(u,p,lambda) pchisq(u^2,p,lambda^2) # cdf of ncc
+#'
+F=function(chisq,p,lambda) pchisq(chisq, p, lambda) # cdf of ncc
 
 #' chi quantile function.
 #'
 #' Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 #'
-#' @param prob numeric in [0,1], quantile of chi random variable.
+#' @param prob numeric in [0,1], quantile of Chi-square random variable.
 #' @param p integer, degrees of freedom.
-#' @param lambda, noncentrality parameter of chi distribution.
+#' @param lambda, noncentrality parameter of Chi-square distribution.
 #' @importFrom stats qchisq
 #' @return xxxx
 #' @export
 #'
-Finv=function(prob,p,lambda) sqrt(qchisq(prob,p,lambda^2)) # quantile
+Finv=function(prob,p,lambda) sqrt(qchisq(prob,p,lambda)) # quantile
 
 
-lambound=function(y,p,alpha) {
+lambound_chisq=function(y,p,alpha) {
   lambda=1; obj=1
   while(obj>0) {
     lambda=2*lambda
@@ -59,10 +60,10 @@ lambound=function(y,p,alpha) {
 #' @importFrom stats uniroot
 #' @return xxxx
 #' @export
-lamfind=function(y,p,alpha) {
-  if(alpha<1e-4 | F(y,p,0)<alpha) stop("bad lamfind")
-  lbig=lambound(y,p,alpha)
-  f=function(lambda) F(y,p,lambda) - alpha
+lamfind_chisq = function(y,p,alpha) {
+  if(alpha< 1e-4 | F(y,p,0) < alpha) stop("bad lamfind")
+  lbig = lambound_chisq(y,p,alpha)
+  f = function(lambda) F(y,p,lambda) - alpha # note: here F is the defined function for the cdf of chisq
   lambda=uniroot(f,c(0,lbig))$root
 }
 
@@ -140,23 +141,23 @@ ncc.ci.central=function(y,p,alpha=0.05) {
 #' @param alpha probability for confidence interval.
 #' @return xxxx
 #' @export
-ncc.ci.sr=function(y,p,alpha=0.05) {
-  u0=Finv(1-alpha,p,0)
-  if(y<=u0) ll=0
-  else {
-    f=function(b) F(y,p,y-b)-F(max(y-2*b,0),p,y-b)-(1-alpha)
-    bb=uniroot(f,c(0,y))$root
-    ll=y-bb
-  }
-  f = function(b) F(y+2*b,p,y+b)-F(y,p,y+b)-(1-alpha)
-  #f2 = function(b) integrate(function(x) dchisq(x, df = p, ncp = (y+b)^2), lower=y^2, upper=(y+2*b)^2)$value - (1-alpha)
-  big=1; obj=-1
-  while(obj<0) {big=2*big; obj=f(big)}
-  bb=uniroot(f,c(0,big))$root
-  lu=y+bb
-  int8=c(ll,lu)
-  int8
-}
+# ncc.ci.sr=function(y,p,alpha=0.05) {
+#   u0=Finv(1-alpha,p,0)
+#   if(y<=u0) ll=0
+#   else {
+#     f=function(b) F(y,p,y-b)-F(max(y-2*b,0),p,y-b)-(1-alpha)
+#     bb=uniroot(f,c(0,y))$root
+#     ll=y-bb
+#   }
+#   f = function(b) F(y+2*b,p,y+b)-F(y,p,y+b)-(1-alpha)
+#   #f2 = function(b) integrate(function(x) dchisq(x, df = p, ncp = (y+b)^2), lower=y^2, upper=(y+2*b)^2)$value - (1-alpha)
+#   big=1; obj=-1
+#   while(obj<0) {big=2*big; obj=f(big)}
+#   bb=uniroot(f,c(0,big))$root
+#   lu=y+bb
+#   int8=c(ll,lu)
+#   int8
+# }
 
 
 
@@ -171,32 +172,32 @@ ncc.ci.sr=function(y,p,alpha=0.05) {
 #' @importFrom stats constrOptim
 #' @return xxx
 #' @export
-ncc.ci.mdb=function(y,p,alpha=0.05) {
-  u0=Finv(1-alpha,p,0); nu=(p-2)/2; zz=-qnorm(alpha/2)
-  if(y<=u0) ll=0
-  else {
-    ly=lamfind(y,p,1-alpha)
-    #    f=function(lambda) F(y,p,lambda)-(1-alpha)
-    #    lbig=lambound(y,p,1-alpha)
-    #    ly=uniroot(f,c(0,lbig))$root
-    g0=gb(0,nu,ly); gy=gb(y,nu,ly)
-    if(g0>=gy) ll=ly
-    else {
-      f=function(cd) (log(gb(y,nu,cd[1])/gb(cd[2],nu,cd[1])))^2 +
-        (F(y,p,cd[1])-F(cd[2],p,cd[1]) - (1-alpha))^2 # cd1=lam; cd2=cc
-      start=c(y-zz,y-2*zz)
-      if(start[1]<=0) start[1]=.1*(y+.1)
-      if(start[2]<=0) start[2]=.05*(y+.1)
-      ll=constrOptim(start,f,grad=NULL,ui=diag(2),ci=c(0,0))$par[1]
-    }
-  }
-  f=function(cd) (log(gb(y,nu,cd[1])/gb(cd[2],nu,cd[1])))^2 +
-    (F(cd[2],p,cd[1])-F(y,p,cd[1]) - (1-alpha))^2 # cd1=lam; cd2=d
-  start=c(y+zz,y+2*zz)
-  lu=constrOptim(start,f,grad=NULL,ui=diag(2),ci=c(0,0))$par[1]
-  int6=c(ll,lu)
-  int6
-}
+# ncc.ci.mdb=function(y,p,alpha=0.05) {
+#   u0=Finv(1-alpha,p,0); nu=(p-2)/2; zz=-qnorm(alpha/2)
+#   if(y<=u0) ll=0
+#   else {
+#     ly=lamfind(y,p,1-alpha)
+#     #    f=function(lambda) F(y,p,lambda)-(1-alpha)
+#     #    lbig=lambound(y,p,1-alpha)
+#     #    ly=uniroot(f,c(0,lbig))$root
+#     g0=gb(0,nu,ly); gy=gb(y,nu,ly)
+#     if(g0>=gy) ll=ly
+#     else {
+#       f=function(cd) (log(gb(y,nu,cd[1])/gb(cd[2],nu,cd[1])))^2 +
+#         (F(y,p,cd[1])-F(cd[2],p,cd[1]) - (1-alpha))^2 # cd1=lam; cd2=cc
+#       start=c(y-zz,y-2*zz)
+#       if(start[1]<=0) start[1]=.1*(y+.1)
+#       if(start[2]<=0) start[2]=.05*(y+.1)
+#       ll=constrOptim(start,f,grad=NULL,ui=diag(2),ci=c(0,0))$par[1]
+#     }
+#   }
+#   f=function(cd) (log(gb(y,nu,cd[1])/gb(cd[2],nu,cd[1])))^2 +
+#     (F(cd[2],p,cd[1])-F(y,p,cd[1]) - (1-alpha))^2 # cd1=lam; cd2=d
+#   start=c(y+zz,y+2*zz)
+#   lu=constrOptim(start,f,grad=NULL,ui=diag(2),ci=c(0,0))$par[1]
+#   int6=c(ll,lu)
+#   int6
+# }
 
 #' MD radial confidence interval for chi-square noncentrality parameter.
 #' Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
@@ -207,32 +208,32 @@ ncc.ci.mdb=function(y,p,alpha=0.05) {
 #' @importFrom stats constrOptim qnorm
 #' @return xxx
 #' @export
-ncc.ci.mdr=function(y,p,alpha=0.05) {
-  u0=Finv(1-alpha,p,0); nu=(p-2)/2; zz=-qnorm(alpha/2)
-  if(y<=u0) ll=0
-  else {
-    ly=lamfind(y,p,1-alpha)
-    #    f=function(lambda) F(y,p,lambda)-(1-alpha)
-    #    lbig=lambound(y,p,1-alpha)
-    #    ly=uniroot(f,c(0,lbig))$root
-    g0=gr(0,nu,ly); gy=gr(y,nu,ly)
-    if(g0>=gy) ll=ly
-    else {
-      f=function(cd) (log(gr(y,nu,cd[1])/gr(cd[2],nu,cd[1])))^2 +
-        (F(y,p,cd[1])-F(cd[2],p,cd[1]) - (1-alpha))^2 # cd1=lam; cd2=cc
-      start=c(y-zz,y-2*zz)
-      if(start[1]<=0) start[1]=.1*(y+.1)
-      if(start[2]<=0) start[2]=.05*(y+.1)
-      ll=constrOptim(start,f,grad=NULL,ui=diag(2),ci=c(0,0))$par[1]
-    }
-  }
-  f=function(cd) (log(gr(y,nu,cd[1])/gr(cd[2],nu,cd[1])))^2 +
-    (F(cd[2],p,cd[1])-F(y,p,cd[1]) - (1-alpha))^2 # cd1=lam; cd2=d
-  start=c(y+zz,y+2*zz)
-  lu=constrOptim(start,f,grad=NULL,ui=diag(2),ci=c(0,0))$par[1]
-  int7=c(ll,lu)
-  int7
-}
+# ncc.ci.mdr=function(y,p,alpha=0.05) {
+#   u0=Finv(1-alpha,p,0); nu=(p-2)/2; zz=-qnorm(alpha/2)
+#   if(y<=u0) ll=0
+#   else {
+#     ly=lamfind(y,p,1-alpha)
+#     #    f=function(lambda) F(y,p,lambda)-(1-alpha)
+#     #    lbig=lambound(y,p,1-alpha)
+#     #    ly=uniroot(f,c(0,lbig))$root
+#     g0=gr(0,nu,ly); gy=gr(y,nu,ly)
+#     if(g0>=gy) ll=ly
+#     else {
+#       f=function(cd) (log(gr(y,nu,cd[1])/gr(cd[2],nu,cd[1])))^2 +
+#         (F(y,p,cd[1])-F(cd[2],p,cd[1]) - (1-alpha))^2 # cd1=lam; cd2=cc
+#       start=c(y-zz,y-2*zz)
+#       if(start[1]<=0) start[1]=.1*(y+.1)
+#       if(start[2]<=0) start[2]=.05*(y+.1)
+#       ll=constrOptim(start,f,grad=NULL,ui=diag(2),ci=c(0,0))$par[1]
+#     }
+#   }
+#   f=function(cd) (log(gr(y,nu,cd[1])/gr(cd[2],nu,cd[1])))^2 +
+#     (F(cd[2],p,cd[1])-F(y,p,cd[1]) - (1-alpha))^2 # cd1=lam; cd2=d
+#   start=c(y+zz,y+2*zz)
+#   lu=constrOptim(start,f,grad=NULL,ui=diag(2),ci=c(0,0))$par[1]
+#   int7=c(ll,lu)
+#   int7
+# }
 
 
 #' Return four confidence intervals for noncentrality parameter of a chi-square distribution.
@@ -240,21 +241,45 @@ ncc.ci.mdr=function(y,p,alpha=0.05) {
 #' Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 #'
 #'
-#' @param yl numeric, value of chi random variable.
-#' @param p integer, degrees of freedom.
+#' @param y numeric, value of chi random variable.
+#' @param df integer, degrees of freedom.
 #' @param alpha, probability for confidence interval.
 #' @return xxxx
 #' @export
-ncc.ints=function(yl,p,alpha=0.05) {
-  int1=ncc.ci.central(yl,p,alpha)
-  int2=ncc.ci.sr(yl,p,alpha)
-  #int3 = ncc.ci.mdb(yl,p,alpha)
-  #int4 = ncc.ci.mdr(yl, p, alpha)
-  ans=rbind(int1,int2)#,int3,int4)
-  rownames(ans)=c("Central",
-                  "Symmetric range")
-                  #"MD Bessel",
-                  #"MD radial")
-  colnames(ans) = c('L', 'U')
-  ans
+ncc.ci=function(y, df, alpha=0.05) {
+  # int1=ncc.ci.central(yl,p,alpha)
+  # int2=ncc.ci.sr(yl,p,alpha)
+  # #int3 = ncc.ci.mdb(yl,p,alpha)
+  # #int4 = ncc.ci.mdr(yl, p, alpha)
+  # ans=rbind(int1,int2)#,int3,int4)
+  # rownames(ans)=c("Central",
+  #                 "Symmetric range")
+  #                 #"MD Bessel",
+  #                 #"MD radial")
+
+  p = pchisq(y, df, 0, lower.tail = TRUE)
+  if (p < 1-alpha/2) { # p < 1-alpha/2 means ncp = 0 still fail to satisfy pchisq(y, df, ncp = 0) >= 1 - alpha/2
+    ll = 0
+    if(p > alpha) { # when ll = 0, put all the probability on the upper bound side
+      ## Then if pchisq(y, ..., ncp = 0) > alpha, upper bound > 0
+      ul = lamfind_chisq(y, df, alpha)
+      lower.prob = 0
+      upper.prob = alpha
+    } else{ # ie, p<=alpha --> even putting all probability on the upper side,
+      #still fail to get a value for ncp that is > 0
+      ul = 0
+      lower.prob = 0
+      upper.prob = alpha
+    }
+  } else{ # compute the central version of CI for the noncetrality parameter
+    ll = lamfind_chisq(y, df, 1-alpha/2)
+    ul = lamfind_chisq(y, df, alpha/2)
+    lower.prob = upper.prob = alpha/2
+  }
+  ci = c(ll, ul)
+  names(ci) = c('L', 'U')
+  output = list(CI = ci,
+                lower.prob = lower.prob,
+                upper.prob = upper.prob)
+  return(output)
 }
