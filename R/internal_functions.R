@@ -60,8 +60,8 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
                   print.gap = 2, quote = FALSE)
   } else cat("No coefficients\n\n")
 
-  if (x$boot.method == "nonparam") cat("\n Confidence intervals (CIs) constructed using", x$nboot,"non-parametric bootstraps")
-  if (x$boot.method == "bayes") cat("\n Credible intervals constructed using", x$nboot,"Bayesian bootstraps")
+  if (x$boot.method == "nonparam") cat("\n Confidence intervals (CIs) constructed using", x$nboot,"non-parametric bootstraps \n")
+  if (x$boot.method == "bayes") cat("\n Credible intervals constructed using", x$nboot,"Bayesian bootstraps \n")
   if(nzchar(mess <- naprint(x$na.action))) cat("  (",mess, ")\n", sep = "")
 
   invisible(x)
