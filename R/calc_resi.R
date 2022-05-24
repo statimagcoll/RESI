@@ -16,9 +16,16 @@ calc_resi <- function(x, ...){
 #' @importFrom lmtest coeftest
 #' @importFrom stats pt qnorm
 #' @export
-calc_resi.lm = function(object, vcov.=sandwich::vcovHC, ...){
+calc_resi.lm = function(object, vcov.= sandwich::vcovHC, ...){
   x = as.matrix(summary(object)$coefficients)
-  cbind(x, RESI = RESI::chisq2S(qnorm(pt(x[,'t value'], df = object$df.residual))^2, 1, object$df.residual))
+  se = sqrt(diag(vcov.(object, ...)))
+  x = cbind('Estimate' = x[, 1], 's.e.' = se)
+  x = cbind(x, 'Wald' = (x[, "Estimate"]/x[, 's.e.'])^2)
+  x = cbind(x, 'p-value'= pchisq(x[, "Wald"], df = 1, lower.tail = FALSE))
+  resi.tab = cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], df = 1, object$df.residual))
+  output = list(resi.tab = resi.tab,
+                vcov. = vcov.)
+  return(output)
 }
 
 #' Robust effect size add-on for glm
@@ -39,7 +46,10 @@ calc_resi.glm = function(object, vcov.=sandwich::vcovHC, ...){
   x = cbind('Estimate' = x[, 1], 'Robust s.e.' = robust.se)
   x = cbind(x, 'Robust Wald' = (x[, "Estimate"]/x[, 'Robust s.e.'])^2)
   x = cbind(x, 'p-value'= pchisq(x[, "Robust Wald"], df = 1, lower.tail = FALSE))
-  cbind(x, RESI = RESI::chisq2S(x[,'Robust Wald'], 1, object$df.residual))
+  resi.tab = cbind(x, RESI = RESI::chisq2S(x[,'Robust Wald'], 1, object$df.residual))
+  output = list(resi.tab = resi.tab,
+                vcov. = vcov.)
+  return(output)
 }
 
 #' Robust effect size add-on for Wald tests and anova
@@ -54,10 +64,10 @@ calc_resi.glm = function(object, vcov.=sandwich::vcovHC, ...){
 #' @importFrom lmtest waldtest
 #' @importFrom stats pt qnorm
 #' @export
-calc_resi.waldtest = function(object, ..., vcov.=sandwich::vcovHC){
-  x = waldtest(object, ...=..., vcov=vcov.)
-  cbind(x, S = RESI::chisq2S(qnorm(pt(x[,'t value'], df = object$df.residual))^2, 1, object$df.residual))
-}
+# calc_resi.waldtest = function(object, ..., vcov.=sandwich::vcovHC){
+#   x = waldtest(object, ...=..., vcov=vcov.)
+#   cbind(x, S = RESI::chisq2S(qnorm(pt(x[,'t value'], df = object$df.residual))^2, 1, object$df.residual))
+# }
 
 
 #' RESI from gee or geeglm object
