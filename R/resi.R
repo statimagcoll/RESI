@@ -1,7 +1,7 @@
 #' Robust effect size add-on for model fit objects
 #' @export
-resi <- function(x, ...){
-  UseMethod("resi")
+calc_resi <- function(x, ...){
+  UseMethod("calc_resi")
 }
 
 #' Robust effect size add-on for lm
@@ -16,9 +16,9 @@ resi <- function(x, ...){
 #' @importFrom lmtest coeftest
 #' @importFrom stats pt qnorm
 #' @export
-resi.lm = function(object, vcov.=sandwich::vcovHC, ...){
+calc_resi.lm = function(object, vcov.=sandwich::vcovHC, ...){
   x = as.matrix(summary(object)$coefficients)
-  cbind(x, S = RESI::chisq2S(qnorm(pt(x[,'t value'], df = object$df.residual))^2, 1, object$df.residual))
+  cbind(x, RESI = RESI::chisq2S(qnorm(pt(x[,'t value'], df = object$df.residual))^2, 1, object$df.residual))
 }
 
 #' Robust effect size add-on for glm
@@ -33,7 +33,7 @@ resi.lm = function(object, vcov.=sandwich::vcovHC, ...){
 #' @importFrom sandwich vcovHC
 #' @importFrom lmtest coeftest
 #' @export
-resi.glm = function(object, vcov.=sandwich::vcovHC, ...){
+calc_resi.glm = function(object, vcov.=sandwich::vcovHC, ...){
   x = as.matrix(summary(object)$coefficients)
   robust.se = sqrt(diag(vcov.(object, ...)))
   x = cbind('Estimate' = x[, 1], 'Robust s.e.' = robust.se)
@@ -54,7 +54,7 @@ resi.glm = function(object, vcov.=sandwich::vcovHC, ...){
 #' @importFrom lmtest waldtest
 #' @importFrom stats pt qnorm
 #' @export
-resi.waldtest = function(object, ..., vcov.=sandwich::vcovHC){
+calc_resi.waldtest = function(object, ..., vcov.=sandwich::vcovHC){
   x = waldtest(object, ...=..., vcov=vcov.)
   cbind(x, S = RESI::chisq2S(qnorm(pt(x[,'t value'], df = object$df.residual))^2, 1, object$df.residual))
 }
@@ -65,7 +65,7 @@ resi.waldtest = function(object, ..., vcov.=sandwich::vcovHC){
 #' @param object The model object
 #' @return returns the ANOVA-type summary table with RESI estimate for each factor
 #' @export
-resi.geeglm <- function(object, ...){
+calc_resi.geeglm <- function(object, ...){
   x = as.matrix(summary(object)$coefficients)
   #sample size
   N = length(summary(object)$clusz)
@@ -73,7 +73,7 @@ resi.geeglm <- function(object, ...){
   return(output)
 }
 
-resi.gee <- function(object, ...){
+calc_resi.gee <- function(object, ...){
   x = as.matrix(summary(object)$coefficients)
   #sample size
   N = length(unique(object$id))
@@ -86,7 +86,7 @@ resi.gee <- function(object, ...){
 #' @param object The lme model object
 #' @return returns the ANOVA-type summary table with RESI estimate for each factor
 #' @export
-resi.lme <- function(object, ...){
+calc_resi.lme <- function(object, ...){
   x = as.matrix(summary(object)$tTable)
   #sample size
   N = summary(object)$dims$ngrps[1]
