@@ -31,33 +31,56 @@ resi <- function(x, ...){
 #' @param boot.method which type of bootstrap to use: `nonpara` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.
 #' @param alpha significance level of the constructed CIs. By default, 0.05 will be used.
 #' @export
-resi.glm <- function(object = NULL, model.full = NULL, model.reduced = NULL,
+resi.glm <- function(object, model.full = NULL, model.reduced = NULL,
                       robust.var = TRUE,
-                      boot.method = "nonparametric",
+                      boot.method = "nonparam",
                       nboot = 1000, alpha = 0.05){
   if (is.null(model.reduced)){
-    output = resi.glm(object)
+    output = calc_resi.glm(object)$resi.tab
     data = object$model
     # bootstrap
-    output.boot = as.matrix(output[, 'RESI'])
-    for (i in 1:nboot){
-      boot.data = boot.samp(data)
-      # re-fit the model
-      boot.mod = update(object, data = boot.data)
-      output.boot = cbind(output.boot, calc_resi.glm(boot.mod)[, 'RESI'])
+    ## non-param
+    if (tolower(boot.method) == "nonparam"){
+      output.boot = as.matrix(output[, 'RESI'])
+      for (i in 1:nboot){
+        boot.data = boot.samp(data)
+        # re-fit the model
+        boot.mod = update(object, data = boot.data)
+        output.boot = cbind(output.boot, calc_resi.glm(boot.mod)$resi.tab[, 'RESI'])
+      }
     }
+    # bayesian boot
+    if (tolower(boot.method)  == "bayes"){
+      output.boot = as.matrix(output[, 'RESI'])
+      for (i in 1:nboot){
+        boot.data = bayes.samp(data)
+        # re-fit the model
+        boot.mod = update(object, data = boot.data, weight = g)
+        output.boot = cbind(output.boot, calc_resi.glm(boot.mod)$resi.tab[, 'RESI'])
+      }
+    }
+
     output.boot = output.boot[, -1]
     RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
-    output = cbind(output, t(RESI.ci))
-    return(output)
+    output.tab = cbind(output, t(RESI.ci))
+    output = list(resi = output.tab,
+                  alpha = alpha,
+                  boot.value = output.boot, # bootstrapped values of RESI
+                  boot.method = tolower(boot.method),
+                  nboot = nboot,
+                  input.object = object,
+                  robust.var = robust.var
+                  )
+
   } else{
    output = boot.ci(model.full = model.full, model.reduced = model.reduced,
-                     robust.var = robust.var,
-                     boot.type = boot.type, multi = multi,
-                     r = nboot,
-                     alpha = alpha)$ANOES
+                    robust.var = robust.var,
+                    boot.type = boot.type, multi = multi,
+                    r = nboot,
+                    alpha = alpha)$ANOES
   }
-   return(output)
+  class(output) = "resi"
+  return(output)
 }
 
 
