@@ -43,7 +43,7 @@ resi.lm <- function(object, model.reduced = NULL,
 
   if (! tolower(boot.method) %in% c("nonparam", "bayes")) stop("\n The bootstrap method should be either 'nonparam' for non-parametric bootstrap, or 'bayes' for Bayesian bootstrap")
 
-  output = calc_resi(object, object.reduced = model.reduced, vcov. = vcovfunc)$resi.tab
+  output = calc_resi(object, object.reduced = model.reduced, vcov. = vcovfunc, ...)$resi.tab
   data = object$model
   # bootstrap
   output.boot = as.matrix(output[, 'RESI'])
@@ -81,7 +81,7 @@ resi.lm <- function(object, model.reduced = NULL,
   output.tab = cbind(output, t(RESI.ci))
   if (robust.var) {
     colnames(output.tab)[which(colnames(output.tab) == 'Wald')] = 'Robust Wald'
-    if (is.null(model.reduced)) colnames(output.tab)['s.e.'] = 'Robust s.e.'
+    if (is.null(model.reduced)) colnames(output.tab)[which(colnames(output.tab) == 's.e.')] = 'Robust s.e.'
   }
   output = list(resi = output.tab,
                 alpha = alpha,
