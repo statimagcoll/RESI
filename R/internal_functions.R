@@ -55,7 +55,7 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   cat("\n Call:  ",
       paste(deparse(x$input.object$call), sep = "\n", collapse = "\n"), "\n\n", sep = "")
   if(length(coef(x$input.object))) {
-    print.default(format(x$resi, digits = digits),
+    print.default(format(round(x$resi, digits = digits)),
                   print.gap = 2, quote = FALSE)
   } else cat("No coefficients\n\n")
 
