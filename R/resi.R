@@ -1,6 +1,6 @@
 
 #' Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for (generalized) linear regression models
-# #' @export
+#' @export
 # anoes <- function(model.full, model.reduced = NULL,
 #                      robust.var = TRUE,
 #                      boot.type = 1, multi = 'none',
