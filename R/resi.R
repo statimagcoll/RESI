@@ -89,6 +89,7 @@ resi.lm <- function(object, model.reduced = NULL,
                 boot.method = tolower(boot.method),
                 nboot = nboot,
                 input.object = object,
+                input.object.reduced = model.reduced,
                 robust.var = robust.var
   )
 
