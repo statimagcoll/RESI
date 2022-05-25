@@ -4,7 +4,7 @@ calc_resi <- function(x, ...){
   UseMethod("calc_resi")
 }
 
-#' Robust effect size add-on for lm
+#' Robust effect size add-on for lm and glm
 #' Effect size summary that can compliment your summary output. All conversions are based on the robust effect size index estimator.
 #' @param object The model object.
 #' @param object.reduced The reduced model to compare with the object while calculating the effect size. By default, `model.reduced = NULL`; if a reduced model is specified, only the effect size for the different parameters will be shown.
@@ -64,17 +64,21 @@ calc_resi.lm = function(object, object.reduced = NULL, vcov.= sandwich::vcovHC, 
 #' @importFrom sandwich vcovHC
 #' @importFrom lmtest coeftest
 #' @export
-calc_resi.glm = function(object, vcov.=sandwich::vcovHC, ...){
-  x = as.matrix(summary(object)$coefficients)
-  robust.se = sqrt(diag(vcov.(object, ...)))
-  x = cbind('Estimate' = x[, 1], 'Robust s.e.' = robust.se)
-  x = cbind(x, 'Robust Wald' = (x[, "Estimate"]/x[, 'Robust s.e.'])^2)
-  x = cbind(x, 'p-value'= pchisq(x[, "Robust Wald"], df = 1, lower.tail = FALSE))
-  resi.tab = cbind(x, RESI = RESI::chisq2S(x[,'Robust Wald'], 1, object$df.residual))
-  output = list(resi.tab = resi.tab,
-                vcov. = vcov.)
-  return(output)
-}
+# calc_resi.glm = function(object, object.reduced = NULL, vcov.=sandwich::vcovHC, ...){
+#   if (is.null(object.reduced)){
+#     x = as.matrix(summary(object)$coefficients)
+#     robust.se = sqrt(diag(vcov.(object, ...)))
+#     x = cbind('Estimate' = x[, 1], 'Robust s.e.' = robust.se)
+#     x = cbind(x, 'Robust Wald' = (x[, "Estimate"]/x[, 'Robust s.e.'])^2)
+#     x = cbind(x, 'p-value'= pchisq(x[, "Robust Wald"], df = 1, lower.tail = FALSE))
+#     resi.tab = cbind(x, RESI = RESI::chisq2S(x[,'Robust Wald'], 1, object$df.residual))
+#   } else {
+#
+#   }
+#   output = list(resi.tab = resi.tab,
+#                 vcov. = vcov.)
+#   return(output)
+# }
 
 #' Robust effect size add-on for Wald tests and anova
 #'
