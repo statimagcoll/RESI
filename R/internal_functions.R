@@ -49,8 +49,7 @@ bayes.samp <- function(data) {
 
 #' @export
 print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
-  if (x$robust.var) cat("\n Analysis of Effect sizes (ANOES) based on RESI using robust sandwich covariance estimator: ")
-  if (! x$robust.var) cat("\n Analysis of Effect sizes (ANOES) based on RESI using naive covariance estimator: ")
+  cat("\n Analysis of Effect sizes (ANOES) based on RESI: ")
   cat("\n Significance level = ", x$alpha)
   cat("\n Call:  ",
       paste(deparse(x$input.object$call), sep = "\n", collapse = "\n"), "\n\n", sep = "")
@@ -59,6 +58,9 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
                   print.gap = 2, quote = FALSE)
   } else cat("No coefficients\n\n")
 
+  cat("\n Notes:")
+  if (x$robust.var) cat("\n The RESI is calculated using the robust (sandwich) covariance estimator.")
+  else cat("\n The RESI is calculated using the naive covariance estimator.")
   if (x$boot.method == "nonparam") cat("\n Confidence intervals (CIs) constructed using", x$nboot,"non-parametric bootstraps \n")
   if (x$boot.method == "bayes") cat("\n Credible intervals constructed using", x$nboot,"Bayesian bootstraps \n")
   if(nzchar(mess <- naprint(x$na.action))) cat("  (",mess, ")\n", sep = "")
