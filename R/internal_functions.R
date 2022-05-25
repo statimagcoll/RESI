@@ -51,18 +51,19 @@ bayes.samp <- function(data) {
 print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   cat("\n Analysis of Effect sizes (ANOES) based on RESI: ")
   cat("\n Significance level = ", x$alpha)
-  cat("\n Call:  ",
+  cat( ifelse(is.null(x$input.object.reduced), "\n Call:  ", "\n Full Model:"),
       paste(deparse(x$input.object$call), sep = "\n", collapse = "\n"), "\n\n", sep = "")
+  if (!is.null(x$input.object.reduced)) cat("\n Reduced Model:", paste(deparse(x$input.object$call), sep = "\n", collapse = "\n"), "\n\n", sep = "")
   if(length(coef(x$input.object))) {
     print.default(format(round(x$resi, digits = digits)),
                   print.gap = 2, quote = FALSE)
   } else cat("No coefficients\n\n")
 
   cat("\n Notes:")
-  if (x$robust.var) cat("\n The RESI is calculated using the robust (sandwich) covariance estimator.")
-  else cat("\n The RESI is calculated using the naive covariance estimator.")
-  if (x$boot.method == "nonparam") cat("\n Confidence intervals (CIs) constructed using", x$nboot,"non-parametric bootstraps \n")
-  if (x$boot.method == "bayes") cat("\n Credible intervals constructed using", x$nboot,"Bayesian bootstraps \n")
+  if (x$robust.var) cat("\n 1. The RESI is calculated using the robust (sandwich) covariance estimator.")
+  else cat("\n 1. The RESI is calculated using the naive covariance estimator.")
+  if (x$boot.method == "nonparam") cat("\n 2. Confidence intervals (CIs) constructed using", x$nboot,"non-parametric bootstraps \n")
+  if (x$boot.method == "bayes") cat("\n 2. Credible intervals constructed using", x$nboot,"Bayesian bootstraps \n")
   if(nzchar(mess <- naprint(x$na.action))) cat("  (",mess, ")\n", sep = "")
 
   invisible(x)
