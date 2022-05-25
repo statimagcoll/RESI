@@ -10,18 +10,25 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Collate: 
-  'anoes.R'
+  'internal_functions.R'
   'boot.ci.R'
   'esSim.R'
   'nccd.R'
   'ncf.R'
+  'calc_resi.R'
   'resi.R'
   'S.R'
+  'ess.R'
+  'simulation.R'
 Imports:
   lmtest,
   pracma,
   sandwich,
-  parallel
+  parallel,
+  clubSandwich,
+  mvtnorm,
+  geepack,
+  nlme
 Suggests:
   testthat
 RoxygenNote: 7.1.1

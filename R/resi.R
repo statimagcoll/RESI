@@ -1,51 +1,218 @@
-#' Robust effect size add-on for lm objects
-#'
-#' Effect size summary that can compliment your summary output. All conversions are based on the robust effect size index estimator.
-#' @param object The model object.
-#' @param vcov. The variance covariance matrix to use. Defaults to one of the heteroskedasticity consistent estimator. Note that this differs from the default in lmtest.
-#' @param ... Arguments passed to coeftest
-#' @keywords lm effect size
-#' @return Returns a summary of tests and the robust effect size index for linear models.
-#' @details Stuff and stuff.
-#' @importFrom sandwich vcovHC
-#' @importFrom lmtest coeftest
-#' @importFrom stats pt qnorm
+
+#' Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for (generalized) linear regression models
 #' @export
-resi.lm = function(object, vcov.=sandwich::vcovHC, ...){
-  x = coeftest(object, vcov.=vcov., ...)
-  cbind(x, S = RESI::chisq2S(qnorm(pt(x[,'t value'], df = object$df.residual))^2, 1, object$df.residual))
+# anoes <- function(model.full, model.reduced = NULL,
+#                      robust.var = TRUE,
+#                      boot.type = 1, multi = 'none',
+#                      nboot = 1000, alpha = 0.05){
+#
+#   output = boot.ci.glm(model.full = model.full, model.reduced = model.reduced,
+#                     robust.var = robust.var,
+#                     boot.type = boot.type, multi = multi,
+#                     r = nboot,
+#                     alpha = alpha)$ANOES
+#
+#   return(output)
+# }
+#
+resi <- function(x, ...){
+  UseMethod("resi")
 }
 
-#' Robust effect size add-on for glm
-#'
-#' Effect size summary that can compliment your summary output. All conversions are based on the robust effect size index estimator.
-#' @param object The model object.
-#' @param vcov. The variance covariance matrix to use. Defaults to one of the heteroskedasticity consistent estimator. Note that this differs from the default in lmtest.
-#' @param ... Arguments passed to coeftest
-#' @keywords effect size glm
-#' @return Returns a summary of tests and the robust effect size index for generalized linear models.
-#' @details Stuff and more stuff.
-#' @importFrom sandwich vcovHC
-#' @importFrom lmtest coeftest
+
+#' Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for (generalized) linear regression models
+#' This function estiamtes RESI and it CIs in a fitted glm model object
+#' The CI are calculated via non-parametric bootstraps
+#' @param model.full the full model. It should be a `glm` object.
+#' @param model.reduced the reduced `glm()` model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
+#' @param nboot numeric, the number of bootstrap replicates. By default, 1000 bootstraps will be implemented.
+#' @param robust.var default to TRUE, whether to use the robust (sandwich) variance estimator when construct the Wald test statistic. If `TRUE`, the variance of the estimator will be obtained by using `sandwich::vcovHC()`` and the HC3 will be applied.
+#' @param boot.method which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.
+#' @param alpha significance level of the constructed CIs. By default, 0.05 will be used.
 #' @export
-resi.glm = function(object, vcov.=sandwich::vcovHC, ...){
-  x = coeftest(object, vcov.=vcov., ...)
-  cbind(x, S = RESI::chisq2S(x[,'z value']^2, 1, object$df.residual))
+resi.lm <- function(object, model.reduced = NULL,
+                      robust.var = TRUE,
+                      boot.method = "nonparam",
+                      nboot = 1000, alpha = 0.05, ...){
+
+  if (robust.var) {
+    vcovfunc = sandwich::vcovHC
+  } else {
+    vcovfunc = vcov
+  }
+
+  if (! tolower(boot.method) %in% c("nonparam", "bayes")) stop("\n The bootstrap method should be either 'nonparam' for non-parametric bootstrap, or 'bayes' for Bayesian bootstrap")
+
+  output = calc_resi(object, object.reduced = model.reduced, vcov. = vcovfunc, ...)$resi.tab
+  data = object$model
+  # bootstrap
+  output.boot = as.matrix(output[, 'RESI'])
+  ## non-param
+  if (tolower(boot.method) == "nonparam"){
+    for (i in 1:nboot){
+      boot.data = boot.samp(data)
+      # re-fit the model
+      boot.mod = update(object, data = boot.data)
+      if (is.null(model.reduced)){
+        boot.mod.reduced = NULL
+      } else {
+        boot.mod.reduced = update(model.reduced, data = boot.data)
+      }
+      output.boot = cbind(output.boot, calc_resi(object = boot.mod, object.reduced = boot.mod.reduced, vcov. = vcovfunc, ...)$resi.tab[, 'RESI'])
+    }
+  }
+  # bayesian boot
+  if (tolower(boot.method)  == "bayes"){
+    for (i in 1:nboot){
+      boot.data = bayes.samp(data)
+      # re-fit the model
+      boot.mod = update(object, data = boot.data, weights = g)
+      if (is.null(model.reduced)){
+        boot.mod.reduced = NULL
+      } else {
+        boot.mod.reduced = update(model.reduced, data = boot.data, weights = g )
+      }
+      output.boot = cbind(output.boot, calc_resi(object = boot.mod, object.reduced = model.reduced, vcov. = vcovfunc, ...)$resi.tab[, 'RESI'])
+    }
+  } # end of `if (boot.method == "bayes")`
+
+  output.boot = output.boot[, -1]
+  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+  output.tab = cbind(output, t(RESI.ci))
+  if (robust.var) {
+    colnames(output.tab)[which(colnames(output.tab) == 'Wald')] = 'Robust Wald'
+    if (is.null(model.reduced)) colnames(output.tab)[which(colnames(output.tab) == 's.e.')] = 'Robust s.e.'
+  }
+  output = list(resi = output.tab,
+                alpha = alpha,
+                boot.value = output.boot, # bootstrapped values of RESI
+                boot.method = tolower(boot.method),
+                nboot = nboot,
+                input.object = object,
+                input.object.reduced = model.reduced,
+                robust.var = robust.var
+  )
+
+  class(output) = "resi"
+  return(output)
 }
 
-#' Robust effect size add-on for Wald tests and anova
-#'
-#' Effect size summary that can compliment your summary output. All conversions are based on the robust effect size index estimator. Object handling is handled by the 'lmtest' package.
-#' @param object The model object.
-#' @param vcov. The variance covariance matrix to use. Defaults to one of the heteroskedasticity consistent estimator. Note that this differs from the default in lmtest.
-#' @param ... Arguments passed to waldtest
-#' @keywords wald test, anova
-#' @return Returns an anova-like test and the robust effect size index for comparing two or more models.
-#' @importFrom sandwich vcovHC
-#' @importFrom lmtest waldtest
-#' @importFrom stats pt qnorm
+
+# resi.lm <- function(object, model.full = NULL, model.reduced = NULL,
+#                     robust.var = TRUE,
+#                     boot.method = "nonparam",
+#                     nboot = 1000, alpha = 0.05){
+#   if (is.null(model.reduced)){
+#     output = calc_resi.glm(object)$resi.tab
+#     data = object$model
+#     # bootstrap
+#     ## non-param
+#     if (tolower(boot.method) == "nonparam"){
+#       output.boot = as.matrix(output[, 'RESI'])
+#       for (i in 1:nboot){
+#         boot.data = boot.samp(data)
+#         # re-fit the model
+#         boot.mod = update(object, data = boot.data)
+#         output.boot = cbind(output.boot, calc_resi.glm(boot.mod)$resi.tab[, 'RESI'])
+#       }
+#     }
+#     # bayesian boot
+#     if (tolower(boot.method)  == "bayes"){
+#       output.boot = as.matrix(output[, 'RESI'])
+#       for (i in 1:nboot){
+#         boot.data = bayes.samp(data)
+#         # re-fit the model
+#         boot.mod = update(object, data = boot.data, weight = g)
+#         output.boot = cbind(output.boot, calc_resi.glm(boot.mod)$resi.tab[, 'RESI'])
+#       }
+#     }
+#
+#     output.boot = output.boot[, -1]
+#     RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+#     output.tab = cbind(output, t(RESI.ci))
+#     output = list(resi = output.tab,
+#                   alpha = alpha,
+#                   boot.value = output.boot, # bootstrapped values of RESI
+#                   boot.method = tolower(boot.method),
+#                   nboot = nboot,
+#                   input.object = object,
+#                   robust.var = robust.var
+#     )
+#
+#   } else{ # else: if there is a reduced model
+#
+#     output = boot.ci(model.full = model.full, model.reduced = model.reduced,
+#                      robust.var = robust.var,
+#                      boot.type = boot.type, multi = multi,
+#                      r = nboot,
+#                      alpha = alpha)$ANOES
+#   }
+#   class(output) = "resi"
+#   return(output)
+# }
+
+
+
+
+
+#' Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for GEE models
+#' This function will estimate RESI and its CI for each factor in a fitted GEE model object.
+#' The CIs are calculated via non-parametric bootstraps.
+#' @param object the model object
+#' @param alpha numeric, the type I error rate based on which CIs were constructed. By default, 0.05.
+#' @param nboot numeric, the number of bootstraps used to construct CIs. By default, 1000.
 #' @export
-resi.waldtest = function(object, ..., vcov.=sandwich::vcovHC){
-  x = waldtest(object, ...=..., vcov=vcov.)
-  cbind(x, S = RESI::chisq2S(qnorm(pt(x[,'t value'], df = object$df.residual))^2, 1, object$df.residual))
+#' @return An ANOVA-type model summary output with RESI estimates and CIs added.
+resi.geeglm <- function(object, alpha = 0.05, nboot = 1000){
+  output = resi.geeglm(object) # RESI point estimates
+  data = object$data
+  # id variable name
+  id_var = as.character(object$call$id)
+  # bootstrap
+  output.boot = as.matrix(output[, 'RESI'])
+  for (i in 1:nboot){
+    boot.data = boot.samp(data, id.var = id_var)
+    # re-fit the model
+    boot.mod = update(object, data = boot.data)
+    output.boot = cbind(output.boot, calc_resi(boot.mod)[, 'RESI'])
+  }
+  output.boot = output.boot[, -1]
+  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+  output = cbind(output, t(RESI.ci))
+  return(output)
 }
+
+#' Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for LME models
+#' This function will estimate RESI and its CI for each factor in a fitted GEE model object.
+#' The CIs are calculated via non-parametric bootstraps.
+#' @param object the model object
+#' @param alpha numeric, the type I error rate based on which CIs were constructed. By default, 0.05.
+#' @param nboot numeric, the number of bootstraps used to construct CIs. By default, 1000.
+#' @export
+#' @return An ANOVA-type model summary output with RESI estimates and CIs added.
+resi.lme <- function(object, alpha = 0.05, nboot = 1000){
+  output = resi.lme(object) # RESI point estimates
+  data = object$data
+  # id variable name
+  id_var = attr(nlme::getGroups(object), "label")
+  # bootstrap
+  output.boot = as.matrix(output[, 'RESI'])
+  for (i in 1:nboot){
+    boot.data = boot.samp(data, id.var = id_var)
+    # re-fit the model
+    boot.mod = update(object, data = boot.data)
+    output.boot = cbind(output.boot, calc_resi(boot.mod)[, 'RESI'])
+  }
+  output.boot = output.boot[, -1]
+  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+  output = cbind(output, t(RESI.ci))
+  return(output)
+}
+
+
+
+
+
+
+
+

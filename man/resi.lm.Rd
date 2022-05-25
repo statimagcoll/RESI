@@ -2,26 +2,35 @@
 % Please edit documentation in R/resi.R
 \name{resi.lm}
 \alias{resi.lm}
-\title{Robust effect size add-on for lm objects}
+\title{Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for (generalized) linear regression models
+This function estiamtes RESI and it CIs in a fitted glm model object
+The CI are calculated via non-parametric bootstraps}
 \usage{
-resi.lm(object, vcov. = sandwich::vcovHC, ...)
+\method{resi}{lm}(
+  object,
+  model.reduced = NULL,
+  robust.var = TRUE,
+  boot.method = "nonparam",
+  nboot = 1000,
+  alpha = 0.05,
+  ...
+)
 }
 \arguments{
-\item{object}{The model object.}
+\item{model.reduced}{the reduced `glm()` model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.}
 
-\item{vcov.}{The variance covariance matrix to use. Defaults to one of the heteroskedasticity consistent estimator. Note that this differs from the default in lmtest.}
+\item{robust.var}{default to TRUE, whether to use the robust (sandwich) variance estimator when construct the Wald test statistic. If `TRUE`, the variance of the estimator will be obtained by using `sandwich::vcovHC()`` and the HC3 will be applied.}
 
-\item{...}{Arguments passed to coeftest}
-}
-\value{
-Returns a summary of tests and the robust effect size index for linear models.
+\item{boot.method}{which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.}
+
+\item{nboot}{numeric, the number of bootstrap replicates. By default, 1000 bootstraps will be implemented.}
+
+\item{alpha}{significance level of the constructed CIs. By default, 0.05 will be used.}
+
+\item{model.full}{the full model. It should be a `glm` object.}
 }
 \description{
-Effect size summary that can compliment your summary output. All conversions are based on the robust effect size index estimator.
+Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for (generalized) linear regression models
+This function estiamtes RESI and it CIs in a fitted glm model object
+The CI are calculated via non-parametric bootstraps
 }
-\details{
-Stuff and stuff.
-}
-\keyword{effect}
-\keyword{lm}
-\keyword{size}
