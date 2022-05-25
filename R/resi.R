@@ -80,8 +80,8 @@ resi.lm <- function(object, model.reduced = NULL,
   RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
   output.tab = cbind(output, t(RESI.ci))
   if (robust.var) {
-    colnames(output.tab)['s.e.'] = 'Robust s.e.'
-    colnames(output.tab)['Wald'] = 'Robust Wald'
+    colnames(output.tab)[which(colnames(output.tab) == 'Wald')] = 'Robust Wald'
+    if (is.null(model.reduced)) colnames(output.tab)['s.e.'] = 'Robust s.e.'
   }
   output = list(resi = output.tab,
                 alpha = alpha,
