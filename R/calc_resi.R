@@ -26,7 +26,7 @@ calc_resi.lm = function(object, object.reduced = NULL, vcov.= sandwich::vcovHC, 
     resi.tab = cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], df = 1, object$df.residual))
   } else {
     # Overall (Wald) test stat
-    wald.test = lmtest::waldtest(object.reduced, object, vcov = vcov., test = 'Chisq')
+    wald.test = lmtest::waldtest(object.reduced, object, vcov = vcov., test = 'Chisq',...)
     stats = wald.test$Chisq[2]
     overall.df = wald.test$Df[2]
     res.df = wald.test$Res.Df[2]
