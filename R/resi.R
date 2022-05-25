@@ -43,7 +43,7 @@ resi.lm <- function(object, model.reduced = NULL,
 
   if (! tolower(boot.method) %in% c("nonparam", "bayes")) stop("\n The bootstrap method should be either 'nonparam' for non-parametric bootstrap, or 'bayes' for Bayesian bootstrap")
 
-  output = calc_resi.lm(object, object.reduced = model.reduced, vcov. = vcovfunc)$resi.tab
+  output = calc_resi(object, object.reduced = model.reduced, vcov. = vcovfunc)$resi.tab
   data = object$model
   # bootstrap
   output.boot = as.matrix(output[, 'RESI'])
@@ -58,7 +58,7 @@ resi.lm <- function(object, model.reduced = NULL,
       } else {
         boot.mod.reduced = update(object.reduced, data = boot.data )
       }
-      output.boot = cbind(output.boot, calc_resi.lm(object = boot.mod, object.reduced = boot.mod.reduced, vcov. = vcovfunc, ...)$resi.tab[, 'RESI'])
+      output.boot = cbind(output.boot, calc_resi(object = boot.mod, object.reduced = boot.mod.reduced, vcov. = vcovfunc, ...)$resi.tab[, 'RESI'])
     }
   }
   # bayesian boot
@@ -72,7 +72,7 @@ resi.lm <- function(object, model.reduced = NULL,
       } else {
         boot.mod.reduced = update(object.reduced, data = boot.data, weights = g )
       }
-      output.boot = cbind(output.boot, calc_resi.lm(object = boot.mod, object.reduced = model.reduced, vcov. = vcovfunc, ...)$resi.tab[, 'RESI'])
+      output.boot = cbind(output.boot, calc_resi(object = boot.mod, object.reduced = model.reduced, vcov. = vcovfunc, ...)$resi.tab[, 'RESI'])
     }
   } # end of `if (boot.method == "bayes")`
 
@@ -169,7 +169,7 @@ resi.geeglm <- function(object, alpha = 0.05, nboot = 1000){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
     boot.mod = update(object, data = boot.data)
-    output.boot = cbind(output.boot, calc_resi.geeglm(boot.mod)[, 'RESI'])
+    output.boot = cbind(output.boot, calc_resi(boot.mod)[, 'RESI'])
   }
   output.boot = output.boot[, -1]
   RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
@@ -196,7 +196,7 @@ resi.lme <- function(object, alpha = 0.05, nboot = 1000){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
     boot.mod = update(object, data = boot.data)
-    output.boot = cbind(output.boot, calc_resi.lme(boot.mod)[, 'RESI'])
+    output.boot = cbind(output.boot, calc_resi(boot.mod)[, 'RESI'])
   }
   output.boot = output.boot[, -1]
   RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
