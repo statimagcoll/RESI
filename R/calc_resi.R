@@ -7,24 +7,48 @@ calc_resi <- function(x, ...){
 #' Robust effect size add-on for lm
 #' Effect size summary that can compliment your summary output. All conversions are based on the robust effect size index estimator.
 #' @param object The model object.
+#' @param object.reduced The reduced model to compare with the object while calculating the effect size. By default, `model.reduced = NULL`; if a reduced model is specified, only the effect size for the different parameters will be shown.
 #' @param vcov. The variance covariance matrix to use. Defaults to one of the heteroskedasticity consistent estimator. Note that this differs from the default in lmtest.
-#' @param ... Arguments passed to coeftest
+#' @param ... Arguments passed to `vcov.`
 #' @keywords lm effect size
 #' @return Returns a summary of tests and the robust effect size index for linear models.
 #' @details Stuff and stuff.
 #' @importFrom sandwich vcovHC
 #' @importFrom lmtest coeftest
-#' @importFrom stats pt qnorm
 #' @export
-calc_resi.lm = function(object, vcov.= sandwich::vcovHC, ...){
-  x = as.matrix(summary(object)$coefficients)
-  se = sqrt(diag(vcov.(object, ...)))
-  x = cbind('Estimate' = x[, 1], 's.e.' = se)
-  x = cbind(x, 'Wald' = (x[, "Estimate"]/x[, 's.e.'])^2)
-  x = cbind(x, 'p-value'= pchisq(x[, "Wald"], df = 1, lower.tail = FALSE))
-  resi.tab = cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], df = 1, object$df.residual))
+calc_resi.lm = function(object, object.reduced = NULL, vcov.= sandwich::vcovHC, ...){
+  if (is.null(object.reduced)) {
+    x = as.matrix(summary(object)$coefficients)
+    se = sqrt(diag(vcov.(object, ...)))
+    x = cbind('Estimate' = x[, 1], 's.e.' = se)
+    x = cbind(x, 'Wald' = (x[, "Estimate"]/x[, 's.e.'])^2)
+    x = cbind(x, 'p-value'= pchisq(x[, "Wald"], df = 1, lower.tail = FALSE))
+    resi.tab = cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], df = 1, object$df.residual))
+  } else {
+
+    # Overall (Wald) test stat
+    wald.test = lmtest::waldtest(object.reduced, object, vcov = vcov., test = 'Chisq')
+    stats = wald.test$Chisq[2]
+    overall.df = wald.test$Df[2]
+    res.df = wald.test$Res.Df[2]
+    # overall RESI
+    overall.resi.hat = RESI::chisq2S(stats, overall.df, res.df)
+
+    # set up ANOES table
+    anoes.tab = matrix(rep(NA, 2*4), nrow = 2, ncol = 4)
+    anoes.tab[1, c(1, 2, 4) ] = c(stats, overall.df, overall.resi.hat)
+    anoes.tab[2, 2] = res.df
+    ## rename
+    rownames(anoes.tab) = c("Tested", "Residual")
+    colnames(anoes.tab) = c("Wald", "df", "p-val", "RESI")
+    ## calculate p-values form Chi-sq dist
+    anoes.tab[, 'p-val'] = pchisq(anoes.tab[, "Wald"], df = anoes.tab[, "df"], lower.tail = FALSE)
+    resi.tab = anoes.tab
+  }
   output = list(resi.tab = resi.tab,
-                vcov. = vcov.)
+                vcov. = vcov.,
+                object = object,
+                object.reduced = object.reduced)
   return(output)
 }
 
