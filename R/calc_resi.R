@@ -63,7 +63,6 @@ calc_resi.lm = function(object, object.reduced = NULL, vcov.= sandwich::vcovHC, 
 #' @details Stuff and more stuff.
 #' @importFrom sandwich vcovHC
 #' @importFrom lmtest coeftest
-#' @export
 # calc_resi.glm = function(object, object.reduced = NULL, vcov.=sandwich::vcovHC, ...){
 #   if (is.null(object.reduced)){
 #     x = as.matrix(summary(object)$coefficients)
@@ -91,7 +90,6 @@ calc_resi.lm = function(object, object.reduced = NULL, vcov.= sandwich::vcovHC, 
 #' @importFrom sandwich vcovHC
 #' @importFrom lmtest waldtest
 #' @importFrom stats pt qnorm
-#' @export
 # calc_resi.waldtest = function(object, ..., vcov.=sandwich::vcovHC){
 #   x = waldtest(object, ...=..., vcov=vcov.)
 #   cbind(x, S = RESI::chisq2S(qnorm(pt(x[,'t value'], df = object$df.residual))^2, 1, object$df.residual))

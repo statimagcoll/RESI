@@ -48,11 +48,10 @@ bayes.samp <- function(data) {
 }
 
 
-
 print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   if (x$robust.var) cat("\n Analysis of Effect sizes (ANOES) based on RESI using robust sandwich covariance estimator: ")
   if (! x$robust.var) cat("\n Analysis of Effect sizes (ANOES) based on RESI using naive covariance estimator: ")
-  cat("\n significance level = ", x$alpha)
+  cat("\n Significance level = ", x$alpha)
   cat("\n Call:  ",
       paste(deparse(x$input.object$call), sep = "\n", collapse = "\n"), "\n\n", sep = "")
   if(length(coef(x$input.object))) {

@@ -2,10 +2,10 @@
 % Please edit documentation in R/resi.R
 \name{resi}
 \alias{resi}
-\title{Robust effect size add-on for model fit objects}
+\title{Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for (generalized) linear regression models}
 \usage{
 resi(x, ...)
 }
 \description{
-Robust effect size add-on for model fit objects
+Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for (generalized) linear regression models
 }

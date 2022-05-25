@@ -140,7 +140,6 @@ ncc.ci.central=function(y,p,alpha=0.05) {
 #' @param p integer, degrees of freedom.
 #' @param alpha probability for confidence interval.
 #' @return xxxx
-#' @export
 # ncc.ci.sr=function(y,p,alpha=0.05) {
 #   u0=Finv(1-alpha,p,0)
 #   if(y<=u0) ll=0
@@ -171,7 +170,6 @@ ncc.ci.central=function(y,p,alpha=0.05) {
 #' @param alpha probability for confidence interval.
 #' @importFrom stats constrOptim
 #' @return xxx
-#' @export
 # ncc.ci.mdb=function(y,p,alpha=0.05) {
 #   u0=Finv(1-alpha,p,0); nu=(p-2)/2; zz=-qnorm(alpha/2)
 #   if(y<=u0) ll=0
@@ -207,7 +205,6 @@ ncc.ci.central=function(y,p,alpha=0.05) {
 #' @param alpha probability for confidence interval.
 #' @importFrom stats constrOptim qnorm
 #' @return xxx
-#' @export
 # ncc.ci.mdr=function(y,p,alpha=0.05) {
 #   u0=Finv(1-alpha,p,0); nu=(p-2)/2; zz=-qnorm(alpha/2)
 #   if(y<=u0) ll=0

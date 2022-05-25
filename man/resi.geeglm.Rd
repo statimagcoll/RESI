@@ -2,18 +2,24 @@
 % Please edit documentation in R/resi.R
 \name{resi.geeglm}
 \alias{resi.geeglm}
-\title{RESI from gee or geeglm object
-This function calculate the RESI from geeglm model object}
+\title{Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for GEE models
+This function will estimate RESI and its CI for each factor in a fitted GEE model object.
+The CIs are calculated via non-parametric bootstraps.}
 \usage{
-\method{resi}{geeglm}(object, ...)
+\method{resi}{geeglm}(object, alpha = 0.05, nboot = 1000)
 }
 \arguments{
-\item{object}{The model object}
+\item{object}{the model object}
+
+\item{alpha}{numeric, the type I error rate based on which CIs were constructed. By default, 0.05.}
+
+\item{nboot}{numeric, the number of bootstraps used to construct CIs. By default, 1000.}
 }
 \value{
-returns the ANOVA-type summary table with RESI estimate for each factor
+An ANOVA-type model summary output with RESI estimates and CIs added.
 }
 \description{
-RESI from gee or geeglm object
-This function calculate the RESI from geeglm model object
+Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for GEE models
+This function will estimate RESI and its CI for each factor in a fitted GEE model object.
+The CIs are calculated via non-parametric bootstraps.
 }

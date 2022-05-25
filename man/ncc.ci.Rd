@@ -19,10 +19,17 @@ ncc.ci(y, df, alpha = 0.05)
 }
 \value{
 xxxx
+MD Bessel confidence interval for chi-square noncentrality parameter.
+Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 
 xxx
+MD radial confidence interval for chi-square noncentrality parameter.
+Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 
 xxx
+Return four confidence intervals for noncentrality parameter of a chi-square distribution.
+
+Code taken by SNV from https://www1.maths.leeds.ac.uk/~john/software/ncc/ncc.r.
 
 xxxx
 }
