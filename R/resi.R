@@ -1,6 +1,6 @@
 
 #' Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for (generalized) linear regression models
-#' @export
+# #' @export
 # anoes <- function(model.full, model.reduced = NULL,
 #                      robust.var = TRUE,
 #                      boot.type = 1, multi = 'none',
@@ -27,14 +27,76 @@ resi <- function(x, ...){
 #' @param model.reduced the reduced `glm()` model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param nboot numeric, the number of bootstrap replicates. By default, 1000 bootstraps will be implemented.
 #' @param robust.var default to TRUE, whether to use the robust (sandwich) variance estimator when construct the Wald test statistic. If `TRUE`, the variance of the estimator will be obtained by using `sandwich::vcovHC()`` and the HC3 will be applied.
-#' @param multi the distribution from which the multipliers will be drawn: 'none' = the multipliers equal constant 1 (default); 'rad' = rademacher; 'normal' = Std Normal distribution
-#' @param boot.method which type of bootstrap to use: `nonpara` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.
+#' @param boot.method which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.
 #' @param alpha significance level of the constructed CIs. By default, 0.05 will be used.
 #' @export
-resi.glm <- function(object, model.full = NULL, model.reduced = NULL,
+resi.glm <- function(object, model.reduced = NULL,
                       robust.var = TRUE,
                       boot.method = "nonparam",
-                      nboot = 1000, alpha = 0.05){
+                      nboot = 1000, alpha = 0.05, ...){
+
+  if (robust.var) {
+    vcovfunc = sandwich::vcovHC
+  } else {
+    vcovfunc = vcov
+  }
+
+  if (! tolower(boot.method) %in% c("nonparam", "bayes")) stop("\n The bootstrap method should be either 'nonparam' for non-parametric bootstrap, or 'bayes' for Bayesian bootstrap")
+
+  output = calc_resi.lm(object, object.reduced = model.reduced, vcov. = vcovfunc)$resi.tab
+  data = object$model
+  # bootstrap
+  output.boot = as.matrix(output[, 'RESI'])
+  ## non-param
+  if (tolower(boot.method) == "nonparam"){
+    for (i in 1:nboot){
+      boot.data = boot.samp(data)
+      # re-fit the model
+      boot.mod = update(object, data = boot.data)
+      if (is.null(model.reduced)){
+        boot.mod.reduced = NULL
+      } else {
+        boot.mod.reduced = update(object.reduced, data = boot.data )
+      }
+      output.boot = cbind(output.boot, calc_resi.lm(object = boot.mod, object.reduced = boot.mod.reduced, vcov. = vcovfunc, ...)$resi.tab[, 'RESI'])
+    }
+  }
+  # bayesian boot
+  if (tolower(boot.method)  == "bayes"){
+    for (i in 1:nboot){
+      boot.data = bayes.samp(data)
+      # re-fit the model
+      boot.mod = update(object, data = boot.data, weights = g)
+      if (is.null(model.reduced)){
+        boot.mod.reduced = NULL
+      } else {
+        boot.mod.reduced = update(object.reduced, data = boot.data, weights = g )
+      }
+      output.boot = cbind(output.boot, calc_resi.lm(object = boot.mod, object.reduced = model.reduced, vcov. = vcovfunc, ...)$resi.tab[, 'RESI'])
+    }
+  } # end of `if (boot.method == "bayes")`
+
+  output.boot = output.boot[, -1]
+  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+  output.tab = cbind(output, t(RESI.ci))
+  output = list(resi = output.tab,
+                alpha = alpha,
+                boot.value = output.boot, # bootstrapped values of RESI
+                boot.method = tolower(boot.method),
+                nboot = nboot,
+                input.object = object,
+                robust.var = robust.var
+  )
+
+  class(output) = "resi"
+  return(output)
+}
+
+
+resi.lm <- function(object, model.full = NULL, model.reduced = NULL,
+                    robust.var = TRUE,
+                    boot.method = "nonparam",
+                    nboot = 1000, alpha = 0.05){
   if (is.null(model.reduced)){
     output = calc_resi.glm(object)$resi.tab
     data = object$model
@@ -70,18 +132,22 @@ resi.glm <- function(object, model.full = NULL, model.reduced = NULL,
                   nboot = nboot,
                   input.object = object,
                   robust.var = robust.var
-                  )
+    )
 
-  } else{
-   output = boot.ci(model.full = model.full, model.reduced = model.reduced,
-                    robust.var = robust.var,
-                    boot.type = boot.type, multi = multi,
-                    r = nboot,
-                    alpha = alpha)$ANOES
+  } else{ # else: if there is a reduced model
+
+    output = boot.ci(model.full = model.full, model.reduced = model.reduced,
+                     robust.var = robust.var,
+                     boot.type = boot.type, multi = multi,
+                     r = nboot,
+                     alpha = alpha)$ANOES
   }
   class(output) = "resi"
   return(output)
 }
+
+
+
 
 
 #' Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for GEE models
