@@ -8,27 +8,12 @@
 }
 \arguments{
 \item{object}{The model object}
-
-\item{...}{Arguments passed to waldtest}
-
-\item{vcov.}{The variance covariance matrix to use. Defaults to one of the heteroskedasticity consistent estimator. Note that this differs from the default in lmtest.}
 }
 \value{
-Returns a summary of tests and the robust effect size index for generalized linear models.
-
-Returns an anova-like test and the robust effect size index for comparing two or more models.
-
 returns the ANOVA-type summary table with RESI estimate for each factor
 }
 \description{
 Effect size summary that can compliment your summary output. All conversions are based on the robust effect size index estimator.
+RESI from gee or geeglm object
+This function calculate the RESI from geeglm model object
 }
-\details{
-Stuff and more stuff.
-}
-\keyword{anova}
-\keyword{effect}
-\keyword{glm}
-\keyword{size}
-\keyword{test,}
-\keyword{wald}
