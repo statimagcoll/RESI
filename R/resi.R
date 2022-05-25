@@ -56,7 +56,7 @@ resi.lm <- function(object, model.reduced = NULL,
       if (is.null(model.reduced)){
         boot.mod.reduced = NULL
       } else {
-        boot.mod.reduced = update(object.reduced, data = boot.data )
+        boot.mod.reduced = update(model.reduced, data = boot.data)
       }
       output.boot = cbind(output.boot, calc_resi(object = boot.mod, object.reduced = boot.mod.reduced, vcov. = vcovfunc, ...)$resi.tab[, 'RESI'])
     }
@@ -70,7 +70,7 @@ resi.lm <- function(object, model.reduced = NULL,
       if (is.null(model.reduced)){
         boot.mod.reduced = NULL
       } else {
-        boot.mod.reduced = update(object.reduced, data = boot.data, weights = g )
+        boot.mod.reduced = update(model.reduced, data = boot.data, weights = g )
       }
       output.boot = cbind(output.boot, calc_resi(object = boot.mod, object.reduced = model.reduced, vcov. = vcovfunc, ...)$resi.tab[, 'RESI'])
     }
