@@ -11,6 +11,7 @@ Encoding: UTF-8
 LazyData: true
 Collate: 
   'internal_functions.R'
+  'boot.ci.R'
   'esSim.R'
   'nccd.R'
   'ncf.R'
