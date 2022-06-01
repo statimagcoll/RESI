@@ -1,0 +1,64 @@
+#' Robust Effect Size index (RESI) point and interval estimation for models
+#' @param model.full the full model.
+#' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
+#' @param data optional data frame or object coercible to data frame of model.full data (required for some model types)
+#' @param anova whether to produce an Anova table with the RESI columns added. By default = `TRUE`
+#' @param summary whether to produce a summary table with the RESI columns added. By default = `TRUE`
+#' @param nboot numeric, the number of bootstrap replicates. By default, 1000 bootstraps will be implemented.
+#' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)
+#' @param alpha significance level of the constructed CIs. By default, 0.05 will be used.
+#' @param ... Other arguments to be passed to Anova function
+#' @importFrom aod wald.test
+#' @importFrom car Anova
+#' @importFrom lmtest waldtest
+#' @importFrom regtools nlshc
+#' @importFrom sandwich vcovHC
+#' @importFrom stats coef formula glm hatvalues pf predict quantile residuals update vcov
+#' @export
+#' @return Returns a list that includes function arguments, RESI point estimates, and confidence intervals
+
+resi <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
+                 nboot = 1000, vcovfunc = sandwich::vcovHC, alpha = 0.05, ...){
+  # point estimation
+  output <- list(model.full = formula(model.full), model.reduced = NULL, alpha = alpha,
+                 `number of bootstraps` = nboot)
+  output = c(output, resi.pe(model.full, model.reduced, data, anova,summary, vcovfunc, correct, ...))
+
+  # bootstrapping
+  boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
+  colnames(boot.results) = names(output$estimates)
+  for (i in 1:nboot){
+    boot.data = boot.samp(data)
+    boot.model.full <- update(model.full, data = boot.data)
+    if (is.null(model.reduced)){
+      boot.model.reduced = update(model.full, formula = as.formula(paste(format(formula(model.full)[[2]]), "~ 1")),  data = boot.data)
+    }
+    else{
+      boot.model.reduced = update(model.reduced,  data = boot.data)
+    }
+    boot.results[i,] = resi.pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
+                       data = boot.data, anova = anova, summary = summary,
+                       vcovfunc = vcovfunc, ...)$estimates
+
+  }
+
+  output$overall[2,c("LL", "UL")] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2))
+
+  if (anova){
+    CIs = apply(boot.results[,2:(1+nrow(output$anova))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+    CIs = t(CIs)
+    output$anova[1:nrow(CIs), c("LL", "UL")] = CIs
+  }
+
+  if (summary){
+    CIs = apply(boot.results[,(ncol(boot.results)-nrow(output$summary)+1):ncol(boot.results)], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+    CIs = t(CIs)
+    output$summary[1:nrow(CIs), c("LL", "UL")] = CIs
+  }
+
+  output$boot.results = boot.results
+  output$model.reduced = formula(boot.model.reduced)
+  class(output) = "resi"
+  print(output[which(!(names(output) %in% c("boot.results", "estimates")))])
+  return(invisible(output))
+}
