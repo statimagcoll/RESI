@@ -2,9 +2,72 @@
 % Please edit documentation in R/resi.pe.R
 \name{resi.pe}
 \alias{resi.pe}
+\alias{resi.pe.default}
+\alias{resi.pe.glm}
+\alias{resi.pe.lm}
+\alias{resi.pe.nls}
+\alias{resi.pe.survreg}
+\alias{resi.pe.coxph}
 \title{Robust Effect Size index (RESI) point estimation}
 \usage{
 resi.pe(model.full, ...)
+
+\method{resi.pe}{default}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  summary = TRUE,
+  vcovfunc = sandwich::vcovHC
+)
+
+\method{resi.pe}{glm}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  summary = TRUE,
+  vcovfunc = sandwich::vcovHC,
+  ...
+)
+
+\method{resi.pe}{lm}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  summary = TRUE,
+  vcovfunc = sandwich::vcovHC,
+  ...
+)
+
+\method{resi.pe}{nls}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  summary = TRUE,
+  vcovfunc = regtools::nlshc,
+  ...
+)
+
+\method{resi.pe}{survreg}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  summary = TRUE,
+  vcovfunc = vcov,
+  ...
+)
+
+\method{resi.pe}{coxph}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  summary = TRUE,
+  vcovfunc = vcov,
+  ...
+)
 }
 \arguments{
 \item{model.full}{the full model.}
@@ -13,17 +76,44 @@ resi.pe(model.full, ...)
 
 \item{model.reduced}{the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.}
 
-\item{data}{optional data frame or object coercible to data frame of model.full data (required for some model types)}
-
-\item{anova}{whether to produce an Anova table with the RESI columns added. By default = `TRUE`}
+\item{data}{required data frame or object coercible to data frame of model.full data}
 
 \item{summary}{whether to produce a summary table with the RESI columns added. By default = `TRUE`}
 
 \item{vcovfunc}{the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)}
+
+\item{anova}{whether to produce an Anova table with the RESI columns added. By default = `TRUE`}
 }
 \value{
+Returns a list of RESI point estimates
+
+Returns a list of RESI point estimates
+
+Returns a list of RESI point estimates
+
+Returns a list of RESI point estimates
+
+Returns a list of RESI point estimates
+
+Returns a list of RESI point estimates
+
 Returns a list of RESI point estimates
 }
 \description{
 Robust Effect Size index (RESI) point estimation
 }
+\section{Methods (by class)}{
+\itemize{
+\item \code{default}: Robust Effect Size index (RESI) point estimation
+
+\item \code{glm}: Robust Effect Size index (RESI) point estimation for generalized linear models
+
+\item \code{lm}: Robust Effect Size index (RESI) point estimation for linear models
+
+\item \code{nls}: Robust Effect Size index (RESI) point estimation for nonlinear least squares models
+
+\item \code{survreg}: Robust Effect Size index (RESI) point estimation for survreg
+
+\item \code{coxph}: Robust Effect Size index (RESI) point estimation for coxph
+}}
+
