@@ -19,10 +19,14 @@
 
 resi <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
                  nboot = 1000, vcovfunc = sandwich::vcovHC, alpha = 0.05, ...){
+  if (missing(data)){
+    data = model.full$model
+  }
+
   # point estimation
   output <- list(model.full = formula(model.full), model.reduced = NULL, alpha = alpha,
                  `number of bootstraps` = nboot)
-  output = c(output, resi.pe(model.full, model.reduced, data, anova,summary, vcovfunc, correct, ...))
+  output = c(output, resi.pe(model.full, model.reduced, data, anova,summary, vcovfunc, ...))
 
   # bootstrapping
   boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
@@ -36,25 +40,27 @@ resi <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary =
     else{
       boot.model.reduced = update(model.reduced,  data = boot.data)
     }
-    boot.results[i,] = resi.pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
+    boot.results[i,] = suppressWarnings(resi.pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
                        data = boot.data, anova = anova, summary = summary,
-                       vcovfunc = vcovfunc, ...)$estimates
+                       vcovfunc = vcovfunc, ...)$estimates)
 
   }
 
   output$overall[2,c("LL", "UL")] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2))
 
+  if (summary){
+    CIs = apply(boot.results[,2:(1+nrow(output$summary))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+    CIs = t(CIs)
+    output$summary[1:nrow(CIs), c("LL", "UL")] = CIs
+  }
+
   if (anova){
-    CIs = apply(boot.results[,2:(1+nrow(output$anova))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+    CIs = apply(boot.results[,(ncol(boot.results)-nrow(output$anova)+1):ncol(boot.results)], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
     CIs = t(CIs)
     output$anova[1:nrow(CIs), c("LL", "UL")] = CIs
   }
 
-  if (summary){
-    CIs = apply(boot.results[,(ncol(boot.results)-nrow(output$summary)+1):ncol(boot.results)], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
-    CIs = t(CIs)
-    output$summary[1:nrow(CIs), c("LL", "UL")] = CIs
-  }
+
 
   output$boot.results = boot.results
   output$model.reduced = formula(boot.model.reduced)
