@@ -21,15 +21,15 @@ anoes(
 )
 }
 \arguments{
-\item{model.full}{the full model. It should be a `glm` object.}
+\item{model.full}{the full model.}
 
-\item{model.reduced}{the reduced `glm()` model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.}
+\item{model.reduced}{the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.}
 
-\item{data}{optional data frame or object coercible to data frame of model.full data (required for linear models with splines)}
+\item{data}{optional data frame or object coercible to data frame of model.full data (required for some model types)}
 
 \item{anova}{whether to compute an ANOES table based on the Anova function. By default = `TRUE`}
 
-\item{summary}{whether to produce a summary output with the RESI columns added. By default = `TRUE`}
+\item{summary}{whether to produce a summary table with the RESI columns added. By default = `TRUE`}
 
 \item{nboot}{numeric, the number of bootstrap replicates. By default, 1000 bootstraps will be implemented.}
 
@@ -39,7 +39,7 @@ anoes(
 
 \item{boot.type}{which type of bootstrap to use. 1: resampling covariates along with residuals (default); 2: fixing covariates and only bootstrapping residulas; 3: resampling covariates and residuals independently w/ replacements; 4. no sampling, just multipliers}
 
-\item{alpha}{significance level of the constructed CIs. By default, 0.05 will be used0}
+\item{alpha}{significance level of the constructed CIs. By default, 0.05 will be used.}
 
 \item{correct}{for the linear regression models (i.e., `family = 'gaussian'` in the `glm()` function) whether the residuals with bias correction will be used, by default, FALSE.}
 
@@ -48,7 +48,7 @@ anoes(
 \item{...}{Other arguments to be passed to Anova function}
 }
 \value{
-
+Returns a list of arguments and RESI estimates and confidence intervals
 }
 \description{
 Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for (generalized) linear regression models
