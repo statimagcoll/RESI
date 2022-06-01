@@ -43,7 +43,7 @@ resi.pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # Anova table (Chi sq statistics)
   if (anova){
-    suppressMessages(anova.tab <- Anova(model.full, test.statistic = 'Wald', vcov. = vcovfunc, ...))
+    suppressMessages(anova.tab <- car::Anova(model.full, test.statistic = 'Wald', vcov. = vcovfunc, ...))
     anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], model.full$df.residual)
     output$anova = anova.tab
     output$estimates = c(output$estimates, anova.tab$RESI)
@@ -53,7 +53,7 @@ resi.pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # summary table (z statistics)
   if (summary){
-    summary.tab <- coeftest(model.full, vcov. = vcovfunc)
+    summary.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc)
     summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
                              summary.tab[,'z value'], summary.tab[,'Pr(>|z|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
@@ -91,7 +91,7 @@ resi.pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # Anova table (F statistics)
   if (anova){
-    suppressMessages(anova.tab <- Anova(model.full, vcov. = vcovfunc, ...))
+    suppressMessages(anova.tab <- car::Anova(model.full, vcov. = vcovfunc, ...))
     anova.tab[,'RESI'] = f2S(anova.tab[,'F'], anova.tab[,'Df'], res.df)
     output$anova = anova.tab
     output$estimates = c(output$estimates, anova.tab$RESI)
@@ -101,7 +101,7 @@ resi.pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # summary table (t statistics)
   if (summary){
-    summary.tab <- coeftest(model.full, vcov. = vcovfunc)
+    summary.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc)
     summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
                             summary.tab[,'t value'], summary.tab[,'Pr(>|t|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
