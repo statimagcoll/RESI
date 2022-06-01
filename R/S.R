@@ -10,7 +10,7 @@
 #' @keywords power
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
 #' @export
-chisq2S = function(chisq, df, n){
+chisq2S <- function(chisq, df, n){
   S = (chisq - df)/n
   sqrt(ifelse(S<0, 0, S))
 }
@@ -26,9 +26,37 @@ chisq2S = function(chisq, df, n){
 #' @keywords power
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
 #' @export
-f2S = function(f, df, rdf){
+f2S <- function(f, df, rdf){
   S = (f*df*(rdf-2)/rdf - df)/rdf
   sqrt(ifelse(S<0, 0, S))
+}
+
+
+#' Compute the robust effect size index estimator from t statistic
+#'
+#' This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
+#' Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
+#' @param t The t statistic for the parameter of interest.
+#' @param rdf Model residual degrees of freedom or number of independent samples.
+#' @keywords power
+#' @return Returns a scalar or vector argument of the the robust effect size index estimate.
+#' @export
+t2S <- function(t, rdf){
+  2*t/rdf*exp(lgamma(rdf/2)- lgamma((rdf-1)/2))
+}
+
+
+#' Compute the robust effect size index estimator from Z statistic
+#'
+#' This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
+#' Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
+#' @param z The Z statistic for the parameter of interest.
+#' @param n Number of independent samples.
+#' @keywords power
+#' @return Returns a scalar or vector argument of the the robust effect size index estimate.
+#' @export
+z2S <- function(z, n){
+  z/sqrt(n)
 }
 
 ### A few conversion functions for other indices
