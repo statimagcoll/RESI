@@ -12,14 +12,8 @@
 #' @param correct for the linear regression models (i.e., `family = 'gaussian'` in the `glm()` function) whether the residuals with bias correction will be used, by default, FALSE.
 #' @param num.cores The number of CPU cores to be used for calculating bootstrapped CIs, by default, only 1 core will be used.
 #' @param ... Other arguments to be passed to Anova function
-#' @importFrom aod wald.test
-#' @importFrom car Anova
-#' @importFrom lmtest waldtest
-#' @importFrom regtools nlshc
-#' @importFrom sandwich vcovHC
-#' @importFrom stats coef formula glm hatvalues pf predict quantile residuals update vcov
 #' @export
-#' @return
+#' @return Returns a list of arguments and RESI estimates and confidence intervals
 
 
 anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE, nboot = 1000, vcovfunc = sandwich::vcovHC, multi = 'none', boot.type = 1, alpha = 0.05, correct = FALSE, num.cores = 1, ...){
