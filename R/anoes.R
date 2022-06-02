@@ -17,7 +17,7 @@
 
 
 anoes <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE, nboot = 1000, vcovfunc = sandwich::vcovHC, multi = 'none', boot.type = 1, alpha = 0.05, correct = FALSE, num.cores = 1, ...){
-  #browser()
+  browser()
 
   # check to make sure anova or summary is specified
   if (!anova & !summary){
