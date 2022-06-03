@@ -2,15 +2,32 @@
 % Please edit documentation in R/resi.R
 \name{resi}
 \alias{resi}
+\alias{resi.default}
+\alias{resi.nls}
 \title{Robust Effect Size index (RESI) point and interval estimation for models}
 \usage{
-resi(
+resi(model.full, ...)
+
+\method{resi}{default}(
   model.full,
   model.reduced = NULL,
   data,
   anova = TRUE,
   summary = TRUE,
   nboot = 1000,
+  boot.method = "nonparam",
+  vcovfunc = sandwich::vcovHC,
+  alpha = 0.05,
+  ...
+)
+
+\method{resi}{nls}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  summary = TRUE,
+  nboot = 1000,
+  boot.method = "nonparam",
   vcovfunc = sandwich::vcovHC,
   alpha = 0.05,
   ...
@@ -18,6 +35,8 @@ resi(
 }
 \arguments{
 \item{model.full}{the full model.}
+
+\item{...}{Other arguments to be passed to Anova function}
 
 \item{model.reduced}{the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.}
 
@@ -29,11 +48,11 @@ resi(
 
 \item{nboot}{numeric, the number of bootstrap replicates. By default, 1000 bootstraps will be implemented.}
 
+\item{boot.method}{which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.}
+
 \item{vcovfunc}{the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)}
 
 \item{alpha}{significance level of the constructed CIs. By default, 0.05 will be used.}
-
-\item{...}{Other arguments to be passed to Anova function}
 }
 \value{
 Returns a list that includes function arguments, RESI point estimates, and confidence intervals
@@ -41,3 +60,10 @@ Returns a list that includes function arguments, RESI point estimates, and confi
 \description{
 Robust Effect Size index (RESI) point and interval estimation for models
 }
+\section{Methods (by class)}{
+\itemize{
+\item \code{default}: Robust Effect Size index (RESI) point and interval estimation for models
+
+\item \code{nls}: Robust Effect Size index (RESI) point and interval estimation for nls models
+}}
+
