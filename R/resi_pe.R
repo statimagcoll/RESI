@@ -10,11 +10,11 @@
 #' @export
 #' @return Returns a list of RESI point estimates
 
-resi.pe <- function(model.full, ...){
-  UseMethod("resi.pe")
+resi_pe <- function(model.full, ...){
+  UseMethod("resi_pe")
 }
 
-#' @describeIn resi.pe Robust Effect Size index (RESI) point estimation
+#' @describeIn resi_pe Robust Effect Size index (RESI) point estimation
 #' @param model.full the full model.
 #' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param data optional data frame or object coercible to data frame of model.full data (required for some model types)
@@ -22,8 +22,7 @@ resi.pe <- function(model.full, ...){
 #' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)
 #' @param ... Other arguments to be passed to Anova function
 #' @export
-#' @return Returns a list of RESI point estimates
-resi.pe.default <- function(model.full, model.reduced = NULL, data,
+resi_pe.default <- function(model.full, model.reduced = NULL, data,
                     summary = TRUE, vcovfunc = sandwich::vcovHC){
   if (missing(data)){
       data = model.full$model
@@ -60,7 +59,7 @@ resi.pe.default <- function(model.full, model.reduced = NULL, data,
   return(output)
 }
 
-#' @describeIn resi.pe Robust Effect Size index (RESI) point estimation for generalized linear models
+#' @describeIn resi_pe Robust Effect Size index (RESI) point estimation for generalized linear models
 #' @param model.full the full model.
 #' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param data optional data frame or object coercible to data frame of model.full data (required for some model types)
@@ -69,10 +68,9 @@ resi.pe.default <- function(model.full, model.reduced = NULL, data,
 #' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)
 #' @param ... Other arguments to be passed to Anova function
 #' @export
-#' @return Returns a list of RESI point estimates
-resi.pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                             summary = TRUE, vcovfunc = sandwich::vcovHC, ...){
-  output <- resi.pe.default(model.full, model.reduced, data, summary, vcovfunc)
+  output <- resi_pe.default(model.full, model.reduced, data, summary, vcovfunc)
 
   # Anova table (Chi sq statistics)
   if (anova){
@@ -87,7 +85,7 @@ resi.pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   return(output)
 }
 
-#' @describeIn resi.pe Robust Effect Size index (RESI) point estimation for linear models
+#' @describeIn resi_pe Robust Effect Size index (RESI) point estimation for linear models
 #' @param model.full the full model.
 #' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param data optional data frame or object coercible to data frame of model.full data
@@ -96,9 +94,7 @@ resi.pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)
 #' @param ... Other arguments to be passed to Anova function
 #' @export
-#' @return Returns a list of RESI point estimates
-
-resi.pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                        summary = TRUE, vcovfunc = sandwich::vcovHC, ...){
   # data required with splines
   if (missing(data)){
@@ -146,7 +142,7 @@ resi.pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   return(output)
 }
 
-#' @describeIn resi.pe Robust Effect Size index (RESI) point estimation for nonlinear least squares models
+#' @describeIn resi_pe Robust Effect Size index (RESI) point estimation for nonlinear least squares models
 #' @param model.full the full model.
 #' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param data required data frame or object coercible to data frame of model.full data
@@ -154,9 +150,7 @@ resi.pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, regtools::nlshc (the robust variance estimator for nls models)
 #' @param ... ignored
 #' @export
-#' @return Returns a list of RESI point estimates
-
-resi.pe.nls <- function(model.full, model.reduced = NULL, data,
+resi_pe.nls <- function(model.full, model.reduced = NULL, data,
                        summary = TRUE, vcovfunc = regtools::nlshc, ...){
   if (missing(data) | is.null(data)){
     stop('\n Data argument is required for nls model')
@@ -169,7 +163,7 @@ resi.pe.nls <- function(model.full, model.reduced = NULL, data,
 
   if (identical(vcovfunc, sandwich::vcovHC)){
     vcovfunc = regtools::nlshc
-    message("Sandwich vcov function not applicable for nls model type, vcovfunc set to regtools::nlshc")
+    warning("Sandwich vcov function not applicable for nls model type, vcovfunc set to regtools::nlshc")
   }
 
   var.names = names(coef(model.full))
@@ -178,14 +172,15 @@ resi.pe.nls <- function(model.full, model.reduced = NULL, data,
   colnames(vcovmat) = var.names
 
   # overall
-  wald.test = aod::wald.test(vcovmat[var.names, var.names], coef(model.full), Terms = 2:length(coef(model.full)))
-  stats = wald.test$result$chi2["chi2"]
-  overall.df = wald.test$result$chi2["df"]
+  overall.tab = aod::wald.test(vcov(model.full), coef(model.full), Terms = 1:length(coef(model.full)))$result$chi2
+  stats = overall.tab["chi2"]
+  overall.df = overall.tab["df"]
   res.df = nrow(data) - overall.df
   overall.resi.hat = chisq2S(stats, overall.df, res.df)
-  wald.test$result$chi2['RESI'] = overall.resi.hat
-  wald.test = wald.test$result$chi2
-  output <- list(estimates = overall.resi.hat, overall = wald.test)
+  overall.tab['RESI'] = overall.resi.hat
+  overall.tab = as.data.frame(t(overall.tab))
+  rownames(overall.tab) = "Wald Test"
+  output <- list(estimates = overall.resi.hat, overall = overall.tab)
   names.est = "Overall"
   names(output$estimates) = names.est
 
@@ -204,7 +199,7 @@ resi.pe.nls <- function(model.full, model.reduced = NULL, data,
   return(output)
 }
 
-#' @describeIn resi.pe Robust Effect Size index (RESI) point estimation for survreg
+#' @describeIn resi_pe Robust Effect Size index (RESI) point estimation for survreg
 #' @param model.full the full model.
 #' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param data required data frame or object coercible to data frame of model.full data
@@ -213,9 +208,7 @@ resi.pe.nls <- function(model.full, model.reduced = NULL, data,
 #' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)
 #' @param ... Other arguments to be passed to Anova function
 #' @export
-#' @return Returns a list of RESI point estimates
-
-resi.pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                         summary = TRUE, vcovfunc = vcov, ...){
   if (missing(data)){
     stop('\n Data argument is required for survreg model')
@@ -225,7 +218,7 @@ resi.pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
     warning("vcov function ignored for survreg objects")
   }
 
-  output = resi.pe.default(model.full, model.reduced, data, summary, vcovfunc = vcov)
+  output = resi_pe.default(model.full, model.reduced, data, summary, vcovfunc = vcov)
 
   # Anova table (Chi sq statistics)
   if (anova){
@@ -241,7 +234,7 @@ resi.pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
   return(output)
 }
 
-#' @describeIn resi.pe Robust Effect Size index (RESI) point estimation for coxph
+#' @describeIn resi_pe Robust Effect Size index (RESI) point estimation for coxph
 #' @param model.full the full model.
 #' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param data required data frame or object coercible to data frame of model.full data
@@ -250,8 +243,7 @@ resi.pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
 #' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)
 #' @param ... Other arguments to be passed to Anova function
 #' @export
-#' @return Returns a list of RESI point estimates
-resi.pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                        summary = TRUE, vcovfunc = vcov, ...){
   if (missing(data)){
     stop('\n Data argument is required for coxph model')
@@ -267,14 +259,15 @@ resi.pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   }
 
   # overall
-  wald.test = aod::wald.test(vcov(model.full), coef(model.full), Terms = 1:length(coef(model.full)))
-  stats = wald.test$result$chi2["chi2"]
-  overall.df = wald.test$result$chi2["df"]
+  overall.tab = aod::wald.test(vcov(model.full), coef(model.full), Terms = 1:length(coef(model.full)))$result$chi2
+  stats = overall.tab["chi2"]
+  overall.df = overall.tab["df"]
   res.df = nrow(data) - overall.df
   overall.resi.hat = chisq2S(stats, overall.df, res.df)
-  wald.test$result$chi2['RESI'] = overall.resi.hat
-  wald.test = wald.test$result$chi2
-  output <- list(estimates = overall.resi.hat, overall = wald.test)
+  overall.tab['RESI'] = overall.resi.hat
+  overall.tab = as.data.frame(t(overall.tab))
+  rownames(overall.tab) = "Wald Test"
+  output <- list(estimates = overall.resi.hat, overall = overall.tab)
   names.est = "Overall"
   names(output$estimates) = names.est
 
