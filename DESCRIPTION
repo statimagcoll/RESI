@@ -18,7 +18,7 @@ Collate:
   'S.R'
   'summary.resi.R'
   'resi.R'
-  'resi.pe.R'
+  'resi_pe.R'
   'Anova.resi.R'
 Imports:
     lmtest,
