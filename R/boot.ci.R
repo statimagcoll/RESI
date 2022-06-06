@@ -1,6 +1,8 @@
 #######
 # Function to construct CI for
 # RESI in generalized linear models
+# obsolete with anoes function
+# need to delete file and documentation
 ######
 
 #' Function generating CIs for the RESI via various bootstrap methods
@@ -15,6 +17,8 @@
 #' @param correct for the linear regression models (i.e., `family = 'gaussian'` in the `glm()` function) whether the residuals with bias correction will be used, by default, FALSE.
 #' @param num.cores The number of CPU cores to be used for calculating bootstrapped CIs, by default, only 1 core will be used.
 #' @param digits the number of decimal digits in the output ANOES table. By default, 3
+
+# anoes.est
 
 boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRUE, multi = 'none', boot.type = 1, alpha = 0.05, correct = FALSE, num.cores = 1, digits = 3){
 
@@ -119,7 +123,7 @@ boot.ci <- function(model.full, model.reduced = NULL, r = 1000, robust.var = TRU
                                               # when `model.reduced = NULL`, output the wald test stat for each effect
                                               if (is.null(model.reduced)){
                                                 ## Individual (Wald) test stats
-                                                ## note: the results from car:Anova look wield when using glm()...so I calculate the stats manually
+                                                ## note: the results from car:Anova look weird when using glm()...so I calculate the stats manually
                                                 ind.stats <- (coef(boot.model.full)[var.names])^2/diag(as.matrix(vcovfunc(boot.model.full)[var.names, var.names]))
                                                 stats <- c(stats, ind.stats)
                                                 names(stats) <- c("Overall", var.names)
