@@ -15,6 +15,10 @@ chisq2S <- function(chisq, df, n){
   sqrt(ifelse(S<0, 0, S))
 }
 
+chisq2Ssq = function(chisq, df, rdf){
+  S = (chisq - df)/rdf
+}
+
 
 #' Compute the robust effect size index estimator from F-statistic
 #'
