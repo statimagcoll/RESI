@@ -1,14 +1,14 @@
 #' Robust Effect Size index (RESI) point estimation
-#' @param model.full the full model.
-#' @param ... Other arguments to be passed to Anova function
+#' @param model.full the full model fit object.
 #' @importFrom aod wald.test
 #' @importFrom car Anova
 #' @importFrom lmtest waldtest
 #' @importFrom regtools nlshc
 #' @importFrom sandwich vcovHC
 #' @importFrom stats coef formula glm hatvalues pf predict quantile residuals update vcov
+#' @param ... Other arguments to be passed to the covariance function `vcovfunc`
 #' @export
-#' @return Returns a list of RESI point estimates
+#' @return Returns a list containing RESI point estimates
 
 resi_pe <- function(model.full, ...){
   UseMethod("resi_pe")
@@ -90,9 +90,9 @@ resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param data optional data frame or object coercible to data frame of model.full data
 #' @param anova whether to produce an Anova table with the RESI columns added. By default = `TRUE`
-#' @param summary whether to produce a summary table with the RESI columns added. By default = `TRUE`
+#' @param summary whether to produce a model coefficient table with the RESI columns added. By default = `TRUE`
 #' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)
-#' @param ... Other arguments to be passed to Anova function
+#' @param ... Other arguments to be passed to `Anova` function
 #' @export
 resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                        summary = TRUE, vcovfunc = sandwich::vcovHC, ...){
@@ -119,6 +119,8 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # summary table (t statistics)
   if (summary){
+    ## KK: are we sure this function always returns the t-statistics?
+    ## KK: will it change with the different model type passed by `model.full`?
     summary.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc)
     summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
                             summary.tab[,'t value'], summary.tab[,'Pr(>|t|)'], row.names = rownames(summary.tab))
@@ -267,6 +269,7 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   overall.tab['RESI'] = overall.resi.hat
   overall.tab = as.data.frame(t(overall.tab))
   rownames(overall.tab) = "Wald Test"
+  ## the output object
   output <- list(estimates = overall.resi.hat, overall = overall.tab)
   names.est = "Overall"
   names(output$estimates) = names.est
