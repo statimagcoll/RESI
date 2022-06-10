@@ -85,7 +85,7 @@ resi_pe(model.full, ...)
 \item{anova}{whether to produce an Anova table with the RESI columns added. By default = `TRUE`}
 }
 \value{
-Returns a list of RESI point estimates
+Returns a list containing RESI point estimates
 }
 \description{
 Robust Effect Size index (RESI) point estimation
