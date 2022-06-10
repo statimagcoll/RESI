@@ -238,6 +238,56 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
   return(output)
 }
 
+#' @describeIn resi_pe Robust Effect Size index (RESI) point estimation for hurdle models
+#' @param model.full the full model.
+#' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
+#' @param data optional data frame or object coercible to data frame of model.full data
+#' @param summary whether to produce a model coefficient table with the RESI columns added. By default = `TRUE`
+#' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::sandwich (the robust (sandwich) variance estimator)
+#' @param ... ignored
+#' @export
+resi_pe.hurdle <- function(model.full, model.reduced = NULL, data,
+                           summary = TRUE, vcovfunc = sandwich::sandwich, ...){
+  if (missing(data)){
+    data = model.full$model
+  }
+
+  if (is.null(model.reduced)){
+    form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
+    model.reduced <- update(model.full, formula = form.reduced, data = data)
+  }
+
+  if (identical(vcovfunc, sandwich::vcovHC)){
+    vcovfunc = sandwich::sandwich
+  }
+
+  # overall
+  wald.test = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc, test = 'Chisq')
+  stats = wald.test$Chisq[2]
+  overall.df = wald.test$Df[2]
+  res.df = wald.test$Res.Df[2]
+  overall.resi.hat = chisq2S(stats, overall.df, res.df)
+  wald.test[2, 'RESI'] = overall.resi.hat
+  output <- list(estimates = overall.resi.hat, overall = wald.test)
+  names.est = "Overall"
+  names(output$estimates) = names.est
+
+  # summary table (z statistics)
+  if (summary){
+    summary.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc, df = 0)
+    summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
+                            summary.tab[,'z value'], summary.tab[,'Pr(>|z|)'], row.names = rownames(summary.tab))
+    colnames(summary.df) = colnames(summary.tab)
+    summary.df[,'RESI'] = z2S(summary.df[,'z value'], nrow(data))
+    output$summary = summary.df
+    output$estimates = c(output$estimates, summary.df$RESI)
+    names.est = c(names.est, rownames(summary.df))
+    names(output$estimates) = names.est
+  }
+
+  return(output)
+}
+
 #' @describeIn resi_pe Robust Effect Size index (RESI) point estimation for coxph models
 #' @param model.full the full model.
 #' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
