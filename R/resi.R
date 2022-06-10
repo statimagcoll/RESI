@@ -4,10 +4,10 @@
 #' @param data optional data frame or object coercible to data frame of model.full data (required for some model types)
 #' @param anova whether to produce an Anova table with the RESI columns added. By default = `TRUE`
 #' @param summary whether to produce a summary table with the RESI columns added. By default = `TRUE`
-#' @param nboot numeric, the number of bootstrap replicates. By default, 1000 bootstraps will be implemented.
+#' @param nboot numeric, the number of bootstrap replicates. By default, 1000.
 #' @param boot.method which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.
 #' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)
-#' @param alpha significance level of the constructed CIs. By default, 0.05 will be used.
+#' @param alpha significance level of the constructed CIs. By default, 0.05.
 #' @param ... Other arguments to be passed to Anova function
 #' @importFrom aod wald.test
 #' @importFrom car Anova
@@ -28,10 +28,10 @@ resi <- function(model.full, ...){
 #' @param data optional data frame or object coercible to data frame of model.full data (required for some model types)
 #' @param anova whether to produce an Anova table with the RESI columns added. By default = `TRUE`
 #' @param summary whether to produce a summary table with the RESI columns added. By default = `TRUE`
-#' @param nboot numeric, the number of bootstrap replicates. By default, 1000 bootstraps will be implemented.
+#' @param nboot numeric, the number of bootstrap replicates. By default, 1000.
 #' @param boot.method which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.
 #' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)
-#' @param alpha significance level of the constructed CIs. By default, 0.05 will be used.
+#' @param alpha significance level of the constructed CIs. By default, 0.05.
 #' @param ... Other arguments to be passed to Anova function
 #' @export
 resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
@@ -113,10 +113,10 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
 #' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param data optional data frame or object coercible to data frame of model.full data (required for some model types)
 #' @param summary whether to produce a summary table with the RESI columns added. By default = `TRUE`
-#' @param nboot numeric, the number of bootstrap replicates. By default, 1000 bootstraps will be implemented.
+#' @param nboot numeric, the number of bootstrap replicates. By default, 1000.
 #' @param boot.method which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.
 #' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)
-#' @param alpha significance level of the constructed CIs. By default, 0.05 will be used.
+#' @param alpha significance level of the constructed CIs. By default, 0.05.
 #' @param ... Other arguments to be passed to Anova function
 #' @export
 
@@ -180,10 +180,10 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 #' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param data optional data frame or object coercible to data frame of model.full data (required for some model types)
 #' @param summary whether to produce a summary table with the RESI columns added. By default = `TRUE`
-#' @param nboot numeric, the number of bootstrap replicates. By default, 1000 bootstraps will be implemented.
+#' @param nboot numeric, the number of bootstrap replicates. By default, 1000.
 #' @param boot.method which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.
 #' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::sandwich (the robust variance estimator)
-#' @param alpha significance level of the constructed CIs. By default, 0.05 will be used.
+#' @param alpha significance level of the constructed CIs. By default, 0.05.
 #' @param ... Other arguments to be passed to Anova function
 #' @export
 
@@ -240,4 +240,56 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
   class(output) = "resi"
   print(output[which(!(names(output) %in% c("boot.results", "estimates")))])
   return(invisible(output))
+}
+
+#' @describeIn resi Robust Effect Size index (RESI) point and interval estimation for GEE models
+#' This function will estimate RESI and its CI for each factor in a fitted GEE model object.
+#' The CIs are calculated via non-parametric bootstraps.
+#' @param model.full the full model object.
+#' @param alpha numeric, significance level of the constructed CIs. By default, 0.05.
+#' @param nboot  numeric, the number of bootstrap replicates. By default, 1000.
+#' @export
+resi.geeglm <- function(model.full, alpha = 0.05, nboot = 1000){
+  output = resi_pe(model.full) # RESI point estimates
+  data = model.full$data
+  # id variable name
+  id_var = as.character(model.full$call$id)
+  # bootstrap
+  output.boot = as.matrix(output[, 'RESI'])
+  for (i in 1:nboot){
+    boot.data = boot.samp(data, id.var = id_var)
+    # re-fit the model
+    boot.mod = update(model.full, data = boot.data)
+    output.boot = cbind(output.boot, resi_pe(boot.mod)[, 'RESI'])
+  }
+  output.boot = output.boot[, -1]
+  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+  output = cbind(output, t(RESI.ci))
+  return(output)
+}
+
+#' @describeIn resi Robust Effect Size index (RESI) point and interval estimation for LME models
+#' This function will estimate RESI and its CI for each factor in a fitted LME model object.
+#' The CIs are calculated via non-parametric bootstraps.
+#' @param model.full the full model object
+#' @param alpha numeric, significance level of the constructed CIs. By default, 0.05.
+#' @param nboot numeric, the number of bootstrap replicates. By default, 1000.
+#' @export
+resi.lme <- function(model.full, alpha = 0.05, nboot = 1000){
+  output = resi_pe(model.full) # RESI point estimates
+  data = model.full$data
+  # id variable name
+  id_var = attr(nlme::getGroups(model.full), "label")
+  # bootstrap
+  output.boot = as.matrix(output[, 'RESI'])
+  for (i in 1:nboot){
+    boot.data = boot.samp(data, id.var = id_var)
+    # re-fit the model
+    boot.mod = update(model.full, data = boot.data)
+    output.boot = cbind(output.boot, resi_pe(boot.mod)[, 'RESI'])
+  }
+  output.boot = output.boot[, -1]
+  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+  output = cbind(output, t(RESI.ci))
+  return(output)
 }
