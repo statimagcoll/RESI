@@ -7,5 +7,5 @@
 ess(x, ...)
 }
 \description{
-This function calcualte the effective sample size (ESS) from Kang et. al (2022)
+This function calculate the effective sample size (ESS) from Kang et. al (2022)
 }

@@ -7,7 +7,11 @@
 \alias{resi_pe.lm}
 \alias{resi_pe.nls}
 \alias{resi_pe.survreg}
+\alias{resi_pe.hurdle}
 \alias{resi_pe.coxph}
+\alias{resi_pe.geeglm}
+\alias{resi_pe.gee}
+\alias{resi_pe.lme}
 \title{Robust Effect Size index (RESI) point estimation}
 \usage{
 resi_pe(model.full, ...)
@@ -59,6 +63,15 @@ resi_pe(model.full, ...)
   ...
 )
 
+\method{resi_pe}{hurdle}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  summary = TRUE,
+  vcovfunc = sandwich::sandwich,
+  ...
+)
+
 \method{resi_pe}{coxph}(
   model.full,
   model.reduced = NULL,
@@ -68,9 +81,15 @@ resi_pe(model.full, ...)
   vcovfunc = vcov,
   ...
 )
+
+\method{resi_pe}{geeglm}(model.full, ...)
+
+\method{resi_pe}{gee}(model.full, ...)
+
+\method{resi_pe}{lme}(model.full, ...)
 }
 \arguments{
-\item{model.full}{the full model.}
+\item{model.full}{The lme model object}
 
 \item{...}{Other arguments to be passed to Anova function}
 
@@ -86,6 +105,8 @@ resi_pe(model.full, ...)
 }
 \value{
 Returns a list containing RESI point estimates
+
+returns the summary-type table with RESI estimate for each factor
 }
 \description{
 Robust Effect Size index (RESI) point estimation
@@ -102,6 +123,17 @@ Robust Effect Size index (RESI) point estimation
 
 \item \code{survreg}: Robust Effect Size index (RESI) point estimation for survreg
 
-\item \code{coxph}: Robust Effect Size index (RESI) point estimation for coxph
+\item \code{hurdle}: Robust Effect Size index (RESI) point estimation for hurdle models
+
+\item \code{coxph}: Robust Effect Size index (RESI) point estimation for coxph models
+
+\item \code{geeglm}: Robust Effect Size index (RESI) point estimation for geeglm object
+This function calculates the RESI from geeglm model object
+
+\item \code{gee}: Robust Effect Size index (RESI) point estimation for gee object
+This function calculates the RESI from gee model object
+
+\item \code{lme}: Robust Effect Size index (RESI) point estimation for lme object
+This function calculate the RESI from lme model object
 }}
 

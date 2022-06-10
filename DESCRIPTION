@@ -12,10 +12,8 @@ Encoding: UTF-8
 LazyData: true
 Collate: 
   'boot.ci.R'
-  'calc_resi.R'
   'ess.R'
   'internal_functions.R'
-  'resi_KK.R'
   'simulation.R'
   'S.R'
   'summary.resi.R'
@@ -29,7 +27,10 @@ Imports:
     parallel,
     car,
     aod,
-    regtools
+    regtools,
+    clubSandwich,
+    nlme,
+    mvtnorm
 Suggests:
   testthat
 RoxygenNote: 7.2.0

@@ -380,6 +380,7 @@ resi_pe.gee <- function(model.full, ...){
 #' This function calculate the RESI from lme model object
 #' @param model.full The lme model object
 #' @return returns the summary-type table with RESI estimate for each factor
+#' @importFrom clubSandwich vcovCR
 #' @export
 resi_pe.lme <- function(model.full, ...){
   x = as.matrix(summary(model.full)$tTable)

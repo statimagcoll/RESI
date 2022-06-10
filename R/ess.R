@@ -1,6 +1,6 @@
 #' Calculating Effective Sample Size
 #'
-#' This function calcualte the effective sample size (ESS) from Kang et. al (2022)
+#' This function calculate the effective sample size (ESS) from Kang et. al (2022)
 #' @export
 ess <- function(x, ...) {
 UseMethod("ess")

@@ -274,6 +274,7 @@ resi.geeglm <- function(model.full, alpha = 0.05, nboot = 1000){
 #' @param model.full the full model object
 #' @param alpha numeric, significance level of the constructed CIs. By default, 0.05.
 #' @param nboot numeric, the number of bootstrap replicates. By default, 1000.
+#' @importFrom nlme getGroups
 #' @export
 resi.lme <- function(model.full, alpha = 0.05, nboot = 1000){
   output = resi_pe(model.full) # RESI point estimates
