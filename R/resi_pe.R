@@ -121,6 +121,7 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   if (summary){
     ## KK: are we sure this function always returns the t-statistics?
     ## KK: will it change with the different model type passed by `model.full`?
+    ## MJ: for lm it will be t unless you manually set the df argument for coeftest to Inf or 0
     summary.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc)
     summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
                             summary.tab[,'t value'], summary.tab[,'Pr(>|t|)'], row.names = rownames(summary.tab))
@@ -212,6 +213,7 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data,
 #' @export
 resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                         summary = TRUE, vcovfunc = vcov, ...){
+  browser()
   if (missing(data)){
     stop('\n Data argument is required for survreg model')
   }
@@ -236,7 +238,7 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
   return(output)
 }
 
-#' @describeIn resi_pe Robust Effect Size index (RESI) point estimation for coxph
+#' @describeIn resi_pe Robust Effect Size index (RESI) point estimation for coxph models
 #' @param model.full the full model.
 #' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param data required data frame or object coercible to data frame of model.full data
@@ -298,3 +300,46 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   return(output)
 }
+
+
+#' @describeIn resi_pe Robust Effect Size index (RESI) point estimation for geeglm object
+#' This function calculates the RESI from geeglm model object
+#' @param model.full the full model.
+#' @export
+resi_pe.geeglm <- function(model.full, ...){
+  x = as.matrix(summary(model.full)$coefficients)
+  #sample size
+  N = length(summary(model.full)$clusz)
+  output = cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], 1, N))
+  return(output)
+}
+
+#' @describeIn resi_pe Robust Effect Size index (RESI) point estimation for gee object
+#' This function calculates the RESI from gee model object
+#' @param model.full the full model.
+#' @export
+resi_pe.gee <- function(model.full, ...){
+  x = as.matrix(summary(model.full)$coefficients)
+  #sample size
+  N = length(unique(model.full$id))
+  output = cbind(x, RESI = RESI::chisq2S(x[, 'Robust z']^2, 1, N))
+  return(output)
+}
+
+#' @describeIn resi_pe Robust Effect Size index (RESI) point estimation for lme object
+#' This function calculate the RESI from lme model object
+#' @param model.full The lme model object
+#' @return returns the summary-type table with RESI estimate for each factor
+#' @export
+resi_pe.lme <- function(model.full, ...){
+  x = as.matrix(summary(model.full)$tTable)
+  #sample size
+  N = summary(model.full)$dims$ngrps[1]
+  # robust se
+  robust.var = diag(clubSandwich::vcovCR(model.full, type = "CR3"))
+  robust.se = sqrt(robust.var)
+  output = cbind(x, 'Robust.SE' = robust.se, 'Robust Wald' = (x[, 'Value']^2/robust.var), RESI = RESI::chisq2S(x[, 'Value']^2/robust.var, 1, N))
+  return(output)
+}
+
+
