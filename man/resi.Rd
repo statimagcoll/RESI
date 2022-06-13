@@ -4,7 +4,7 @@
 \alias{resi}
 \alias{resi.default}
 \alias{resi.nls}
-\alias{resi.hurdle}
+\alias{resi.zeroinfl}
 \alias{resi.geeglm}
 \alias{resi.lme}
 \title{Robust Effect Size index (RESI) point and interval estimation for models}
@@ -36,7 +36,7 @@ resi(model.full, ...)
   ...
 )
 
-\method{resi}{hurdle}(
+\method{resi}{zeroinfl}(
   model.full,
   model.reduced = NULL,
   data,
@@ -74,25 +74,21 @@ resi(model.full, ...)
 \item{alpha}{numeric, significance level of the constructed CIs. By default, 0.05.}
 }
 \value{
-Returns a list that includes function arguments, RESI point estimates, and confidence intervals
+Returns a list that includes function arguments, RESI point estimates, and confidence intervals in summary/anova-style tables
 }
 \description{
-Robust Effect Size index (RESI) point and interval estimation for models
+This function will estimate RESI and its CI in various ways for a fitted model object. Overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in summary-style table. RESI is (optionally) estimated for each variable/interaction in an Anova-style table for models with existing Anova methods. CIs can be calculated using either non-parametric or Bayesian bootstrapping.
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{default}: Robust Effect Size index (RESI) point and interval estimation for models
+\item \code{default}: RESI point and interval estimation for models
 
-\item \code{nls}: Robust Effect Size index (RESI) point and interval estimation for nls models
+\item \code{nls}: RESI point and interval estimation for nls models
 
-\item \code{hurdle}: Robust Effect Size index (RESI) point and interval estimation for hurdle models
+\item \code{zeroinfl}: RESI point and interval estimation for hurdle models
 
-\item \code{geeglm}: Robust Effect Size index (RESI) point and interval estimation for GEE models
-This function will estimate RESI and its CI for each factor in a fitted GEE model object.
-The CIs are calculated via non-parametric bootstraps.
+\item \code{geeglm}: RESI point and interval estimation for GEE models
 
-\item \code{lme}: Robust Effect Size index (RESI) point and interval estimation for LME models
-This function will estimate RESI and its CI for each factor in a fitted LME model object.
-The CIs are calculated via non-parametric bootstraps.
+\item \code{lme}: RESI point and interval estimation for LME models
 }}
 

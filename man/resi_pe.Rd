@@ -7,7 +7,7 @@
 \alias{resi_pe.lm}
 \alias{resi_pe.nls}
 \alias{resi_pe.survreg}
-\alias{resi_pe.hurdle}
+\alias{resi_pe.zeroinfl}
 \alias{resi_pe.coxph}
 \alias{resi_pe.geeglm}
 \alias{resi_pe.gee}
@@ -63,7 +63,7 @@ resi_pe(model.full, ...)
   ...
 )
 
-\method{resi_pe}{hurdle}(
+\method{resi_pe}{zeroinfl}(
   model.full,
   model.reduced = NULL,
   data,
@@ -95,7 +95,7 @@ resi_pe(model.full, ...)
 
 \item{model.reduced}{the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.}
 
-\item{data}{required data frame or object coercible to data frame of model.full data}
+\item{data}{optional data frame or object coercible to data frame of model.full data (required for some model types)}
 
 \item{summary}{whether to produce a summary table with the RESI columns added. By default = `TRUE`}
 
@@ -105,35 +105,30 @@ resi_pe(model.full, ...)
 }
 \value{
 Returns a list containing RESI point estimates
-
-returns the summary-type table with RESI estimate for each factor
 }
 \description{
 Robust Effect Size index (RESI) point estimation
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{default}: Robust Effect Size index (RESI) point estimation
+\item \code{default}: RESI point estimation
 
-\item \code{glm}: Robust Effect Size index (RESI) point estimation for generalized linear models
+\item \code{glm}: RESI point estimation for generalized linear models
 
-\item \code{lm}: Robust Effect Size index (RESI) point estimation for linear models
+\item \code{lm}: RESI point estimation for linear models
 
-\item \code{nls}: Robust Effect Size index (RESI) point estimation for nonlinear least squares models
+\item \code{nls}: RESI point estimation for nonlinear least squares models
 
-\item \code{survreg}: Robust Effect Size index (RESI) point estimation for survreg
+\item \code{survreg}: RESI point estimation for survreg
 
-\item \code{hurdle}: Robust Effect Size index (RESI) point estimation for hurdle models
+\item \code{zeroinfl}: RESI point estimation for hurdle and zeroinfl models
 
-\item \code{coxph}: Robust Effect Size index (RESI) point estimation for coxph models
+\item \code{coxph}: RESI point estimation for coxph models
 
-\item \code{geeglm}: Robust Effect Size index (RESI) point estimation for geeglm object
-This function calculates the RESI from geeglm model object
+\item \code{geeglm}: RESI point estimation for geeglm object
 
-\item \code{gee}: Robust Effect Size index (RESI) point estimation for gee object
-This function calculates the RESI from gee model object
+\item \code{gee}: RESI point estimation for gee object
 
-\item \code{lme}: Robust Effect Size index (RESI) point estimation for lme object
-This function calculate the RESI from lme model object
+\item \code{lme}: RESI point estimation for lme object
 }}
 
