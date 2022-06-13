@@ -53,31 +53,31 @@ resi(model.full, ...)
 \method{resi}{lme}(model.full, alpha = 0.05, nboot = 1000)
 }
 \arguments{
-\item{model.full}{the full model object}
+\item{model.full}{\code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.}
 
-\item{...}{Other arguments to be passed to Anova function}
+\item{...}{Other arguments to be passed to Anova function.}
 
-\item{model.reduced}{the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.}
+\item{model.reduced}{Fitted model object of same type as model.full. By default `NULL`; the same model as the full model but only having intercept.}
 
-\item{data}{optional data frame or object coercible to data frame of model.full data (required for some model types)}
+\item{data}{Data.frame or object coercible to data.frame of model.full data (required for some model types).}
 
-\item{anova}{whether to produce an Anova table with the RESI columns added. By default = `TRUE`}
+\item{anova}{Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.}
 
-\item{summary}{whether to produce a summary table with the RESI columns added. By default = `TRUE`}
+\item{summary}{Logical, whether to produce a summary table with the RESI columns added. By default = `TRUE`.}
 
-\item{nboot}{numeric, the number of bootstrap replicates. By default, 1000.}
+\item{nboot}{Numeric, the number of bootstrap replicates. By default, 1000.}
 
-\item{boot.method}{which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.}
+\item{boot.method}{String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.}
 
-\item{vcovfunc}{the variance estimator function for constructing the Wald test statistic. By default, sandwich::sandwich (the robust variance estimator)}
+\item{vcovfunc}{The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).}
 
-\item{alpha}{numeric, significance level of the constructed CIs. By default, 0.05.}
+\item{alpha}{Numeric, significance level of the constructed CIs. By default, 0.05.}
 }
 \value{
 Returns a list that includes function arguments, RESI point estimates, and confidence intervals in summary/anova-style tables
 }
 \description{
-This function will estimate RESI and its CI in various ways for a fitted model object. Overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in summary-style table. RESI is (optionally) estimated for each variable/interaction in an Anova-style table for models with existing Anova methods. CIs can be calculated using either non-parametric or Bayesian bootstrapping.
+This function will estimate the robust effect size (RESI) from Vandekar, Rao, & Blume (2020) and its confidence interval in various ways for a fitted model object. The overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in summary-style table. RESI is (optionally) estimated for each variable/interaction in an Anova-style table for models with existing Anova methods. CIs can be calculated using either non-parametric or Bayesian bootstrapping.
 }
 \section{Methods (by class)}{
 \itemize{

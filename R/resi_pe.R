@@ -1,12 +1,17 @@
-#' Robust Effect Size index (RESI) point estimation
-#' @param model.full the full model fit object.
+#' Robust Effect Size index (RESI) Point Estimation
+#' @param model.full \code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.
+#' @param model.reduced Fitted model object of same type as model.full. By default `NULL`; the same model as the full model but only having intercept.
+#' @param data Data.frame or object coercible to data.frame of model.full data (required for some model types).
+#' @param vcovfunc The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).
+#' @param summary Logical, whether to produce a summary table with the RESI columns added. By default = `TRUE`.
+#' @param anova Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.
+#' @param ... Other arguments to be passed to Anova function.
 #' @importFrom aod wald.test
 #' @importFrom car Anova
 #' @importFrom lmtest waldtest
 #' @importFrom regtools nlshc
 #' @importFrom sandwich vcovHC
 #' @importFrom stats coef formula glm hatvalues pf predict quantile residuals update vcov
-#' @param ... Other arguments to be passed to the covariance function `vcovfunc`
 #' @export
 #' @return Returns a list containing RESI point estimates
 
@@ -15,12 +20,6 @@ resi_pe <- function(model.full, ...){
 }
 
 #' @describeIn resi_pe RESI point estimation
-#' @param model.full the full model.
-#' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
-#' @param data optional data frame or object coercible to data frame of model.full data (required for some model types)
-#' @param summary whether to produce a summary table with the RESI columns added. By default = `TRUE`
-#' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)
-#' @param ... Other arguments to be passed to Anova function
 #' @export
 resi_pe.default <- function(model.full, model.reduced = NULL, data,
                     summary = TRUE, vcovfunc = sandwich::vcovHC){
@@ -60,13 +59,6 @@ resi_pe.default <- function(model.full, model.reduced = NULL, data,
 }
 
 #' @describeIn resi_pe RESI point estimation for generalized linear models
-#' @param model.full the full model.
-#' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
-#' @param data optional data frame or object coercible to data frame of model.full data (required for some model types)
-#' @param anova whether to produce an Anova table with the RESI columns added. By default = `TRUE`
-#' @param summary whether to produce a summary table with the RESI columns added. By default = `TRUE`
-#' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)
-#' @param ... Other arguments to be passed to Anova function
 #' @export
 resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                             summary = TRUE, vcovfunc = sandwich::vcovHC, ...){
@@ -86,13 +78,6 @@ resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 }
 
 #' @describeIn resi_pe RESI point estimation for linear models
-#' @param model.full the full model.
-#' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
-#' @param data optional data frame or object coercible to data frame of model.full data
-#' @param anova whether to produce an Anova table with the RESI columns added. By default = `TRUE`
-#' @param summary whether to produce a model coefficient table with the RESI columns added. By default = `TRUE`
-#' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)
-#' @param ... Other arguments to be passed to `Anova` function
 #' @export
 resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                        summary = TRUE, vcovfunc = sandwich::vcovHC, ...){
@@ -146,12 +131,6 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 }
 
 #' @describeIn resi_pe RESI point estimation for nonlinear least squares models
-#' @param model.full the full model.
-#' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
-#' @param data 	optional data frame or object coercible to data frame of model.full data (required for some model types)
-#' @param summary whether to produce a summary table with the RESI columns added. By default = `TRUE`
-#' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, regtools::nlshc (the robust variance estimator for nls models)
-#' @param ... ignored
 #' @export
 resi_pe.nls <- function(model.full, model.reduced = NULL, data,
                        summary = TRUE, vcovfunc = regtools::nlshc, ...){
@@ -203,13 +182,6 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data,
 }
 
 #' @describeIn resi_pe RESI point estimation for survreg
-#' @param model.full the full model.
-#' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
-#' @param data optional data frame or object coercible to data frame of model.full data (required for some model types)
-#' @param anova whether to produce an Anova table with the RESI columns added. By default = `TRUE`
-#' @param summary whether to produce a summary table with the RESI columns added. By default = `TRUE`
-#' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)
-#' @param ... Other arguments to be passed to Anova function
 #' @export
 resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                         summary = TRUE, vcovfunc = vcov, ...){
@@ -238,12 +210,6 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
 }
 
 #' @describeIn resi_pe RESI point estimation for hurdle and zeroinfl models
-#' @param model.full the full model.
-#' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
-#' @param data optional data frame or object coercible to data frame of model.full data
-#' @param summary whether to produce a model coefficient table with the RESI columns added. By default = `TRUE`
-#' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::sandwich (the robust (sandwich) variance estimator)
-#' @param ... ignored
 #' @export
 resi_pe.zeroinfl <- resi_pe.hurdle <- function(model.full, model.reduced = NULL, data,
                            summary = TRUE, vcovfunc = sandwich::sandwich, ...){
@@ -288,13 +254,6 @@ resi_pe.zeroinfl <- resi_pe.hurdle <- function(model.full, model.reduced = NULL,
 }
 
 #' @describeIn resi_pe RESI point estimation for coxph models
-#' @param model.full the full model.
-#' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
-#' @param data optional data frame or object coercible to data frame of model.full data (required for some model types)
-#' @param anova whether to produce an Anova table with the RESI columns added. By default = `TRUE`
-#' @param summary whether to produce a summary table with the RESI columns added. By default = `TRUE`
-#' @param vcovfunc the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)
-#' @param ... Other arguments to be passed to Anova function
 #' @export
 resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                        summary = TRUE, vcovfunc = vcov, ...){
@@ -352,7 +311,6 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
 
 #' @describeIn resi_pe RESI point estimation for geeglm object
-#' @param model.full the full model.
 #' @export
 resi_pe.geeglm <- function(model.full, ...){
   x = as.matrix(summary(model.full)$coefficients)
@@ -363,7 +321,6 @@ resi_pe.geeglm <- function(model.full, ...){
 }
 
 #' @describeIn resi_pe RESI point estimation for gee object
-#' @param model.full the full model.
 #' @export
 resi_pe.gee <- function(model.full, ...){
   x = as.matrix(summary(model.full)$coefficients)
@@ -374,7 +331,6 @@ resi_pe.gee <- function(model.full, ...){
 }
 
 #' @describeIn resi_pe RESI point estimation for lme object
-#' @param model.full The lme model object
 #' @importFrom clubSandwich vcovCR
 #' @export
 resi_pe.lme <- function(model.full, ...){

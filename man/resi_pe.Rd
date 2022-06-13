@@ -12,7 +12,7 @@
 \alias{resi_pe.geeglm}
 \alias{resi_pe.gee}
 \alias{resi_pe.lme}
-\title{Robust Effect Size index (RESI) point estimation}
+\title{Robust Effect Size index (RESI) Point Estimation}
 \usage{
 resi_pe(model.full, ...)
 
@@ -89,25 +89,25 @@ resi_pe(model.full, ...)
 \method{resi_pe}{lme}(model.full, ...)
 }
 \arguments{
-\item{model.full}{The lme model object}
+\item{model.full}{\code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.}
 
-\item{...}{Other arguments to be passed to Anova function}
+\item{...}{Other arguments to be passed to Anova function.}
 
-\item{model.reduced}{the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.}
+\item{model.reduced}{Fitted model object of same type as model.full. By default `NULL`; the same model as the full model but only having intercept.}
 
-\item{data}{optional data frame or object coercible to data frame of model.full data (required for some model types)}
+\item{data}{Data.frame or object coercible to data.frame of model.full data (required for some model types).}
 
-\item{summary}{whether to produce a summary table with the RESI columns added. By default = `TRUE`}
+\item{summary}{Logical, whether to produce a summary table with the RESI columns added. By default = `TRUE`.}
 
-\item{vcovfunc}{the variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator)}
+\item{vcovfunc}{The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).}
 
-\item{anova}{whether to produce an Anova table with the RESI columns added. By default = `TRUE`}
+\item{anova}{Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.}
 }
 \value{
 Returns a list containing RESI point estimates
 }
 \description{
-Robust Effect Size index (RESI) point estimation
+Robust Effect Size index (RESI) Point Estimation
 }
 \section{Methods (by class)}{
 \itemize{
