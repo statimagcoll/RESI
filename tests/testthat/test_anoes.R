@@ -6,7 +6,7 @@ library(lme4)
 library(dplyr)
 library(survival)
 
-data = read.csv("../testdata/insurance.csv")
+data = read.csv("./tests/testdata/insurance.csv")
 mod = glm(charges ~ region * age + bmi + sex, data = data)
 mod.s = glm(charges ~ region * ns(age, df=3) + bmi + sex, data = data)
 mod.r = glm(charges ~ bmi +sex, data = data)
@@ -17,7 +17,7 @@ mod.lm.s.r = lm(charges ~ region * ns(age, df=3), data = data)
 mod.one.predictor = glm(charges ~ bmi, data = data)
 mod.one.pred.multi = glm(charges ~ region, data = data)
 mod.one.pred.lm = lm(charges ~ region, data = data)
-data[,"smoker"] = recode(data[,"smoker"], yes = 1, no = 0)
+data[,"smoker"] = dplyr::recode(data[,"smoker"], yes = 1, no = 0)
 mod.log = glm(smoker ~ age + region, data = data, family = "binomial")
 
 #nls
