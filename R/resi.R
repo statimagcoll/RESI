@@ -1,4 +1,6 @@
 #' Robust Effect Size index (RESI) point and interval estimation for models
+#'
+#' This function will estimate RESI and its CI in various ways for a fitted model object. Overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in summary-style table. RESI is (optionally) estimated for each variable/interaction in an Anova-style table for models with existing Anova methods. CIs can be calculated using either non-parametric or Bayesian bootstrapping.
 #' @param model.full the full model.
 #' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param data optional data frame or object coercible to data frame of model.full data (required for some model types)
@@ -16,13 +18,13 @@
 #' @importFrom sandwich vcovHC
 #' @importFrom stats coef formula glm hatvalues pf predict quantile residuals update vcov
 #' @export
-#' @return Returns a list that includes function arguments, RESI point estimates, and confidence intervals
+#' @return Returns a list that includes function arguments, RESI point estimates, and confidence intervals in summary/anova-style tables
 
 resi <- function(model.full, ...){
   UseMethod("resi")
 }
 
-#' @describeIn resi Robust Effect Size index (RESI) point and interval estimation for models
+#' @describeIn resi RESI point and interval estimation for models
 #' @param model.full the full model.
 #' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param data optional data frame or object coercible to data frame of model.full data (required for some model types)
@@ -108,7 +110,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
   return(invisible(output))
 }
 
-#' @describeIn resi Robust Effect Size index (RESI) point and interval estimation for nls models
+#' @describeIn resi RESI point and interval estimation for nls models
 #' @param model.full the full model.
 #' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param data optional data frame or object coercible to data frame of model.full data (required for some model types)
@@ -175,7 +177,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
   return(invisible(output))
 }
 
-#' @describeIn resi Robust Effect Size index (RESI) point and interval estimation for hurdle models
+#' @describeIn resi RESI point and interval estimation for hurdle models
 #' @param model.full the full model.
 #' @param model.reduced the reduced model to compare with the full model. By default `NULL`, it's the same model as the full model but only having intercept.
 #' @param data optional data frame or object coercible to data frame of model.full data (required for some model types)
@@ -187,7 +189,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 #' @param ... Other arguments to be passed to Anova function
 #' @export
 
-resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
+resi.zeroinfl <- resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
                      nboot = 1000, boot.method = 'nonparam', vcovfunc = sandwich::sandwich, alpha = 0.05, ...){
   if (! tolower(boot.method) %in% c("nonparam", "bayes")) stop("\n The bootstrap method should be either 'nonparam' for non-parametric bootstrap, or 'bayes' for Bayesian bootstrap")
 
@@ -217,9 +219,9 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
   # bayesian bootstrap
   if (tolower(boot.method)  == "bayes"){
     for (i in 1:nboot){
-      boot.data = bayes.samp(data)
-      boot.model.full <- update(model.full, data = boot.data, weights = g)
-      boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
+      boot.data = suppressMessages(bayes.samp(data))
+      boot.model.full <- suppressMessages(update(model.full, data = boot.data, weights = g))
+      boot.results[i,] = suppressMessages(resi_pe(model.full = boot.model.full, model.reduced = NULL,
                                                   data = boot.data, summary = summary,
                                                   vcovfunc = vcovfunc, ...)$estimates)
 
@@ -242,9 +244,7 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
   return(invisible(output))
 }
 
-#' @describeIn resi Robust Effect Size index (RESI) point and interval estimation for GEE models
-#' This function will estimate RESI and its CI for each factor in a fitted GEE model object.
-#' The CIs are calculated via non-parametric bootstraps.
+#' @describeIn resi RESI point and interval estimation for GEE models
 #' @param model.full the full model object.
 #' @param alpha numeric, significance level of the constructed CIs. By default, 0.05.
 #' @param nboot  numeric, the number of bootstrap replicates. By default, 1000.
@@ -268,9 +268,7 @@ resi.geeglm <- function(model.full, alpha = 0.05, nboot = 1000){
   return(output)
 }
 
-#' @describeIn resi Robust Effect Size index (RESI) point and interval estimation for LME models
-#' This function will estimate RESI and its CI for each factor in a fitted LME model object.
-#' The CIs are calculated via non-parametric bootstraps.
+#' @describeIn resi RESI point and interval estimation for LME models
 #' @param model.full the full model object
 #' @param alpha numeric, significance level of the constructed CIs. By default, 0.05.
 #' @param nboot numeric, the number of bootstrap replicates. By default, 1000.
