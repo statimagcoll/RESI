@@ -15,7 +15,6 @@ Collate:
   'ess.R'
   'internal_functions.R'
   'simulation.R'
-  'S.R'
   'summary.resi.R'
   'resi.R'
   'resi_pe.R'
