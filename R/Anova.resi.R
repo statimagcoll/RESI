@@ -1,6 +1,6 @@
 #' Anova method for resi objects
 #'
-#' After running the resi function on a fitted model, this function can be used to print the Anova-style table component. If the resi function was run with the `store.boot = TRUE` option to store the full matrix of bootstrapped estimates, the user can specify a different alpha level for this function's confidence intervals.
+#' After running the \code{\link{resi}} function on a fitted model, this function can be used to print the Anova-style table component. If the resi function was run with the `store.boot = TRUE` option to store the full matrix of bootstrapped estimates, the user can specify a different alpha level for this function's confidence intervals.
 #' @param resi.obj an object resulting from resi function
 #' @param alpha an optional new specification for the confidence level. Can be vector-valued
 #' @return Returns an `anova` object containing the computed Anova-style table

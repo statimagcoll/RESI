@@ -1,9 +1,8 @@
-#' Compute the robust effect size index estimator from chi-squared statistic
+#' Compute the robust effect size index estimator from chi-squared statistic.
 #'
 #' This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
 #' Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
-#' For mixed effects models, RESI is conditional on the average correlation
-#' structure within subjects.
+#' For mixed effects models, RESI is conditional on the average correlation structure within subjects.
 #' @param chisq The chi-square statistic for the parameter of interest.
 #' @param df Number of degrees of freedom of the chi-square statistic.
 #' @param n Number of independent samples.
@@ -14,11 +13,6 @@ chisq2S <- function(chisq, df, n){
   S = (chisq - df)/n
   sqrt(ifelse(S<0, 0, S))
 }
-
-chisq2Ssq = function(chisq, df, rdf){
-  S = (chisq - df)/rdf
-}
-
 
 #' Compute the robust effect size index estimator from F-statistic
 #'
