@@ -87,18 +87,18 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
     }}
 
 
-  output$overall[nrow(output$overall),c("LL", "UL")] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2))
+  output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2))
 
   if (summary){
     CIs = apply(boot.results[,2:(1+nrow(output$summary))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
     CIs = t(CIs)
-    output$summary[1:nrow(CIs), c("LL", "UL")] = CIs
+    output$summary[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = CIs
   }
 
   if (anova){
     CIs = apply(boot.results[,(ncol(boot.results)-nrow(output$anova)+1):ncol(boot.results)], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
     CIs = t(CIs)
-    output$anova[1:nrow(CIs), c("LL", "UL")] = CIs
+    output$anova[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = CIs
   }
 
 
@@ -161,12 +161,12 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
     }}
 
 
-  output$overall[nrow(output$overall),c("LL", "UL")] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2))
+  output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2))
 
   if (summary){
     CIs = apply(boot.results[,2:(1+nrow(output$summary))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
     CIs = t(CIs)
-    output$summary[1:nrow(CIs), c("LL", "UL")] = CIs
+    output$summary[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = CIs
   }
 
 
@@ -228,12 +228,12 @@ resi.zeroinfl <- resi.hurdle <- function(model.full, model.reduced = NULL, data,
     }}
 
 
-  output$overall[nrow(output$overall),c("LL", "UL")] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2))
+  output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2))
 
   if (summary){
     CIs = apply(boot.results[,2:(1+nrow(output$summary))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
     CIs = t(CIs)
-    output$summary[1:nrow(CIs), c("LL", "UL")] = CIs
+    output$summary[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = CIs
   }
 
 
