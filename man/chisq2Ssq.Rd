@@ -2,7 +2,7 @@
 % Please edit documentation in R/internal_functions.R
 \name{chisq2Ssq}
 \alias{chisq2Ssq}
-\title{Transferation from Wald test statistics to squared RESI}
+\title{Transformation from Wald test statistics to squared RESI}
 \usage{
 chisq2Ssq(chisq, df, rdf)
 }
@@ -17,5 +17,5 @@ chisq2Ssq(chisq, df, rdf)
 Returns a scalar or vector argument of the squared robust effect size index estimate.
 }
 \description{
-Transferation from Wald test statistics to squared RESI
+Transformation from Wald test statistics to squared RESI
 }
