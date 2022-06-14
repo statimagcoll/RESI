@@ -238,7 +238,12 @@ resi_pe.hurdle <- function(model.full, model.reduced = NULL, data,
 
   if (is.null(model.reduced)){
     form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
-    model.reduced <- update(model.full, formula = form.reduced, data = data)
+    if (nrow(model.full$model) == nrow(data)){
+      model.reduced <- update(model.full, formula = form.reduced, data = data)
+    }
+    else{
+      model.reduced <- update(model.full, formula = form.reduced, data = model.full$model)
+    }
   }
 
   if (identical(vcovfunc, sandwich::vcovHC)){
