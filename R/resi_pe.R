@@ -192,6 +192,15 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
   if (!identical(vcovfunc, vcov)){
     warning("vcov function ignored for survreg objects")
   }
+  if(is.null(model.reduced)){
+    form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
+    if (is.null(model.full$na.action)){
+      model.reduced <- update(model.full, formula = form.reduced, data = data)
+    }
+    else{
+      model.reduced <- update(model.full, formula = form.reduced, data = data[which(1:nrow(data)!= model.full$na.action),])
+    }
+  }
 
   output = resi_pe.default(model.full, model.reduced, data, summary, vcovfunc = vcov)
 
