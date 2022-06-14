@@ -4,6 +4,7 @@
 \alias{resi}
 \alias{resi.default}
 \alias{resi.nls}
+\alias{resi.hurdle}
 \alias{resi.zeroinfl}
 \alias{resi.geeglm}
 \alias{resi.lme}
@@ -32,6 +33,18 @@ resi(model.full, ...)
   nboot = 1000,
   boot.method = "nonparam",
   vcovfunc = sandwich::vcovHC,
+  alpha = 0.05,
+  ...
+)
+
+\method{resi}{hurdle}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  summary = TRUE,
+  nboot = 1000,
+  boot.method = "nonparam",
+  vcovfunc = sandwich::sandwich,
   alpha = 0.05,
   ...
 )
@@ -85,7 +98,9 @@ This function will estimate the robust effect size (RESI) from Vandekar, Rao, & 
 
 \item \code{nls}: RESI point and interval estimation for nls models
 
-\item \code{zeroinfl}: RESI point and interval estimation for hurdle models
+\item \code{hurdle}: RESI point and interval estimation for hurdle models
+
+\item \code{zeroinfl}: RESI point and interval estimation for zeroinfl models
 
 \item \code{geeglm}: RESI point and interval estimation for GEE models
 

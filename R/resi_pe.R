@@ -209,9 +209,9 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
   return(output)
 }
 
-#' @describeIn resi_pe RESI point estimation for hurdle and zeroinfl models
+#' @describeIn resi_pe RESI point estimation for hurdle models
 #' @export
-resi_pe.zeroinfl <- resi_pe.hurdle <- function(model.full, model.reduced = NULL, data,
+resi_pe.hurdle <- function(model.full, model.reduced = NULL, data,
                            summary = TRUE, vcovfunc = sandwich::sandwich, ...){
   if (missing(data)){
     data = model.full$model
@@ -252,6 +252,11 @@ resi_pe.zeroinfl <- resi_pe.hurdle <- function(model.full, model.reduced = NULL,
 
   return(output)
 }
+
+#' @describeIn resi_pe RESI point estimation for zeroinfl models
+#' @export
+resi_pe.zeroinfl <- resi_pe.hurdle
+
 
 #' @describeIn resi_pe RESI point estimation for coxph models
 #' @export

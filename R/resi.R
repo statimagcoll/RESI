@@ -160,8 +160,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 
 #' @describeIn resi RESI point and interval estimation for hurdle models
 #' @export
-
-resi.zeroinfl <- resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
+resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
                      nboot = 1000, boot.method = 'nonparam', vcovfunc = sandwich::sandwich, alpha = 0.05, ...){
   if (! tolower(boot.method) %in% c("nonparam", "bayes")) stop("\n The bootstrap method should be either 'nonparam' for non-parametric bootstrap, or 'bayes' for Bayesian bootstrap")
 
@@ -215,6 +214,10 @@ resi.zeroinfl <- resi.hurdle <- function(model.full, model.reduced = NULL, data,
   print(output[which(!(names(output) %in% c("boot.results", "estimates")))])
   return(invisible(output))
 }
+
+#' @describeIn resi RESI point and interval estimation for zeroinfl models
+#' @export
+resi.zeroinfl <- resi.hurdle
 
 #' @describeIn resi RESI point and interval estimation for GEE models
 #' @export

@@ -7,6 +7,7 @@
 \alias{resi_pe.lm}
 \alias{resi_pe.nls}
 \alias{resi_pe.survreg}
+\alias{resi_pe.hurdle}
 \alias{resi_pe.zeroinfl}
 \alias{resi_pe.coxph}
 \alias{resi_pe.geeglm}
@@ -60,6 +61,15 @@ resi_pe(model.full, ...)
   anova = TRUE,
   summary = TRUE,
   vcovfunc = vcov,
+  ...
+)
+
+\method{resi_pe}{hurdle}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  summary = TRUE,
+  vcovfunc = sandwich::sandwich,
   ...
 )
 
@@ -121,7 +131,9 @@ Robust Effect Size index (RESI) Point Estimation
 
 \item \code{survreg}: RESI point estimation for survreg
 
-\item \code{zeroinfl}: RESI point estimation for hurdle and zeroinfl models
+\item \code{hurdle}: RESI point estimation for hurdle models
+
+\item \code{zeroinfl}: RESI point estimation for zeroinfl models
 
 \item \code{coxph}: RESI point estimation for coxph models
 
