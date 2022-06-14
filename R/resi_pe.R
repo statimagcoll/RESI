@@ -23,7 +23,6 @@ resi_pe <- function(model.full, ...){
 #' @export
 resi_pe.default <- function(model.full, model.reduced = NULL, data,
                     summary = TRUE, vcovfunc = sandwich::vcovHC){
-  browser()
   if (missing(data)){
       data = model.full$model
   }
@@ -68,7 +67,6 @@ resi_pe.default <- function(model.full, model.reduced = NULL, data,
 #' @export
 resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                             summary = TRUE, vcovfunc = sandwich::vcovHC, ...){
-  browser()
   output <- resi_pe.default(model.full, model.reduced, data, summary, vcovfunc)
 
   # Anova table (Chi sq statistics)
@@ -95,7 +93,12 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   if (is.null(model.reduced)){
     form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
-    model.reduced <- update(model.full, formula = form.reduced, data = data)
+    if (is.null(model.full$na.action)){
+      model.reduced <- update(model.full, formula = form.reduced, data = data)
+    }
+    else{
+      model.reduced <- update(model.full, formula = form.reduced, data = model.full$model)
+    }
   }
 
   # overall
