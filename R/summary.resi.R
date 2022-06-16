@@ -6,18 +6,19 @@
 #' @return Returns a `summary.resi` object containing the computed summary table
 #' @export
 summary.resi <- function(object, alpha = NULL){
-  if(is.null(object$summary)){
+  if(is.null(object$coefficients)){
     stop('\n resi function was not run with summary = TRUE option')
   }
 
   if (is.null(alpha)){
-    output = object$summary
+    output = object$coefficients
   }
   else{
-    output = object$summary[,1:(ncol(object$summary)-2)]
-    CIs = apply(object$boot.results[,2:(1+nrow(object$summary))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+    output = object$coefficients[,1:(ncol(object$coefficients)-2)]
+    CIs = apply(object$boot.results[,2:(1+nrow(object$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
     CIs = t(CIs)
     output[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = CIs
+    # make clear warning message
   }
   class(output) = c('summary.resi', 'data.frame')
   output
