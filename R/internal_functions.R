@@ -109,11 +109,18 @@ bayes.samp <- function(data) {
 
 #' @export
 print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
+  #browser()
   cat("\nAnalysis of Effect sizes (ANOES) based on RESI:")
   cat("\nSignificance level = ", x$alpha)
-  cat(ifelse(x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")), "\nCall:  ", "\nFull Model:"),
-      paste(deparse(x$model.full$call), sep = "\n", collapse = "\n"), "\n",sep = "")
-  if (!(x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")))) cat("Reduced Model:", paste(deparse(x$model.reduced$call), sep = "\n", collapse = "\n"), "\n\n", sep = "")
+  if (is.null(x$model.reduced)){
+    cat("\nCall:  ", paste(deparse(x$model.full$call), sep = "\n", collapse = "\n"),  "\n",sep = "")
+  }
+  else{
+    cat(ifelse(x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")), "\nCall:  ", "\nFull Model:"),
+        paste(deparse(x$model.full$call), sep = "\n", collapse = "\n"), "\n",sep = "")
+    if (!(x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")))) cat("Reduced Model:", paste(deparse(x$model.reduced$call), sep = "\n", collapse = "\n"), "\n\n", sep = "")
+  }
+
   # summary table
   if (!is.null(x$coefficients)){
     cat("\nCoefficient Table \n")
@@ -127,17 +134,19 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   }
 
   # overall
-  if ((x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")))){
-    cat("\nOverall RESI comparing model to intercept-only model:\n\n")
-    overall = as.data.frame(x$overall)[2,]
-    rownames(overall) = NULL
-    print(round(overall, digits = digits))
-  }
-  else{
-    cat("\nOverall RESI comparing full model to reduced model:\n\n")
-    overall = as.data.frame(x$overall)[2,]
-    rownames(overall) = NULL
-    print(round(overall, digits = digits))
+  if (!(is.null(x$model.reduced))){
+    if ((x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")))){
+      cat("\nOverall RESI comparing model to intercept-only model:\n\n")
+      overall = as.data.frame(x$overall)[2,]
+      rownames(overall) = NULL
+      print(round(overall, digits = digits))
+    }
+    else{
+      cat("\nOverall RESI comparing full model to reduced model:\n\n")
+      overall = as.data.frame(x$overall)[2,]
+      rownames(overall) = NULL
+      print(round(overall, digits = digits))
+    }
   }
 
   cat("\nNotes:")

@@ -395,7 +395,7 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @export
 resi_pe.geeglm <- function(model.full, ...){
   x = as.matrix(summary(model.full)$coefficients)
-  #sample size
+  #sample size (not sure if this is getting the correct value)
   N = length(summary(model.full)$clusz)
   output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
                  coefficients =  as.data.frame(cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], 1, N))))
