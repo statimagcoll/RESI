@@ -109,22 +109,44 @@ bayes.samp <- function(data) {
 
 #' @export
 print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
-  cat("\n Analysis of Effect sizes (ANOES) based on RESI: ")
-  cat("\n Significance level = ", x$alpha)
-  cat( ifelse(is.null(x$input.object.reduced), "\n Call:  ", "\n Full Model:"),
-      paste(deparse(x$input.object$call), sep = "\n", collapse = "\n"), "\n\n", sep = "")
-  if (!is.null(x$input.object.reduced)) cat("\n Reduced Model:", paste(deparse(x$input.object$call), sep = "\n", collapse = "\n"), "\n\n", sep = "")
-  if(length(coef(x$input.object))) {
-    print.default(format(round(x$resi, digits = digits)),
-                  print.gap = 2, quote = FALSE)
-  } else cat("No coefficients\n\n")
+  cat("\nAnalysis of Effect sizes (ANOES) based on RESI:")
+  cat("\nSignificance level = ", x$alpha)
+  cat(ifelse(x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")), "\nCall:  ", "\nFull Model:"),
+      paste(deparse(x$model.full$call), sep = "\n", collapse = "\n"), "\n",sep = "")
+  if (!(x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")))) cat("Reduced Model:", paste(deparse(x$model.reduced$call), sep = "\n", collapse = "\n"), "\n\n", sep = "")
+  # summary table
+  if (!is.null(x$coefficients)){
+    cat("\nCoefficient Table \n")
+    print(round(x$coefficients, digits = digits))
+  }
 
-  cat("\n Notes:")
-  if (x$robust.var) cat("\n 1. The RESI is calculated using the robust (sandwich) covariance estimator.")
-  else cat("\n 1. The RESI is calculated using the naive covariance estimator.")
-  if (x$boot.method == "nonparam") cat("\n 2. Confidence intervals (CIs) constructed using", x$nboot,"non-parametric bootstraps \n")
-  if (x$boot.method == "bayes") cat("\n 2. Credible intervals constructed using", x$nboot,"Bayesian bootstraps \n")
-  if(nzchar(mess <- naprint(x$na.action))) cat("  (",mess, ")\n", sep = "")
+  # anova table
+  if (!is.null(x$anova)){
+    cat("\n\n")
+    print(round(x$anova, digits = digits))
+  }
+
+  # overall
+  if ((x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")))){
+    cat("\nOverall RESI comparing model to intercept-only model:\n\n")
+    overall = as.data.frame(x$overall)[2,]
+    rownames(overall) = NULL
+    print(round(overall, digits = digits))
+  }
+  else{
+    cat("\nOverall RESI comparing full model to reduced model:\n\n")
+    overall = as.data.frame(x$overall)[2,]
+    rownames(overall) = NULL
+    print(round(overall, digits = digits))
+  }
+
+  cat("\nNotes:")
+  if (x$robust.var) cat("\n1. The RESI was calculated using the robust (sandwich) covariance estimator.")
+  # change to naive estimator or **a** robust estimator
+  else cat("\n1. The RESI was not calculated using the default (robust) covariance estimator.")
+  if (x$boot.method == "nonparam") cat("\n2. Confidence intervals (CIs) constructed using", x$nboot,"non-parametric bootstraps \n")
+  if (x$boot.method == "bayes") cat("\n2. Credible intervals constructed using", x$nboot,"Bayesian bootstraps \n")
+  # if(nzchar(mess <- naprint(x$na.action))) cat("  (",mess, ")\n", sep = "")
 
   invisible(x)
 }
