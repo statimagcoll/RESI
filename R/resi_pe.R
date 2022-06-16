@@ -3,7 +3,7 @@
 #' @param model.reduced Fitted model object of same type as model.full. By default `NULL`; the same model as the full model but only having intercept.
 #' @param data Data.frame or object coercible to data.frame of model.full data (required for some model types).
 #' @param vcovfunc The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).
-#' @param summary Logical, whether to produce a summary table with the RESI columns added. By default = `TRUE`.
+#' @param summary Logical, whether to produce a summary (coefficients) table with the RESI columns added. By default = `TRUE`.
 #' @param anova Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.
 #' @param ... Other arguments to be passed to Anova function.
 #' @importFrom aod wald.test
@@ -44,7 +44,9 @@ resi_pe.default <- function(model.full, model.reduced = NULL, data,
   res.df = wald.test$Res.Df[2]
   overall.resi.hat = chisq2S(stats, overall.df, res.df)
   wald.test[2, 'RESI'] = overall.resi.hat
-  output <- list(estimates = overall.resi.hat, overall = wald.test)
+  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
+                 model.reduced = list(call = model.reduced$call, formula = formula(model.reduced)),
+                 estimates = overall.resi.hat, overall = wald.test)
   names.est = "Overall"
   names(output$estimates) = names.est
 
@@ -55,11 +57,12 @@ resi_pe.default <- function(model.full, model.reduced = NULL, data,
                              summary.tab[,'z value'], summary.tab[,'Pr(>|z|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
     summary.df[,'RESI'] = z2S(summary.df[,'z value'], nrow(data))
-    output$summary = summary.df
+    output$coefficients = summary.df
     output$estimates = c(output$estimates, summary.df$RESI)
     names.est = c(names.est, rownames(summary.df))
     names(output$estimates) = names.est
   }
+
   return(output)
 }
 
@@ -79,6 +82,13 @@ resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     names.est = c(names.est, rownames(anova.tab))
     names(output$estimates) = names.est
   }
+
+  if(identical(vcovfunc, sandwich::vcovHC)){
+    output$robust.var = TRUE
+  }
+  else{
+    output$robust.var = FALSE
+  }
   return(output)
 }
 
@@ -86,6 +96,7 @@ resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @export
 resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                        summary = TRUE, vcovfunc = sandwich::vcovHC, ...){
+  browser()
   # data required with splines
   if (missing(data)){
     data = model.full$model
@@ -108,7 +119,9 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   res.df = wald.test$Res.Df[2]
   overall.resi.hat = chisq2S(stats, overall.df, res.df)
   wald.test[2, 'RESI'] = overall.resi.hat
-  output <- list(estimates = overall.resi.hat, overall = wald.test)
+  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
+                 model.reduced = list(call = model.reduced$call, formula = formula(model.reduced)),
+                 estimates = overall.resi.hat, overall = wald.test)
   names.est = "Overall"
   names(output$estimates) = names.est
 
@@ -122,7 +135,7 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                             summary.tab[,'t value'], summary.tab[,'Pr(>|t|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
     summary.df[,'RESI'] = t2S(summary.df[,'t value'], model.full$df.residual)
-    output$summary = summary.df
+    output$coefficients = summary.df
     output$estimates = c(output$estimates, summary.df$RESI)
     names.est = c(names.est, rownames(summary.df))
     names(output$estimates) = names.est
@@ -136,6 +149,13 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     output$estimates = c(output$estimates, anova.tab$RESI)
     names.est = c(names.est, rownames(anova.tab))
     names(output$estimates) = names.est
+  }
+
+  if(identical(vcovfunc, sandwich::vcovHC)){
+    output$robust.var = TRUE
+  }
+  else{
+    output$robust.var = FALSE
   }
   return(output)
 }
@@ -172,7 +192,8 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data,
   overall.tab['RESI'] = overall.resi.hat
   overall.tab = as.data.frame(t(overall.tab))
   rownames(overall.tab) = "Wald Test"
-  output <- list(estimates = overall.resi.hat, overall = overall.tab)
+  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
+                 estimates = overall.resi.hat, overall = overall.tab)
   names.est = "Overall"
   names(output$estimates) = names.est
 
@@ -183,10 +204,17 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data,
                             summary.tab[,'t value'], summary.tab[,'Pr(>|t|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
     summary.df[,'RESI'] = t2S(summary.df[,'t value'], res.df)
-    output$summary = summary.df
+    output$coefficients = summary.df
     output$estimates = c(output$estimates, summary.df$RESI)
     names.est = c(names.est, rownames(summary.df))
     names(output$estimates) = names.est
+  }
+
+  if(identical(vcovfunc, regtools::nlshc)){
+    output$robust.var = TRUE
+  }
+  else{
+    output$robust.var = FALSE
   }
   return(output)
 }
@@ -225,6 +253,13 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
     names(output$estimates) = names.est
   }
 
+  if(!(is.null(model.full$naive.var))){
+    output$robust.var = TRUE
+  }
+  else{
+    output$robust.var = FALSE
+  }
+
   return(output)
 }
 
@@ -257,7 +292,9 @@ resi_pe.hurdle <- function(model.full, model.reduced = NULL, data,
   res.df = wald.test$Res.Df[2]
   overall.resi.hat = chisq2S(stats, overall.df, res.df)
   wald.test[2, 'RESI'] = overall.resi.hat
-  output <- list(estimates = overall.resi.hat, overall = wald.test)
+  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
+                 model.reduced = list(call = model.reduced$call, formula = formula(model.reduced)),
+                 estimates = overall.resi.hat, overall = wald.test)
   names.est = "Overall"
   names(output$estimates) = names.est
 
@@ -268,10 +305,17 @@ resi_pe.hurdle <- function(model.full, model.reduced = NULL, data,
                             summary.tab[,'z value'], summary.tab[,'Pr(>|z|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
     summary.df[,'RESI'] = z2S(summary.df[,'z value'], nrow(data))
-    output$summary = summary.df
+    output$coefficients = summary.df
     output$estimates = c(output$estimates, summary.df$RESI)
     names.est = c(names.est, rownames(summary.df))
     names(output$estimates) = names.est
+  }
+
+  if(identical(vcovfunc, sandwich::sandwich)){
+    output$robust.var = TRUE
+  }
+  else{
+    output$robust.var = FALSE
   }
 
   return(output)
@@ -309,7 +353,8 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   overall.tab = as.data.frame(t(overall.tab))
   rownames(overall.tab) = "Wald Test"
   ## the output object
-  output <- list(estimates = overall.resi.hat, overall = overall.tab)
+  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
+                 estimates = overall.resi.hat, overall = overall.tab)
   names.est = "Overall"
   names(output$estimates) = names.est
 
@@ -319,7 +364,7 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                             summary.tab[,'z value'], summary.tab[,'Pr(>|z|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
     summary.df[,'RESI'] = z2S(summary.df[,'z value'], nrow(data))
-    output$summary = summary.df
+    output$coefficients = summary.df
     output$estimates = c(output$estimates, summary.df$RESI)
     names.est = c(names.est, rownames(summary.df))
     names(output$estimates) = names.est
@@ -335,6 +380,13 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     names(output$estimates) = names.est
   }
 
+  if(!(is.null(model.full$naive.var))){
+    output$robust.var = TRUE
+  }
+  else{
+    output$robust.var = FALSE
+  }
+
   return(output)
 }
 
@@ -345,7 +397,8 @@ resi_pe.geeglm <- function(model.full, ...){
   x = as.matrix(summary(model.full)$coefficients)
   #sample size
   N = length(summary(model.full)$clusz)
-  output = cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], 1, N))
+  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
+                 coefficients =  as.data.frame(cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], 1, N))))
   return(output)
 }
 
