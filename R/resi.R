@@ -70,7 +70,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
     }}
 
 
-  output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2))
+  output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
 
   if (summary){
     CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
@@ -132,7 +132,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
     }}
 
 
-  output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2))
+  output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
 
   if (summary){
     CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
@@ -192,7 +192,7 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
     }}
 
 
-  output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2))
+  output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2). na.rm = TRUE)
 
   if (summary){
     CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
@@ -232,7 +232,7 @@ resi.geeglm <- function(model.full, alpha = 0.05, nboot = 1000){
     output.boot = cbind(output.boot, resi_pe(boot.mod)$coefficients[, 'RESI'])
   }
   output.boot = output.boot[, -1]
-  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
   output$coefficients = cbind(output$coefficients, t(RESI.ci))
   output$robust.var = TRUE
   output$boot.method = "nonparam"
@@ -257,7 +257,7 @@ resi.lme <- function(model.full, alpha = 0.05, nboot = 1000){
     output.boot = cbind(output.boot, resi_pe(boot.mod)[, 'RESI'])
   }
   output.boot = output.boot[, -1]
-  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
   output = cbind(output, t(RESI.ci))
   class(output) = 'resi'
   return(output)
