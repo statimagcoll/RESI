@@ -192,7 +192,7 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
     }}
 
 
-  output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2). na.rm = TRUE)
+  output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
 
   if (summary){
     CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
@@ -211,12 +211,9 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 #' @export
 resi.zeroinfl <- resi.hurdle
 
-
-# need to finish making output format consistent
 #' @describeIn resi RESI point and interval estimation for GEE models
 #' @export
 resi.geeglm <- function(model.full, alpha = 0.05, nboot = 1000){
-  #browser()
   output <- list(alpha = alpha, nboot = nboot)
   # RESI point estimates
   output = c(output, resi_pe(model.full))
@@ -234,7 +231,33 @@ resi.geeglm <- function(model.full, alpha = 0.05, nboot = 1000){
   output.boot = output.boot[, -1]
   RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
   output$coefficients = cbind(output$coefficients, t(RESI.ci))
-  output$robust.var = TRUE
+  output$boot.method = "nonparam"
+  class(output)= 'resi'
+  return(output)
+}
+
+#' @describeIn resi RESI point and interval estimation for GEE models
+#' @export
+resi.gee <- function(model.full, data, alpha = 0.05, nboot = 1000){
+  if (missing(data)){
+    stop('\n Data argument is required for GEE models from gee package')
+  }
+  output <- list(alpha = alpha, nboot = nboot)
+  # RESI point estimates
+  output = c(output, resi_pe(model.full))
+  # id variable name
+  id_var = as.character(model.full$call$id)
+  # bootstrap
+  output.boot = as.matrix(output$coefficients[, 'RESI'])
+  for (i in 1:nboot){
+    boot.data = boot.samp(data, id.var = id_var)
+    # re-fit the model
+    suppressMessages(capture.output(boot.mod <- update(model.full, data = boot.data), file =  nullfile()))
+    output.boot = cbind(output.boot, resi_pe(boot.mod)$coefficients[, 'RESI'])
+  }
+  output.boot = output.boot[, -1]
+  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+  output$coefficients = cbind(output$coefficients, t(RESI.ci))
   output$boot.method = "nonparam"
   class(output)= 'resi'
   return(output)
@@ -244,21 +267,25 @@ resi.geeglm <- function(model.full, alpha = 0.05, nboot = 1000){
 #' @importFrom nlme getGroups
 #' @export
 resi.lme <- function(model.full, alpha = 0.05, nboot = 1000){
-  output = resi_pe(model.full) # RESI point estimates
+  output <- list(alpha = alpha, nboot = nboot)
+  # RESI point estimates
+  output = c(output, resi_pe(model.full))
   data = model.full$data
   # id variable name
   id_var = attr(nlme::getGroups(model.full), "label")
   # bootstrap
-  output.boot = as.matrix(output[, 'RESI'])
+  output.boot = as.matrix(output$coefficients[, 'RESI'])
   for (i in 1:nboot){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
-    boot.mod = update(model.full, data = boot.data)
-    output.boot = cbind(output.boot, resi_pe(boot.mod)[, 'RESI'])
+    # not working: boot.mod = update(model.full, data = boot.data)
+    boot.mod = update(model.full, data = boot.data, fixed = as.formula(model.full$call$fixed), random = as.formula(model.full$call$random))
+    output.boot = cbind(output.boot, resi_pe(boot.mod)$coefficients[, 'RESI'])
   }
   output.boot = output.boot[, -1]
   RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
-  output = cbind(output, t(RESI.ci))
+  output$coefficients = cbind(output$coefficients, t(RESI.ci))
+  output$boot.method = "nonparam"
   class(output) = 'resi'
   return(output)
 }
