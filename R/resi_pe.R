@@ -96,7 +96,6 @@ resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @export
 resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                        summary = TRUE, vcovfunc = sandwich::vcovHC, ...){
-  browser()
   # data required with splines
   if (missing(data)){
     data = model.full$model
@@ -236,7 +235,7 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
       model.reduced <- update(model.full, formula = form.reduced, data = data)
     }
     else{
-      model.reduced <- update(model.full, formula = form.reduced, data = data[which(1:nrow(data)!= model.full$na.action),])
+      model.reduced <- update(model.full, formula = form.reduced, data = data[which(!(1:nrow(data)%in% model.full$na.action)),])
     }
   }
 
@@ -395,10 +394,11 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @export
 resi_pe.geeglm <- function(model.full, ...){
   x = as.matrix(summary(model.full)$coefficients)
-  #sample size (not sure if this is getting the correct value)
+  #sample size (is this supposed to be number of groups?)
   N = length(summary(model.full)$clusz)
   output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
                  coefficients =  as.data.frame(cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], 1, N))))
+  output$robust.var = TRUE
   return(output)
 }
 
@@ -408,7 +408,9 @@ resi_pe.gee <- function(model.full, ...){
   x = as.matrix(summary(model.full)$coefficients)
   #sample size
   N = length(unique(model.full$id))
-  output = cbind(x, RESI = RESI::chisq2S(x[, 'Robust z']^2, 1, N))
+  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
+                 coefficients =  as.data.frame(cbind(x, RESI = RESI::chisq2S(x[, 'Robust z']^2, 1, N))))
+  output$robust.var = TRUE
   return(output)
 }
 
@@ -422,7 +424,9 @@ resi_pe.lme <- function(model.full, ...){
   # robust se
   robust.var = diag(clubSandwich::vcovCR(model.full, type = "CR3"))
   robust.se = sqrt(robust.var)
-  output = cbind(x, 'Robust.SE' = robust.se, 'Robust Wald' = (x[, 'Value']^2/robust.var), RESI = RESI::chisq2S(x[, 'Value']^2/robust.var, 1, N))
+  output = list(model.full = list(call = model.full$call, formula = formula(model.full)),
+       coefficients =  as.data.frame(cbind(x, 'Robust.SE' = robust.se, 'Robust Wald' = (x[, 'Value']^2/robust.var), RESI = RESI::chisq2S(x[, 'Value']^2/robust.var, 1, N))))
+  output$robust.var = TRUE
   return(output)
 }
 
