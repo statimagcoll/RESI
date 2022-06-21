@@ -170,16 +170,23 @@ resi.geeglm <- function(object, robust.var = TRUE,
   # id variable name
   id_var = as.character(object$call$id)
   # bootstrap
-  output.boot = as.matrix(output[, 'RESI'])
+  output.boot = list(RESI = as.matrix(output[, 'RESI']),
+                     pm_RESI = as.matrix(output[, 'pm-RESI']))
   for (i in 1:nboot){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
     boot.mod = update(object, data = boot.data)
-    output.boot = cbind(output.boot, calc_resi(boot.mod, robust.var = robust.var)[, 'RESI'])
+    rv.boot = calc_resi(boot.mod, robust.var = robust.var)
+    output.boot$RESI= cbind(output.boot$RESI, rv.boot[, 'RESI'])
+    output.boot$pm_RESI = cbind(output.boot$pm_RESI, rv.boot[, 'pm-RESI'])
   }
-  output.boot = output.boot[, -1]
-  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
-  output = cbind(output, t(RESI.ci))
+  output.boot$RESI = output.boot$RESI[, -1]
+  output.boot$pm_RESI = output.boot$pm_RESI[, -1]
+  RESI.ci = apply(output.boot$RESI, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+  rownames(RESI.ci) = paste("RESI", rownames(RESI.ci))
+  pm_RESI.ci = apply(output.boot$pm_RESI, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+  rownames(pm_RESI.ci) = paste("pm-RESI", rownames(pm_RESI.ci))
+  output = cbind(output, t(RESI.ci), t(pm_RESI.ci))
   return(output)
 }
 
