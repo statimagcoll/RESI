@@ -5,7 +5,7 @@
 \title{RESI from lme object
 This function calculate the RESI from lme model object}
 \usage{
-\method{calc_resi}{lme}(object, ...)
+\method{calc_resi}{lme}(object, robust.var = TRUE, ...)
 }
 \arguments{
 \item{object}{The lme model object}

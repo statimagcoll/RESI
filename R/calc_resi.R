@@ -121,12 +121,16 @@ calc_resi.gee <- function(object, ...){
 #' @param object The lme model object
 #' @return returns the ANOVA-type summary table with RESI estimate for each factor
 #' @export
-calc_resi.lme <- function(object, ...){
+calc_resi.lme <- function(object, robust.var = TRUE, ...){
   x = as.matrix(summary(object)$tTable)
   #sample size
   N = summary(object)$dims$ngrps[1]
   # robust se
-  robust.var = diag(clubSandwich::vcovCR(object, type = "CR3"))
+  if (robust.var) {
+    robust.var = diag(clubSandwich::vcovCR(object, type = "CR3"))
+  } else {
+    robust.var = diag(vcov(object))
+  }
   robust.se = sqrt(robust.var)
   output = cbind(x, 'Robust.SE' = robust.se, 'Robust Wald' = (x[, 'Value']^2/robust.var), RESI = RESI::chisq2S(x[, 'Value']^2/robust.var, 1, N))
   return(output)
@@ -137,12 +141,16 @@ calc_resi.lme <- function(object, ...){
 #' @param object The lmer model object
 #' @return returns the ANOVA-type summary table with RESI estimate for each factor
 #' @export
-calc_resi.lmerMod <- function(object, ...){
+calc_resi.lmerMod <- function(object, robust.var = TRUE, ...){
   x = as.matrix(summary(object)$coefficients)
   #sample size
   N = summary(object)$ngrps
   # robust se
-  robust.var = diag(clubSandwich::vcovCR(object, type = "CR3"))
+  if (robust.var) {
+    robust.var = diag(clubSandwich::vcovCR(object, type = "CR3"))
+  } else {
+    robust.var = diag(vcov(object))
+  }
   robust.se = sqrt(robust.var)
   output = cbind(x, 'Robust.SE' = robust.se, 'Robust Wald' = (x[, 'Estimate']^2/robust.var), RESI = RESI::chisq2S(x[, 'Estimate']^2/robust.var, 1, N))
   return(output)
