@@ -29,7 +29,8 @@ Imports:
   mvtnorm,
   geepack,
   nlme,
-  lme4
+  lme4,
+  buildmer
 Suggests:
   testthat
 RoxygenNote: 7.1.1
