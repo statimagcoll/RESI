@@ -164,8 +164,8 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   cat("\nNotes:")
   if (x$naive.var) cat("\n1. The RESI was calculated using the naive covariance estimator.")
   else  cat("\n1. The RESI was calculated using a robust covariance estimator.")
-  if (x$boot.method == "nonparam") cat("\n2. Confidence intervals (CIs) constructed using", x$nboot,"non-parametric bootstraps \n")
-  if (x$boot.method == "bayes") cat("\n2. Credible intervals constructed using", x$nboot,"Bayesian bootstraps \n")
+  if (x$boot.method == "nonparam") cat("\n2. Confidence intervals (CIs) constructed using", x$nboot,"non-parametric bootstraps. \n")
+  if (x$boot.method == "bayes") cat("\n2. Credible intervals constructed using", x$nboot,"Bayesian bootstraps. \n")
   # if(nzchar(mess <- naprint(x$na.action))) cat("  (",mess, ")\n", sep = "")
 
   invisible(x)
@@ -188,12 +188,17 @@ print.summary.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ..
 plot.resi <- function(object, ycex.axis = 1,...){
   lev <- as.factor(rownames(object$coefficients))
   plot(x = object$coefficients[,"RESI"], y = 1:length(levels(lev)),
-       xlim = c(min(0, object$coefficients[,(ncol(object$coefficients)-1)]),
-                max(object$coefficients[,ncol(object$coefficients)])), xlab = "RESI Estimate",
-       yaxt = "n", ylab = "",...)
+       xlim = c(min(0, min(object$coefficients[,6:ncol(object$coefficients)])),
+                max(object$coefficients[,6:ncol(object$coefficients)])), xlab = "RESI Estimate",
+       yaxt = "n", ylab = "", main = paste("RESI Estimates and ", (1-object$alpha[1])*100, "%", " CIs", sep=""),...)
+  ll = paste((object$alpha[1])/2*100, "%", sep = "")
+  ul = paste((1-object$alpha[1]/2)*100, "%", sep = "")
   for (i in 1:nrow(object$coefficients)){
-    lines(x = c(object$coefficients[i,(ncol(object$coefficients)-1)], object$coefficients[i,ncol(object$coefficients)]), y = c(i,i))
+    lines(x = c(object$coefficients[i,which(colnames(object$coefficients)==ll)], object$coefficients[i,which(colnames(object$coefficients)==ul)]), y = c(i,i))
   }
   axis(2, 1:length(levels(lev)), levels(lev), las = 1, cex.axis = ycex.axis)
   abline(v = 0, lty = 2)
 }
+
+#' @export
+plot.summary.resi <- plot.resi
