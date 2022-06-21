@@ -83,11 +83,11 @@ resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     names(output$estimates) = names.est
   }
 
-  if(identical(vcovfunc, sandwich::vcovHC)){
-    output$robust.var = TRUE
+  if(identical(vcovfunc, stats::vcov)){
+    output$naive.var = TRUE
   }
   else{
-    output$robust.var = FALSE
+    output$naive.var = FALSE
   }
   return(output)
 }
@@ -150,11 +150,11 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     names(output$estimates) = names.est
   }
 
-  if(identical(vcovfunc, sandwich::vcovHC)){
-    output$robust.var = TRUE
+  if(identical(vcovfunc, stats::vcov)){
+    output$naive.var = TRUE
   }
   else{
-    output$robust.var = FALSE
+    output$naive.var = FALSE
   }
   return(output)
 }
@@ -209,15 +209,17 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data,
     names(output$estimates) = names.est
   }
 
-  if(identical(vcovfunc, regtools::nlshc)){
-    output$robust.var = TRUE
+  if(identical(vcovfunc, stats::vcov)){
+    output$naive.var = TRUE
   }
   else{
-    output$robust.var = FALSE
+    output$naive.var = FALSE
   }
   return(output)
 }
 
+
+# change warning message to not print if left as default for this and coxph
 #' @describeIn resi_pe RESI point estimation for survreg
 #' @export
 resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
@@ -252,11 +254,11 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
     names(output$estimates) = names.est
   }
 
-  if(!(is.null(model.full$naive.var))){
-    output$robust.var = TRUE
+  if(is.null(model.full$naive.var)){
+    output$naive.var = TRUE
   }
   else{
-    output$robust.var = FALSE
+    output$naive.var = FALSE
   }
 
   return(output)
@@ -310,11 +312,11 @@ resi_pe.hurdle <- function(model.full, model.reduced = NULL, data,
     names(output$estimates) = names.est
   }
 
-  if(identical(vcovfunc, sandwich::sandwich)){
-    output$robust.var = TRUE
+  if(identical(vcovfunc, stats::vcov)){
+    output$naive.var = TRUE
   }
   else{
-    output$robust.var = FALSE
+    output$naive.var = FALSE
   }
 
   return(output)
@@ -379,11 +381,11 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     names(output$estimates) = names.est
   }
 
-  if(!(is.null(model.full$naive.var))){
-    output$robust.var = TRUE
+  if(is.null(model.full$naive.var)){
+    output$naive.var = TRUE
   }
   else{
-    output$robust.var = FALSE
+    output$naive.var = FALSE
   }
 
   return(output)
@@ -398,7 +400,7 @@ resi_pe.geeglm <- function(model.full, ...){
   N = length(summary(model.full)$clusz)
   output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
                  coefficients =  as.data.frame(cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], 1, N))))
-  output$robust.var = TRUE
+  output$naive.var = FALSE
   return(output)
 }
 
@@ -410,7 +412,7 @@ resi_pe.gee <- function(model.full, ...){
   N = length(unique(model.full$id))
   output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
                  coefficients =  as.data.frame(cbind(x, RESI = RESI::chisq2S(x[, 'Robust z']^2, 1, N))))
-  output$robust.var = TRUE
+  output$naive.var = FALSE
   return(output)
 }
 
@@ -426,7 +428,7 @@ resi_pe.lme <- function(model.full, ...){
   robust.se = sqrt(robust.var)
   output = list(model.full = list(call = model.full$call, formula = formula(model.full)),
        coefficients =  as.data.frame(cbind(x, 'Robust.SE' = robust.se, 'Robust Wald' = (x[, 'Value']^2/robust.var), RESI = RESI::chisq2S(x[, 'Value']^2/robust.var, 1, N))))
-  output$robust.var = TRUE
+  output$naive.var = FALSE
   return(output)
 }
 
