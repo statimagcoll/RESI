@@ -164,7 +164,7 @@ resi.lm <- function(object, model.reduced = NULL,
 #' @export
 #' @return An ANOVA-type model summary output with RESI estimates and CIs added.
 resi.geeglm <- function(object, alpha = 0.05, nboot = 1000){
-  output = resi.geeglm(object) # RESI point estimates
+  output = calc_resi(object) # RESI point estimates
   data = object$data
   # id variable name
   id_var = as.character(object$call$id)
@@ -182,6 +182,29 @@ resi.geeglm <- function(object, alpha = 0.05, nboot = 1000){
   return(output)
 }
 
+# resi.gee <- function(object, data = NULL, alpha = 0.05, nboot = 1000){
+#   output = calc_resi(object) # RESI point estimates
+#
+#   # NOTE: I couldn't find the data output from `gee` object.
+#
+#   # id variable name
+#   id_var = as.character(object$call$id)
+#   # bootstrap
+#   output.boot = as.matrix(output[, 'RESI'])
+#   for (i in 1:nboot){
+#     boot.data = boot.samp(data, id.var = id_var)
+#     # re-fit the model
+#     boot.mod = update(object, data = boot.data)
+#     output.boot = cbind(output.boot, calc_resi(boot.mod)[, 'RESI'])
+#   }
+#   output.boot = output.boot[, -1]
+#   RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+#   output = cbind(output, t(RESI.ci))
+#   return(output)
+# }
+
+
+
 #' Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for LME models
 #' This function will estimate RESI and its CI for each factor in a fitted GEE model object.
 #' The CIs are calculated via non-parametric bootstraps.
@@ -191,11 +214,11 @@ resi.geeglm <- function(object, alpha = 0.05, nboot = 1000){
 #' @export
 #' @return An ANOVA-type model summary output with RESI estimates and CIs added.
 resi.lme <- function(object, alpha = 0.05, nboot = 1000){
-  output = resi.lme(object) # RESI point estimates
+  output = calc_resi(object) # RESI point estimates
   data = object$data
   # id variable name
   id_var = attr(nlme::getGroups(object), "label")
-  # bootstrap
+  # bootstrap (non-param for now)
   output.boot = as.matrix(output[, 'RESI'])
   for (i in 1:nboot){
     boot.data = boot.samp(data, id.var = id_var)
@@ -209,6 +232,24 @@ resi.lme <- function(object, alpha = 0.05, nboot = 1000){
   return(output)
 }
 
+resi.lmerMod <- function(object, alpha = 0.05, nboot = 1000){
+  output = calc_resi(object) # RESI point estimates
+  data = object@frame
+  # id variable name
+  id_var = names(object@flist)
+  # bootstrap (non-param for now)
+  output.boot = as.matrix(output[, 'RESI'])
+  for (i in 1:nboot){
+    boot.data = boot.samp(data, id.var = id_var)
+    # re-fit the model
+    boot.mod = update(object, data = boot.data)
+    output.boot = cbind(output.boot, calc_resi(boot.mod)[, 'RESI'])
+  }
+  output.boot = output.boot[, -1]
+  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+  output = cbind(output, t(RESI.ci))
+  return(output)
+}
 
 
 
