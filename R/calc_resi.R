@@ -147,3 +147,5 @@ calc_resi.lmerMod <- function(object, ...){
   output = cbind(x, 'Robust.SE' = robust.se, 'Robust Wald' = (x[, 'Estimate']^2/robust.var), RESI = RESI::chisq2S(x[, 'Estimate']^2/robust.var, 1, N))
   return(output)
 }
+
+
