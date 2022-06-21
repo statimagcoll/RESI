@@ -111,7 +111,7 @@ bayes.samp <- function(data) {
 print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   #browser()
   cat("\nAnalysis of Effect sizes (ANOES) based on RESI:")
-  cat("\nSignificance level = ", x$alpha)
+  cat("\nConfidence level = ", x$alpha)
   if (is.null(x$model.reduced)){
     cat("\nCall:  ", paste(deparse(x$model.full$call), sep = "\n", collapse = "\n"),  "\n",sep = "")
   }
@@ -160,6 +160,26 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   invisible(x)
 }
 
+
+#' @export
+print.summary.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
+  #browser()
+  cat("\nAnalysis of Effect sizes (ANOES) based on RESI:")
+  cat("\nConfidence level = ", x$alpha)
+  if (is.null(x$model.reduced)){
+    cat("\nCall:  ", paste(deparse(x$model.full$call), sep = "\n", collapse = "\n"),  "\n",sep = "")
+  }
+  else{
+    cat(ifelse(x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")), "\nCall:  ", "\nFull Model:"),
+        paste(deparse(x$model.full$call), sep = "\n", collapse = "\n"), "\n",sep = "")
+    if (!(x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")))) cat("Reduced Model:", paste(deparse(x$model.reduced$call), sep = "\n", collapse = "\n"), "\n\n", sep = "")
+  }
+
+  cat("\nCoefficient Table \n")
+  print(round(x$coefficients, digits = digits))
+
+  invisible(x)
+}
 
 #' Convert S to Cohen's d
 #'

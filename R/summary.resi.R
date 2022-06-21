@@ -10,17 +10,19 @@ summary.resi <- function(object, alpha = NULL){
     stop('\n resi function was not run with summary = TRUE option')
   }
 
+  output = list(alpha = alpha, model.full = object$model.full, model.reduced = object$model.reduced)
   if (is.null(alpha)){
-    output = object$coefficients
+    output$alpha = object$alpha
+    output$coefficients = object$coefficients
   }
   else{
-    output = object$coefficients[,1:(ncol(object$coefficients)-2)]
+    output$coefficients = object$coefficients[,1:(ncol(object$coefficients)-2)]
     CIs = apply(object$boot.results[,2:(1+nrow(object$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
     CIs = t(CIs)
-    output[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = CIs
+    output$coefficients[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = CIs
     # make clear warning message
   }
-  class(output) = c('summary.resi', 'data.frame')
+  class(output) = c('summary.resi')
   output
 }
 
