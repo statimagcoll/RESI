@@ -163,7 +163,8 @@ resi.lm <- function(object, model.reduced = NULL,
 #' @param nboot numeric, the number of bootstraps used to construct CIs. By default, 1000.
 #' @export
 #' @return An ANOVA-type model summary output with RESI estimates and CIs added.
-resi.geeglm <- function(object, alpha = 0.05, nboot = 1000){
+resi.geeglm <- function(object, robust.var = TRUE,
+                        alpha = 0.05, nboot = 1000){
   output = calc_resi(object) # RESI point estimates
   data = object$data
   # id variable name
@@ -174,7 +175,7 @@ resi.geeglm <- function(object, alpha = 0.05, nboot = 1000){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
     boot.mod = update(object, data = boot.data)
-    output.boot = cbind(output.boot, calc_resi(boot.mod)[, 'RESI'])
+    output.boot = cbind(output.boot, calc_resi(boot.mod, robust.var = robust.var)[, 'RESI'])
   }
   output.boot = output.boot[, -1]
   RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
@@ -213,7 +214,8 @@ resi.geeglm <- function(object, alpha = 0.05, nboot = 1000){
 #' @param nboot numeric, the number of bootstraps used to construct CIs. By default, 1000.
 #' @export
 #' @return An ANOVA-type model summary output with RESI estimates and CIs added.
-resi.lme <- function(object, alpha = 0.05, nboot = 1000){
+resi.lme <- function(object, robust.var = TRUE,
+                     alpha = 0.05, nboot = 1000){
   output = calc_resi(object) # RESI point estimates
   data = object$data
   # id variable name
@@ -224,7 +226,7 @@ resi.lme <- function(object, alpha = 0.05, nboot = 1000){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
     boot.mod = update(object, data = boot.data)
-    output.boot = cbind(output.boot, calc_resi(boot.mod)[, 'RESI'])
+    output.boot = cbind(output.boot, calc_resi(boot.mod, robust.var = robust.var)[, 'RESI'])
   }
   output.boot = output.boot[, -1]
   RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
@@ -232,7 +234,7 @@ resi.lme <- function(object, alpha = 0.05, nboot = 1000){
   return(output)
 }
 
-resi.lmerMod <- function(object, alpha = 0.05, nboot = 1000){
+resi.lmerMod <- function(object, robust.var = TRUE, alpha = 0.05, nboot = 1000){
   output = calc_resi(object) # RESI point estimates
   data = object@frame
   # id variable name
@@ -243,7 +245,7 @@ resi.lmerMod <- function(object, alpha = 0.05, nboot = 1000){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
     boot.mod = update(object, data = boot.data)
-    output.boot = cbind(output.boot, calc_resi(boot.mod)[, 'RESI'])
+    output.boot = cbind(output.boot, calc_resi(boot.mod, robust.var = robust.var)[, 'RESI'])
   }
   output.boot = output.boot[, -1]
   RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
