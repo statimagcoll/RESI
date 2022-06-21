@@ -4,6 +4,8 @@
 \alias{resi}
 \alias{resi.default}
 \alias{resi.nls}
+\alias{resi.survreg}
+\alias{resi.coxph}
 \alias{resi.hurdle}
 \alias{resi.zeroinfl}
 \alias{resi.geeglm}
@@ -34,7 +36,35 @@ resi(model.full, ...)
   summary = TRUE,
   nboot = 1000,
   boot.method = "nonparam",
-  vcovfunc = sandwich::vcovHC,
+  vcovfunc = regtools::nlshc,
+  alpha = 0.05,
+  store.boot = FALSE,
+  ...
+)
+
+\method{resi}{survreg}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  summary = TRUE,
+  nboot = 1000,
+  boot.method = "nonparam",
+  vcovfunc = vcov,
+  alpha = 0.05,
+  store.boot = FALSE,
+  ...
+)
+
+\method{resi}{coxph}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  summary = TRUE,
+  nboot = 1000,
+  boot.method = "nonparam",
+  vcovfunc = vcov,
   alpha = 0.05,
   store.boot = FALSE,
   ...
@@ -106,6 +136,10 @@ This function will estimate the robust effect size (RESI) from Vandekar, Rao, & 
 \item \code{default}: RESI point and interval estimation for models
 
 \item \code{nls}: RESI point and interval estimation for nls models
+
+\item \code{survreg}: RESI point and interval estimation for survreg models
+
+\item \code{coxph}: RESI point and interval estimation for coxph models
 
 \item \code{hurdle}: RESI point and interval estimation for hurdle models
 

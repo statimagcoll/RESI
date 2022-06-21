@@ -4,10 +4,10 @@
 \alias{Anova.resi}
 \title{Anova method for resi objects}
 \usage{
-\method{Anova}{resi}(resi.obj, alpha = NULL)
+\method{Anova}{resi}(object, alpha = NULL)
 }
 \arguments{
-\item{resi.obj}{an object resulting from resi function}
+\item{object}{an object resulting from resi function}
 
 \item{alpha}{an optional new specification for the confidence level. Can be vector-valued}
 }
