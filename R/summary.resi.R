@@ -7,7 +7,7 @@
 #' @export
 summary.resi <- function(object, alpha = NULL){
   if(is.null(object$coefficients)){
-    stop('\n resi function was not run with summary = TRUE option')
+    stop('\nresi function was not run with summary = TRUE option')
   }
 
   output = list(alpha = alpha, model.full = object$model.full)
