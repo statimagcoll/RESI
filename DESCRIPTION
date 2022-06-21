@@ -28,7 +28,8 @@ Imports:
   clubSandwich,
   mvtnorm,
   geepack,
-  nlme
+  nlme,
+  lme4
 Suggests:
   testthat
 RoxygenNote: 7.1.1
