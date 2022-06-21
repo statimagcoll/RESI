@@ -69,6 +69,19 @@ f2S <- function(f, df, rdf){
   sqrt(ifelse(S<0, 0, S))
 }
 
+#' Convert S to Cohen's d
+#'
+#' Converts the robust effect size index to Cohen's d using formula from Vandekar, Rao, & Blume (2020).
+#' @param S The robust effect size index.
+#' @param pi The sampling proportions.
+#' @keywords power
+#' @return Returns an estimate the robust effect size index
+#' @details The pi parameter comes from the fact that Cohen's d doesn't account for unequal sample proportions in the population, but S does.
+#' The default is set to a natural value 1/2, which corresponds to a case control design, for example, where sampling proportions always are controlled by the experimenter.
+#' @export
+S2d = function(S, pi=0.5){
+  S * sqrt(1/pi + 1/(1-pi) )
+}
 
 
 #' Non-parametric bootstrap sampling
@@ -170,17 +183,17 @@ print.summary.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ..
   invisible(x)
 }
 
-#' Convert S to Cohen's d
-#'
-#' Converts the robust effect size index to Cohen's d using formula from Vandekar, Rao, & Blume (2020).
-#' @param S The robust effect size index.
-#' @param pi The sampling proportions.
-#' @keywords power
-#' @return Returns an estimate the robust effect size index
-#' @details The pi parameter comes from the fact that Cohen's d doesn't account for unequal sample proportions in the population, but S does.
-#' The default is set to a natural value 1/2, which corresponds to a case control design, for example, where sampling proportions always are controlled by the experimenter.
+# label graph ANOES? Effect sizes?
 #' @export
-S2d = function(S, pi=0.5){
-  S * sqrt(1/pi + 1/(1-pi) )
+plot.resi <- function(object, ycex.axis = 1,...){
+  lev <- as.factor(rownames(object$coefficients))
+  plot(x = object$coefficients[,"RESI"], y = 1:length(levels(lev)),
+       xlim = c(min(0, object$coefficients[,(ncol(object$coefficients)-1)]),
+                max(object$coefficients[,ncol(object$coefficients)])), xlab = "RESI Estimate",
+       yaxt = "n", ylab = "",...)
+  for (i in 1:nrow(object$coefficients)){
+    lines(x = c(object$coefficients[i,(ncol(object$coefficients)-1)], object$coefficients[i,ncol(object$coefficients)]), y = c(i,i))
+  }
+  axis(2, 1:length(levels(lev)), levels(lev), las = 1, cex.axis = ycex.axis)
+  abline(v = 0, lty = 2)
 }
-
