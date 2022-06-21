@@ -74,7 +74,7 @@ ess.lmerMod <- function(obj, xTab, robust.var = TRUE){
   # model form
   form =  obj@call$formula
   ## random effect term
-  re = paste0("(", findbars(form), ")")
+  re = paste0("(", lme4::findbars(form), ")")
   ## remove random effects
   form_lm = buildmer::remove.terms(form, remove = re)
 
