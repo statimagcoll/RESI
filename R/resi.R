@@ -69,19 +69,19 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
                                                   vcovfunc = vcovfunc, ...)$estimates)
     }}
 
-
-  output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+  alpha.order = sort(c(alpha/2, 1-alpha/2))
+  output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
 
   if (summary){
-    CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+    CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = alpha.order, na.rm = TRUE)
     CIs = t(CIs)
-    output$coefficients[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = CIs
+    output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
   }
 
   if (anova){
-    CIs = apply(boot.results[,(ncol(boot.results)-nrow(output$anova)+1):ncol(boot.results)], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+    CIs = apply(boot.results[,(ncol(boot.results)-nrow(output$anova)+1):ncol(boot.results)], 2,  quantile, probs = alpha.order, na.rm = TRUE)
     CIs = t(CIs)
-    output$anova[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = CIs
+    output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
   }
 
   if(store.boot){
@@ -95,7 +95,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
 #' @export
 
 resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
-                     nboot = 1000, boot.method = 'nonparam', vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE, ...){
+                     nboot = 1000, boot.method = 'nonparam', vcovfunc = regtools::nlshc, alpha = 0.05, store.boot = FALSE, ...){
   if (! tolower(boot.method) %in% c("nonparam", "bayes")) stop("\n The bootstrap method should be either 'nonparam' for non-parametric bootstrap, or 'bayes' for Bayesian bootstrap")
 
   if (missing(data)){
@@ -131,13 +131,13 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 
     }}
 
-
-  output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+  alpha.order = sort(c(alpha/2, 1-alpha/2))
+  output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
 
   if (summary){
-    CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+    CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = alpha.order, na.rm = TRUE)
     CIs = t(CIs)
-    output$coefficients[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = CIs
+    output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
   }
 
   if(store.boot){
