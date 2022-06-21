@@ -147,6 +147,8 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
   return(output)
 }
 
+# add coxph/survreg method that does not allow bayes (might take care of vcov default warning messages)
+
 #' @describeIn resi RESI point and interval estimation for hurdle models
 #' @export
 resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
@@ -275,11 +277,13 @@ resi.lme <- function(model.full, alpha = 0.05, nboot = 1000){
   id_var = attr(nlme::getGroups(model.full), "label")
   # bootstrap
   output.boot = as.matrix(output$coefficients[, 'RESI'])
+  # get update method from nlme (non-exported function)
+  fun <- utils::getFromNamespace("update.lme", "nlme")
   for (i in 1:nboot){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
     # not working: boot.mod = update(model.full, data = boot.data)
-    boot.mod = update(model.full, data = boot.data, fixed = as.formula(model.full$call$fixed), random = as.formula(model.full$call$random))
+    boot.mod = fun(model.full, data = boot.data, fixed = as.formula(model.full$call$fixed), random = as.formula(model.full$call$random))
     output.boot = cbind(output.boot, resi_pe(boot.mod)$coefficients[, 'RESI'])
   }
   output.boot = output.boot[, -1]
