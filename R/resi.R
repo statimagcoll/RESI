@@ -248,6 +248,15 @@ resi.lme <- function(object, robust.var = TRUE,
   return(output)
 }
 
+
+#' Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for LME models
+#' This function will estimate RESI and its CI for each factor in a fitted LME model object using `lme4::lmer`.
+#' The CIs are calculated via non-parametric bootstraps.
+#' @param object the model object
+#' @param alpha numeric, the type I error rate based on which CIs were constructed. By default, 0.05.
+#' @param nboot numeric, the number of bootstraps used to construct CIs. By default, 1000.
+#' @export
+#' @return An ANOVA-type model summary output with RESI estimates and CIs added.
 resi.lmerMod <- function(object, robust.var = TRUE, alpha = 0.05, nboot = 1000){
   output = calc_resi(object) # RESI point estimates
   data = object@frame
