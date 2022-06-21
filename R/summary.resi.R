@@ -10,7 +10,7 @@ summary.resi <- function(object, alpha = NULL){
     stop('\n resi function was not run with summary = TRUE option')
   }
 
-  output = list(alpha = alpha, model.full = object$model.full, model.reduced = object$model.reduced)
+  output = list(alpha = alpha, model.full = object$model.full)
   if (is.null(alpha)){
     output$alpha = object$alpha
     output$coefficients = object$coefficients
