@@ -13,12 +13,12 @@ Collate:
   'internal_functions.R'
   'boot.ci.R'
   'esSim.R'
+  'S.R'
   'nccd.R'
   'ncf.R'
+  'ess.R'
   'calc_resi.R'
   'resi.R'
-  'S.R'
-  'ess.R'
   'simulation.R'
 Imports:
   lmtest,
