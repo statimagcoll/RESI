@@ -105,6 +105,8 @@ calc_resi.geeglm <- function(object, ...){
   #sample size
   N = length(summary(object)$clusz)
   output = cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], 1, N))
+  # adding ESS and pm-RESI
+  output = ess(obj = object, xTab = output)
   return(output)
 }
 
@@ -121,18 +123,18 @@ calc_resi.gee <- function(object, ...){
 #' @param object The lme model object
 #' @return returns the ANOVA-type summary table with RESI estimate for each factor
 #' @export
-calc_resi.lme <- function(object, robust.var = TRUE, ...){
+calc_resi.lme <- function(object, robust_var = TRUE, ...){
   x = as.matrix(summary(object)$tTable)
   #sample size
   N = summary(object)$dims$ngrps[1]
   # robust se
   if (robust.var) {
-    robust.var = diag(clubSandwich::vcovCR(object, type = "CR3"))
+    robust_var = diag(clubSandwich::vcovCR(object, type = "CR3"))
+    robust_se = sqrt(robust_var)
+    output = cbind(x, 'Robust.SE' = robust_se, 'Robust Wald' = (x[, 'Value']^2/robust_var), RESI = RESI::chisq2S(x[, 'Value']^2/robust_var, 1, N))
   } else {
-    robust.var = diag(vcov(object))
+    output = cbind(x, 'Wald' = x[, 't-value']^2, RESI = RESI::chisq2S(x[, 't-value']^2, 1, N))
   }
-  robust.se = sqrt(robust.var)
-  output = cbind(x, 'Robust.SE' = robust.se, 'Robust Wald' = (x[, 'Value']^2/robust.var), RESI = RESI::chisq2S(x[, 'Value']^2/robust.var, 1, N))
   return(output)
 }
 
@@ -145,14 +147,18 @@ calc_resi.lmerMod <- function(object, robust.var = TRUE, ...){
   x = as.matrix(summary(object)$coefficients)
   #sample size
   N = summary(object)$ngrps
+
   # robust se
   if (robust.var) {
-    robust.var = diag(clubSandwich::vcovCR(object, type = "CR3"))
+    robust_var = diag(clubSandwich::vcovCR(object, type = "CR3"))
+    robust_se = sqrt(robust_var)
+    output = cbind(x, 'Robust.SE' = robust_se, 'Robust Wald' = (x[, 'Estimate']^2/robust_var), RESI = RESI::chisq2S(x[, 'Estimate']^2/robust_var, 1, N))
   } else {
-    robust.var = diag(vcov(object))
+    output = cbind(x, 'Wald' = x[, 't value']^2, RESI = RESI::chisq2S(x[, 't value']^2, 1, N))
   }
-  robust.se = sqrt(robust.var)
-  output = cbind(x, 'Robust.SE' = robust.se, 'Robust Wald' = (x[, 'Estimate']^2/robust.var), RESI = RESI::chisq2S(x[, 'Estimate']^2/robust.var, 1, N))
+  # adding ESS and pm-RESI
+  output = ess(obj = object,xTab = output, robust.var = robust.var)
+
   return(output)
 }
 
