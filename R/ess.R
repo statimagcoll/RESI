@@ -62,6 +62,10 @@ ess.lme <- function(obj, total = TRUE){
   return(ess)
 }
 
+#' Calculating the effective sample size from a fitted LME model.
+#' @param obj a fitted `lmer`(`lmerMod`) object
+#' @param constr matrix, linear constraint
+#' @export
 ess.lmerMod <- function(obj, xTab, robust.var = TRUE){
   # dataset
   data = obj@frame
