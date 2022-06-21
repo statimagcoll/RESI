@@ -147,7 +147,35 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
   return(output)
 }
 
-# add coxph/survreg method that does not allow bayes (might take care of vcov default warning messages)
+# for now only non-parametric for survreg/coxph
+
+#' @describeIn resi RESI point and interval estimation for survreg models
+#' @export
+resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
+                        nboot = 1000, boot.method = "nonparam", vcovfunc = vcov, alpha = 0.05, store.boot = FALSE, ...){
+
+  if (tolower(boot.method)  == "bayes"){
+    warning("Bayesian bootstrap not currently supported for survreg models, using non-parametric bootstrap")
+  }
+
+  resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
+               anova = anova, summary = summary, nboot = nboot, vcovfunc = vcovfunc,
+               boot.method = "nonparam", store.boot = store.boot, ...)
+}
+
+#' @describeIn resi RESI point and interval estimation for coxph models
+#' @export
+resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
+                         nboot = 1000, boot.method = "nonparam", vcovfunc = vcov, alpha = 0.05, store.boot = FALSE, ...){
+
+  if (tolower(boot.method)  == "bayes"){
+    warning("Bayesian bootstrap not currently supported for coxph models, using non-parametric bootstrap")
+  }
+
+  resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
+               anova = anova, summary = summary, nboot = nboot, vcovfunc = vcovfunc,
+               boot.method = "nonparam", store.boot = store.boot, ...)
+}
 
 #' @describeIn resi RESI point and interval estimation for hurdle models
 #' @export
