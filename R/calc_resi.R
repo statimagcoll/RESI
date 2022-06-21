@@ -133,5 +133,17 @@ calc_resi.lme <- function(object, ...){
 }
 
 
-
-
+#' RESI for lmer object
+#' @param object The lmer model object
+#' @return returns the ANOVA-type summary table with RESI estimate for each factor
+#' @export
+calc_resi.lmerMod <- function(object, ...){
+  x = as.matrix(summary(object)$coefficients)
+  #sample size
+  N = summary(object)$ngrps
+  # robust se
+  robust.var = diag(clubSandwich::vcovCR(object, type = "CR3"))
+  robust.se = sqrt(robust.var)
+  output = cbind(x, 'Robust.SE' = robust.se, 'Robust Wald' = (x[, 'Estimate']^2/robust.var), RESI = RESI::chisq2S(x[, 'Estimate']^2/robust.var, 1, N))
+  return(output)
+}
