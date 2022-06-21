@@ -7,6 +7,7 @@
 \alias{resi.hurdle}
 \alias{resi.zeroinfl}
 \alias{resi.geeglm}
+\alias{resi.gee}
 \alias{resi.lme}
 \title{Robust Effect Size index (RESI) point and interval estimation for models}
 \usage{
@@ -22,6 +23,7 @@ resi(model.full, ...)
   boot.method = "nonparam",
   vcovfunc = sandwich::vcovHC,
   alpha = 0.05,
+  store.boot = FALSE,
   ...
 )
 
@@ -34,6 +36,7 @@ resi(model.full, ...)
   boot.method = "nonparam",
   vcovfunc = sandwich::vcovHC,
   alpha = 0.05,
+  store.boot = FALSE,
   ...
 )
 
@@ -46,6 +49,7 @@ resi(model.full, ...)
   boot.method = "nonparam",
   vcovfunc = sandwich::sandwich,
   alpha = 0.05,
+  store.boot = FALSE,
   ...
 )
 
@@ -58,10 +62,13 @@ resi(model.full, ...)
   boot.method = "nonparam",
   vcovfunc = sandwich::sandwich,
   alpha = 0.05,
+  store.boot = FALSE,
   ...
 )
 
 \method{resi}{geeglm}(model.full, alpha = 0.05, nboot = 1000)
+
+\method{resi}{gee}(model.full, data, alpha = 0.05, nboot = 1000)
 
 \method{resi}{lme}(model.full, alpha = 0.05, nboot = 1000)
 }
@@ -76,7 +83,7 @@ resi(model.full, ...)
 
 \item{anova}{Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.}
 
-\item{summary}{Logical, whether to produce a summary table with the RESI columns added. By default = `TRUE`.}
+\item{summary}{Logical, whether to produce a summary (coefficients) table with the RESI columns added. By default = `TRUE`.}
 
 \item{nboot}{Numeric, the number of bootstrap replicates. By default, 1000.}
 
@@ -85,6 +92,8 @@ resi(model.full, ...)
 \item{vcovfunc}{The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).}
 
 \item{alpha}{Numeric, significance level of the constructed CIs. By default, 0.05.}
+
+\item{store.boot}{Logical, whether to store all the bootstrapped estimates. By default, `FALSE`.}
 }
 \value{
 Returns a list that includes function arguments, RESI point estimates, and confidence intervals in summary/anova-style tables
@@ -103,6 +112,8 @@ This function will estimate the robust effect size (RESI) from Vandekar, Rao, & 
 \item \code{zeroinfl}: RESI point and interval estimation for zeroinfl models
 
 \item \code{geeglm}: RESI point and interval estimation for GEE models
+
+\item \code{gee}: RESI point and interval estimation for GEE models
 
 \item \code{lme}: RESI point and interval estimation for LME models
 }}

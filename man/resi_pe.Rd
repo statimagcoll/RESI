@@ -107,7 +107,7 @@ resi_pe(model.full, ...)
 
 \item{data}{Data.frame or object coercible to data.frame of model.full data (required for some model types).}
 
-\item{summary}{Logical, whether to produce a summary table with the RESI columns added. By default = `TRUE`.}
+\item{summary}{Logical, whether to produce a summary (coefficients) table with the RESI columns added. By default = `TRUE`.}
 
 \item{vcovfunc}{The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).}
 
