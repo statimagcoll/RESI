@@ -258,7 +258,7 @@ resi.lme <- function(object, robust.var = TRUE,
 #' @export
 #' @return An ANOVA-type model summary output with RESI estimates and CIs added.
 resi.lmerMod <- function(object, robust.var = TRUE, alpha = 0.05, nboot = 1000){
-  output = calc_resi(object) # RESI point estimates
+  output = calc_resi(object, robust.var = robust.var) # RESI point estimates
   data = object@frame
   # id variable name
   id_var = names(object@flist)
