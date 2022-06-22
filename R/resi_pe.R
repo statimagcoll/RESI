@@ -229,7 +229,7 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
   }
 
   if (!identical(vcovfunc, vcov)){
-    warning("vcov function ignored for survreg objects")
+    warning("vcovfunc argument ignored for survreg objects")
   }
   if(is.null(model.reduced)){
     form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
@@ -336,7 +336,7 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   }
 
   if (!identical(vcovfunc, vcov)){
-    warning("vcov function ignored for coxph objects")
+    warning("vcovfunc argument ignored for coxph objects")
   }
 
   # currently not accepting other reduced models for coxph
