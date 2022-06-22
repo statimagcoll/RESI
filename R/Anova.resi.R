@@ -22,5 +22,6 @@ Anova.resi <- function(object, alpha = NULL){
     CIs = t(CIs)
     output[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = CIs
   }
+  class(output) = c('anova.resi',class(output))
   output
 }
