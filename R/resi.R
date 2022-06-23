@@ -29,7 +29,7 @@ resi <- function(model.full, ...){
 #' @export
 resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
                  nboot = 1000, boot.method = 'nonparam', vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE, ...){
-  if (! tolower(boot.method) %in% c("nonparam", "bayes")) stop("\n The bootstrap method should be either 'nonparam' for non-parametric bootstrap, or 'bayes' for Bayesian bootstrap")
+  boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
   if (missing(data)){
     data = model.full$model
@@ -96,7 +96,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
 
 resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
                      nboot = 1000, boot.method = 'nonparam', vcovfunc = regtools::nlshc, alpha = 0.05, store.boot = FALSE, ...){
-  if (! tolower(boot.method) %in% c("nonparam", "bayes")) stop("\n The bootstrap method should be either 'nonparam' for non-parametric bootstrap, or 'bayes' for Bayesian bootstrap")
+  boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
   if (missing(data)){
     data = model.full$model
@@ -153,8 +153,8 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 #' @export
 resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
                         nboot = 1000, boot.method = "nonparam", vcovfunc = vcov, alpha = 0.05, store.boot = FALSE, ...){
-
-  if (tolower(boot.method)  == "bayes"){
+  boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
+  if (boot.method == "bayes"){
     warning("Bayesian bootstrap not currently supported for survreg models, using non-parametric bootstrap")
   }
 
@@ -181,7 +181,7 @@ resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE, sum
 #' @export
 resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
                      nboot = 1000, boot.method = 'nonparam', vcovfunc = sandwich::sandwich, alpha = 0.05, store.boot = FALSE, ...){
-  if (! tolower(boot.method) %in% c("nonparam", "bayes")) stop("\n The bootstrap method should be either 'nonparam' for non-parametric bootstrap, or 'bayes' for Bayesian bootstrap")
+  boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
   if (missing(data)){
     data = model.full$model
