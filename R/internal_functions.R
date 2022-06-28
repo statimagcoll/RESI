@@ -32,12 +32,13 @@ chisq2S <- function(chisq, df, n){
 #' This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
 #' Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
 #' @param t The t statistic for the parameter of interest.
+#' @param n Number of independent samples
 #' @param rdf Model residual degrees of freedom or number of independent samples.
 #' @keywords power
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
 #' @export
-t2S <- function(t, rdf){
-  2*t/rdf*exp(lgamma(rdf/2)- lgamma((rdf-1)/2))
+t2S <- function(t, n, rdf){
+  (t*sqrt(2))/(sqrt(n*rdf))*exp(lgamma(rdf/2) - lgamma((rdf-1)/2))
 }
 
 #' Compute the robust effect size index estimator from Z statistic
