@@ -126,14 +126,11 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # summary table (t statistics)
   if (summary){
-    ## KK: are we sure this function always returns the t-statistics?
-    ## KK: will it change with the different model type passed by `model.full`?
-    ## MJ: for lm it will be t unless you manually set the df argument for coeftest to Inf or 0
     summary.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc)
     summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
                             summary.tab[,'t value'], summary.tab[,'Pr(>|t|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
-    summary.df[,'RESI'] = t2S(summary.df[,'t value'], model.full$df.residual)
+    summary.df[,'RESI'] = t2S(summary.df[,'t value'], nrow(data), model.full$df.residual)
     output$coefficients = summary.df
     output$estimates = c(output$estimates, summary.df$RESI)
     names.est = c(names.est, rownames(summary.df))
@@ -202,7 +199,7 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data,
     summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
                             summary.tab[,'t value'], summary.tab[,'Pr(>|t|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
-    summary.df[,'RESI'] = t2S(summary.df[,'t value'], res.df)
+    summary.df[,'RESI'] = t2S(summary.df[,'t value'], nrow(data), res.df)
     output$coefficients = summary.df
     output$estimates = c(output$estimates, summary.df$RESI)
     names.est = c(names.est, rownames(summary.df))
