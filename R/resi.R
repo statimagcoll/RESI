@@ -64,7 +64,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
       boot.data = bayes.samp(data)
       boot.model.full <- update(model.full, data = boot.data, weights = g)
       if (is.null(model.reduced)){
-        boot.model.reduced = update(model.full, formula = as.formula(paste(format(formula(model.full)[[2]]), "~ 1")), data = boot.model.full$model, weights = g)
+        boot.model.reduced = update(model.full, formula = as.formula(paste(format(formula(model.full)[[2]]), "~ 1")), data = boot.model.full$model, weights = `(weights)`)
       }
       else{
         boot.model.reduced = update(model.reduced, data = boot.data, weights = g)
@@ -156,135 +156,28 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 #' @export
 resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
                         nboot = 1000, boot.method = "nonparam", vcovfunc = vcov, alpha = 0.05, store.boot = FALSE, ...){
-  if (boot.method == "bayes"){
-    warning("Bayesian bootstrap not currently recommended for survreg models, use non-parametric")
-  }
-
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
-
-  if (missing(data)){
-    stop('\n Data argument is required for survreg model')
+  if (boot.method == "bayes"){
+    warning("Bayesian bootstrap not currently supported for survreg models, using non-parametric bootstrap")
   }
 
-  # point estimation
-  output <- list(alpha = alpha, nboot = nboot, boot.method = tolower(boot.method))
-  output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced, data = data, anova = anova, summary = summary, vcovfunc = vcovfunc, ...))
-
-  # bootstrapping
-  boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
-  colnames(boot.results) = names(output$estimates)
-  # non-parametric bootstrap
-  if (tolower(boot.method) == "nonparam"){
-    for (i in 1:nboot){
-      boot.data = boot.samp(data)
-      boot.model.full <- update(model.full, data = boot.data)
-      if (is.null(model.reduced)){
-        boot.model.reduced = NULL
-      }
-      else{
-        boot.model.reduced = update(model.reduced, data = boot.data)
-      }
-      boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
-                                                  data = boot.data, anova = anova, summary = summary,
-                                                  vcovfunc = vcovfunc, ...)$estimates)
-    }}
-
-  # bayesian bootstrap ## look at specifically Anova and overall
-  if (tolower(boot.method)  == "bayes"){
-    for (i in 1:nboot){
-      boot.data = bayes.samp(data)
-      boot.model.full <- update(model.full, data = boot.data, weights = g)
-      if (is.null(model.reduced)){
-        boot.model.reduced = update(model.full, formula = as.formula(paste(format(formula(model.full)[[2]]), "~ 1")), data = boot.data[which(!(1:nrow(boot.data)%in% model.full$na.action)),], weights = g)
-      }
-      else{
-        boot.model.reduced = update(model.reduced, data = boot.data, weights = g)
-      }
-      boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
-                                                  data = boot.data, anova = anova, summary = summary,
-                                                  vcovfunc = vcovfunc, ...)$estimates)
-    }}
-
-  alpha.order = sort(c(alpha/2, 1-alpha/2))
-  output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
-
-  if (summary){
-    CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = alpha.order, na.rm = TRUE)
-    CIs = t(CIs)
-    output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
-  }
-
-  if (anova){
-    CIs = apply(boot.results[,(ncol(boot.results)-nrow(output$anova)+1):ncol(boot.results)], 2,  quantile, probs = alpha.order, na.rm = TRUE)
-    CIs = t(CIs)
-    output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
-  }
-
-  if(store.boot){
-    output$boot.results = boot.results
-  }
-  class(output) = "resi"
-  return(output)
+  resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
+               anova = anova, summary = summary, nboot = nboot, vcovfunc = vcovfunc,
+               boot.method = "nonparam", store.boot = store.boot, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for coxph models
 #' @export
 resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
                          nboot = 1000, boot.method = "nonparam", vcovfunc = vcov, alpha = 0.05, store.boot = FALSE, ...){
-
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
-
-  if (missing(data)){
-    stop('\n Data argument is required for survreg model')
+  if (boot.method == "bayes"){
+    warning("Bayesian bootstrap not currently supported for coxph models, using non-parametric bootstrap")
   }
 
-  # point estimation
-  output <- list(alpha = alpha, nboot = nboot, boot.method = tolower(boot.method))
-  output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced, data = data, anova = anova, summary = summary, vcovfunc = vcovfunc, ...))
-
-  # bootstrapping
-  boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
-  colnames(boot.results) = names(output$estimates)
-  # non-parametric bootstrap
-  if (tolower(boot.method) == "nonparam"){
-    for (i in 1:nboot){
-      boot.data = boot.samp(data)
-      boot.model.full <- update(model.full, data = boot.data)
-      boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
-                                                  data = boot.data, anova = anova, summary = summary,
-                                                  vcovfunc = vcovfunc, ...)$estimates)
-    }}
-
-  # bayesian bootstrap
-  if (tolower(boot.method)  == "bayes"){
-    for (i in 1:nboot){
-      boot.data = bayes.samp(data)
-      boot.model.full <- update(model.full, data = boot.data, weights = g)
-      boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
-                                                  data = boot.data, anova = anova, summary = summary,
-                                                  vcovfunc = vcovfunc, ...)$estimates)
-    }}
-
-  alpha.order = sort(c(alpha/2, 1-alpha/2))
-  output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
-
-  if (summary){
-    CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = alpha.order, na.rm = TRUE)
-    CIs = t(CIs)
-    output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
-  }
-
-  if (anova){
-    CIs = apply(boot.results[,(ncol(boot.results)-nrow(output$anova)+1):ncol(boot.results)], 2,  quantile, probs = alpha.order, na.rm = TRUE)
-    CIs = t(CIs)
-    output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
-  }
-
-  if(store.boot){
-    output$boot.results = boot.results
-  }
-  class(output) = "resi"
-  return(output)
+  resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
+               anova = anova, summary = summary, nboot = nboot, vcovfunc = vcovfunc,
+               boot.method = "nonparam", store.boot = store.boot, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for hurdle models
