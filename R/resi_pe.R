@@ -1,4 +1,9 @@
-#' Robust Effect Size index (RESI) Point Estimation
+#' Robust Effect Size Index (RESI) Point Estimation
+#'
+#' This function will estimate the robust effect size (RESI) from Vandekar, Rao, & Blume (2020).
+#' The overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in summary-style table.
+#' RESI is (optionally) estimated for each variable/interaction in an Anova-style table
+#' for models with existing Anova methods. This function is the building block for the \code{\link{resi}} function.
 #' @param model.full \code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.
 #' @param model.reduced Fitted model object of same type as model.full. By default `NULL`; the same model as the full model but only having intercept.
 #' @param data Data.frame or object coercible to data.frame of model.full data (required for some model types).
@@ -13,7 +18,27 @@
 #' @importFrom sandwich vcovHC
 #' @importFrom stats coef formula glm hatvalues pf predict quantile residuals update vcov
 #' @export
+#' @details The Robust Effect Size Index (RESI) is an effect size measure based on M-estimators.
+#' This function is called by \code{\link{resi}} a specified number of times to
+#' form bootstrapped confidence intervals. Called by itself, this function will
+#' only calculate point estimates.
+#'
+#' The RESI, denoted as S, is applicable across many model types. It is a unitless
+#' index and can be easily be compared across models. The RESI can also be
+#' converted to Cohen's \emph{d} (\code{\link{S2d}}) under model homoskedasticity.
+#'
+#' This function computes the RESI point estimates based on Chi-square, F, T, or Z
+#' statistics. The robust (sandwich) variance is used by default, allowing for
+#' consistency under model-misspecification. The RESI is related to the non-centrality
+#' parameter of the test statistic. The RESI estimate is consistent for all four
+#' (Chi-square, F, T, and Z) types of statistics used. The Chi-square and F-based
+#' calculations rely on asymptotic theory, so they may be biased in small samples.
+#' When possible, the T and Z statistics are used, as these are unbiased and can
+#' be positive or negative. The RESI based on the Chi-Square and F statistics is
+#' always greater than or equal to 0. The type of statistic used is listed with
+#' the output.
 #' @return Returns a list containing RESI point estimates
+#' @references Vandekar S, Tao R, Blume J. A Robust Effect Size Index. \emph{Psychometrika}. 2020 Mar;85(1):232-246. doi: 10.1007/s11336-020-09698-2.
 
 resi_pe <- function(model.full, ...){
   UseMethod("resi_pe")
@@ -22,7 +47,7 @@ resi_pe <- function(model.full, ...){
 #' @describeIn resi_pe RESI point estimation
 #' @export
 resi_pe.default <- function(model.full, model.reduced = NULL, data,
-                    summary = TRUE, vcovfunc = sandwich::vcovHC){
+                    summary = TRUE, vcovfunc = sandwich::vcovHC, ...){
   if (missing(data)){
       data = model.full$model
   }

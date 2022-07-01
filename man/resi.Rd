@@ -11,7 +11,7 @@
 \alias{resi.geeglm}
 \alias{resi.gee}
 \alias{resi.lme}
-\title{Robust Effect Size index (RESI) point and interval estimation for models}
+\title{Robust Effect Size Index (RESI) point and interval estimation for models}
 \usage{
 resi(model.full, ...)
 
@@ -96,11 +96,11 @@ resi(model.full, ...)
   ...
 )
 
-\method{resi}{geeglm}(model.full, alpha = 0.05, nboot = 1000)
+\method{resi}{geeglm}(model.full, alpha = 0.05, nboot = 1000, ...)
 
-\method{resi}{gee}(model.full, data, alpha = 0.05, nboot = 1000)
+\method{resi}{gee}(model.full, data, alpha = 0.05, nboot = 1000, ...)
 
-\method{resi}{lme}(model.full, alpha = 0.05, nboot = 1000)
+\method{resi}{lme}(model.full, alpha = 0.05, nboot = 1000, ...)
 }
 \arguments{
 \item{model.full}{\code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.}
@@ -126,10 +126,37 @@ resi(model.full, ...)
 \item{store.boot}{Logical, whether to store all the bootstrapped estimates. By default, `FALSE`.}
 }
 \value{
-Returns a list that includes function arguments, RESI point estimates, and confidence intervals in summary/anova-style tables
+Returns a list that includes function arguments, RESI point estimates,
+and confidence intervals in summary/anova-style tables
 }
 \description{
 This function will estimate the robust effect size (RESI) from Vandekar, Rao, & Blume (2020) and its confidence interval in various ways for a fitted model object. The overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in summary-style table. RESI is (optionally) estimated for each variable/interaction in an Anova-style table for models with existing Anova methods. CIs can be calculated using either non-parametric or Bayesian bootstrapping.
+}
+\details{
+The RESI, denoted as S, is applicable across many model types. It is a unitless
+index and can be easily be compared across models. The RESI can also be
+converted to Cohen's \emph{d} (\code{\link{S2d}}) under  model homoskedasticity.
+
+This function computes the RESI point estimates and bootstrapped confidence
+intervals based on Chi-square, F, T, or Z statistics. The robust (sandwich)
+variance is used by default, allowing for consistency under
+model-misspecification. The RESI is related to the non-centrality parameter
+of the test statistic. The RESI estimate is consistent for all four
+(Chi-square, F, T, and Z) types of statistics used. The Chi-square and F-based
+calculations rely on asymptotic theory, so they may be biased in small samples.
+When possible, the T and Z statistics are used, as these are unbiased and can
+be positive or negative. The RESI based on the Chi-Square and F statistics is
+always greater than or equal to 0. The type of statistic used is listed with
+the output.
+
+For most model types supported by this package, two bootstrap options are
+available. The default is the standard non-parametric bootstrap. Bayesian
+bootstrapping is currently available for models other than \code{survreg} and
+\code{coxph}.
+
+Certain model types require the data used for the model be entered as an argument.
+These are: \code{nls, survreg,} and \code{coxph}. Additionally, if a model
+includes splines, the data needs to be provided.
 }
 \section{Methods (by class)}{
 \itemize{
@@ -152,3 +179,13 @@ This function will estimate the robust effect size (RESI) from Vandekar, Rao, & 
 \item \code{lme}: RESI point and interval estimation for LME models
 }}
 
+\references{
+Vandekar S, Tao R, Blume J. A Robust Effect Size Index. \emph{Psychometrika}. 2020 Mar;85(1):232-246. doi: 10.1007/s11336-020-09698-2.
+
+Kang, K., Armstrong, K., Avery, S., McHugo, M., Heckers, S., & Vandekar, S. (2021). Accurate confidence interval estimation for non-centrality parameters and effect size indices. \emph{arXiv preprint arXiv:2111.05966}.
+}
+\seealso{
+\code{\link{resi_pe}}, \code{\link{vcovHC}}, \code{\link{nlshc}},
+\code{\link{f2S}}, \code{\link{chisq2S}}, \code{\link{z2S}}, \code{\link{t2S}}
+}
+\concept{RESI functions}

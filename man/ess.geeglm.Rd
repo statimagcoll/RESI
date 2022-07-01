@@ -4,7 +4,7 @@
 \alias{ess.geeglm}
 \title{Calculating the effective sample size from a fitted GEE model.}
 \usage{
-\method{ess}{geeglm}(obj, total = TRUE)
+\method{ess}{geeglm}(obj, total = TRUE, ...)
 }
 \arguments{
 \item{obj}{a fitted `geeglm` object}

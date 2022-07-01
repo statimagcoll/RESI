@@ -4,7 +4,7 @@
 \alias{ess}
 \title{Calculating Effective Sample Size}
 \usage{
-ess(x, ...)
+ess(obj, ...)
 }
 \description{
 This function calculate the effective sample size (ESS) from Kang et. al (2022)

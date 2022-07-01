@@ -4,12 +4,14 @@
 \alias{summary.resi}
 \title{Summary method for resi objects}
 \usage{
-\method{summary}{resi}(object, alpha = NULL)
+\method{summary}{resi}(object, alpha = NULL, ...)
 }
 \arguments{
 \item{object}{an object resulting from resi function}
 
 \item{alpha}{an optional new specification for the confidence level. Can be vector-valued}
+
+\item{...}{ignored}
 }
 \value{
 Returns a `summary.resi` object containing the computed summary table

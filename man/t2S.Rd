@@ -4,10 +4,12 @@
 \alias{t2S}
 \title{Compute the robust effect size index estimator from t statistic}
 \usage{
-t2S(t, rdf)
+t2S(t, n, rdf)
 }
 \arguments{
 \item{t}{The t statistic for the parameter of interest.}
+
+\item{n}{Number of independent samples}
 
 \item{rdf}{Model residual degrees of freedom or number of independent samples.}
 }

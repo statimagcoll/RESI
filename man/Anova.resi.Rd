@@ -4,12 +4,14 @@
 \alias{Anova.resi}
 \title{Anova method for resi objects}
 \usage{
-\method{Anova}{resi}(object, alpha = NULL)
+\method{Anova}{resi}(object, alpha = NULL, ...)
 }
 \arguments{
 \item{object}{an object resulting from resi function}
 
 \item{alpha}{an optional new specification for the confidence level. Can be vector-valued}
+
+\item{...}{ignored}
 }
 \value{
 Returns an `anova` object containing the computed Anova-style table

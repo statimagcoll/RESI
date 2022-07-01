@@ -184,29 +184,30 @@ print.summary.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ..
   invisible(x)
 }
 
+#' @importFrom graphics abline axis lines
 #' @export
-plot.resi <- function(object, ycex.axis = 1, alpha = NULL, ...){
+plot.resi <- function(x, ycex.axis = 1, alpha = NULL, ...){
   if (is.null(alpha)){
-    alpha = object$alpha[1]
+    alpha = x$alpha[1]
   }
   else{
     if (length(alpha) > 1){
       warning('\nOnly first alpha will be plotted')
       alpha = alpha[1]
     }
-    if (!(alpha %in% object$alpha)){
+    if (!(alpha %in% x$alpha)){
       stop('\nSpecified alpha not found in the resi object')
     }
   }
   ll = paste(alpha/2*100, "%", sep = "")
   ul = paste((1-alpha/2)*100, "%", sep = "")
-  lev <- as.factor(rownames(object$coefficients))
-  plot(x = object$coefficients[,"RESI"], y = 1:length(levels(lev)),
-       xlim = c(min(0, min(object$coefficients[,ll])), max(object$coefficients[,ul])),
+  lev <- as.factor(rownames(x$coefficients))
+  plot(x = x$coefficients[,"RESI"], y = 1:length(levels(lev)),
+       xlim = c(min(0, min(x$coefficients[,ll])), max(x$coefficients[,ul])),
        xlab = "RESI Estimate", yaxt = "n", ylab = "",
        main = paste("RESI Estimates and ", (1-alpha)*100, "%", " CIs", sep=""),...)
-  for (i in 1:nrow(object$coefficients)){
-    lines(x = c(object$coefficients[i,ll], object$coefficients[i,ul]), y = c(i,i))
+  for (i in 1:nrow(x$coefficients)){
+    lines(x = c(x$coefficients[i,ll], x$coefficients[i,ul]), y = c(i,i))
   }
   axis(2, 1:length(levels(lev)), levels(lev), las = 1, cex.axis = ycex.axis)
   abline(v = 0, lty = 2)
@@ -216,10 +217,10 @@ plot.resi <- function(object, ycex.axis = 1, alpha = NULL, ...){
 plot.summary.resi <- plot.resi
 
 #' @export
-plot.anova.resi <- function(object, alpha = NULL, ycex.axis = 1,...){
-  cols = grep('%', colnames(object))
+plot.anova_resi <- function(x, alpha = NULL, ycex.axis = 1,...){
+  cols = grep('%', colnames(x))
   if (is.null(alpha)){
-    alpha = gsub("%", "", colnames(object)[cols[1]])
+    alpha = gsub("%", "", colnames(x)[cols[1]])
     alpha = as.numeric(alpha)*2/100
   }
   else{
@@ -230,16 +231,16 @@ plot.anova.resi <- function(object, alpha = NULL, ycex.axis = 1,...){
   }
   ll = paste(alpha/2*100, "%", sep="")
   ul = paste((1-alpha/2)*100, "%", sep="")
-  if (!(ll %in% colnames(object))){
+  if (!(ll %in% colnames(x))){
     stop('\nSpecified alpha not found in the resi object')
   }
 
-  lev <- as.factor(rownames(object))
-  plot(x = object$RESI, y = 1:length(levels(lev)),
-       xlim = c(0, max(object[,ul])), xlab = "RESI Estimate",
+  lev <- as.factor(rownames(x))
+  plot(x = x$RESI, y = 1:length(levels(lev)),
+       xlim = c(0, max(x[,ul])), xlab = "RESI Estimate",
        yaxt = "n", ylab = "", main = paste("RESI Estimates and ", (1-alpha)*100, "%", " CIs", sep=""),...)
-  for (i in 1:nrow(object)){
-    lines(x = c(object[i,ll], object[i,ul]), y = c(i,i))
+  for (i in 1:nrow(x)){
+    lines(x = c(x[i,ll], x[i,ul]), y = c(i,i))
   }
   axis(2, 1:length(levels(lev)), levels(lev), las = 1, cex.axis = ycex.axis)
 }

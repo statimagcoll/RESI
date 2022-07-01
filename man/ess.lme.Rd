@@ -4,7 +4,7 @@
 \alias{ess.lme}
 \title{This function calculates the effective sample size from a fitted linear mixed effect model object (lme) or a GEE model object (gee)}
 \usage{
-\method{ess}{lme}(obj, total = TRUE)
+\method{ess}{lme}(obj, total = TRUE, ...)
 }
 \arguments{
 \item{obj}{`lme` or `gee` object}
