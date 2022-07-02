@@ -72,16 +72,87 @@ f2S <- function(f, df, rdf){
 
 #' Convert S to Cohen's d
 #'
-#' Converts the robust effect size index to Cohen's d using formula from Vandekar, Rao, & Blume (2020).
-#' @param S The robust effect size index.
-#' @param pi The sampling proportions.
+#' Converts the robust effect size index (S) to Cohen's d using the formula from
+#' Vandekar, Rao, & Blume (2020).
+#' @param S Numeric, the robust effect size index.
+#' @param pi Numeric, the sampling proportions.
 #' @keywords power
-#' @return Returns an estimate the robust effect size index
-#' @details The pi parameter comes from the fact that Cohen's d doesn't account for unequal sample proportions in the population, but S does.
-#' The default is set to a natural value 1/2, which corresponds to a case control design, for example, where sampling proportions always are controlled by the experimenter.
+#' @return Returns an estimate of Cohen's \emph{d} based on the RESI.
+#' @details The pi parameter comes from the fact that Cohen's d doesn't account
+#' for unequal sample proportions in the population, but S does.
+#'
+#' The default is set to a natural value 1/2, which corresponds to a case
+#' control design, for example, where sampling proportions always are
+#' controlled by the experimenter.
 #' @export
 S2d = function(S, pi=0.5){
-  S * sqrt(1/pi + 1/(1-pi) )
+  S * sqrt(1/pi + 1/(1-pi))
+}
+
+#' Covert Cohen's \emph{d} to S
+#' Converts Cohen's \emph{d} robust effect size index (S) using the formula from
+#' Vandekar, Rao, & Blume (2020).
+#' @param d Numeric, value of Cohen's \emph{d}.
+#' @param pi Numeric, the sampling proportions.
+#' @keywords power
+#' @return Returns an estimate the robust effect size index
+#' @details The pi parameter comes from the fact that Cohen's d doesn't account
+#' for unequal sample proportions in the population, but S does.
+#'
+#' The default is set to a natural value 1/2, which corresponds to a case
+#' control design, for example, where sampling proportions always are
+#' controlled by the experimenter.
+#' @export
+d2S <- function(d, pi = 0.5){
+  abs(d)/sqrt(1/pi + 1/(1-pi))
+}
+
+#' Covert Cohen's \emph{f}^2 to S
+#'
+#' Converts Cohen's \emph{f}^2 to robust effect size index (S)
+#' using the formula from Vandekar, Rao, & Blume (2020).
+#' @param fsq Numeric, value of Cohen's \emph{f}^2.
+#' @keywords power
+#' @return Returns an estimate the robust effect size index
+#' @export
+fsq2S <- function(fsq){
+  sqrt(fsq)
+}
+
+#' Covert S to Cohen's \emph{f}^2
+#'
+#' Converts robust effect size index (S) to Cohen's \emph{f}^2
+#' (effect size for multiple regression) using the formula from Vandekar, Rao, & Blume (2020).
+#' @param S Numeric,the robust effect size index.
+#' @keywords power
+#' @return Returns an estimate of Cohen's \emph{f}^2 based on the RESI
+#' @export
+S2fsq <- function(S){
+  S^2
+}
+
+#' Covert S to R^2
+#'
+#' Converts robust effect size index (S) to R^2, the partial
+#' coefficient of determination, using the formula from Vandekar, Rao, & Blume (2020).
+#' @param S Numeric, the robust effect size index.
+#' @keywords power
+#' @return Returns an estimate of R^2 based on the RESI
+#' @export
+S2Rsq <- function(S){
+  S^2/(1+S^2)
+}
+
+#' Covert R^2 to S
+#'
+#' Converts R^2, the partial coefficient of determination, to
+#' robust effect size index (S) using the formula from Vandekar, Rao, & Blume (2020).
+#' @param Rsq Numeric, R^2
+#' @keywords power
+#' @return Returns an estimate of R^2 based on the RESI
+#' @export
+Rsq2S <- function(Rsq){
+  sqrt((-Rsq)/(Rsq-1))
 }
 
 
