@@ -94,12 +94,12 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
   if (tolower(boot.method)  == "bayes"){
     for (i in 1:nboot){
       boot.data = bayes.samp(data)
-      boot.model.full <- update(model.full, data = boot.data, weights = g)
+      boot.model.full <- update(model.full, data = boot.data, weights = boot.data[,'g'])
       if (is.null(model.reduced)){
         boot.model.reduced = update(model.full, formula = as.formula(paste(format(formula(model.full)[[2]]), "~ 1")), data = boot.model.full$model, weights = `(weights)`)
       }
       else{
-        boot.model.reduced = update(model.reduced, data = boot.data, weights = g)
+        boot.model.reduced = update(model.reduced, data = boot.data, weights = boot.data[,'g'])
       }
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
                                                   data = boot.data, anova = anova, summary = summary,
@@ -340,13 +340,13 @@ resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, ...){
   id_var = attr(nlme::getGroups(model.full), "label")
   # bootstrap
   output.boot = as.matrix(output$coefficients[, 'RESI'])
-  # get update method from nlme (non-exported function)
-  fun <- utils::getFromNamespace("update.lme", "nlme")
+  tryCatch(update(model.full, data = data), error = function(e){
+    message("Need to run `library(nlme)`")})
   for (i in 1:nboot){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
     # not working: boot.mod = update(model.full, data = boot.data)
-    boot.mod = fun(model.full, data = boot.data, fixed = as.formula(model.full$call$fixed), random = as.formula(model.full$call$random))
+    boot.mod = update(model.full, data = boot.data, fixed = as.formula(model.full$call$fixed), random = as.formula(model.full$call$random))
     output.boot = cbind(output.boot, resi_pe(boot.mod)$coefficients[, 'RESI'])
   }
   output.boot = output.boot[, -1]
