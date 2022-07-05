@@ -12,9 +12,7 @@ Encoding: UTF-8
 LazyData: true
 Collate: 
   'boot.ci.R'
-  'ess.R'
   'internal_functions.R'
-  'simulation.R'
   'summary.resi.R'
   'resi.R'
   'resi_pe.R'
