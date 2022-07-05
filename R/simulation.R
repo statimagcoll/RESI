@@ -19,15 +19,15 @@ ARMtx <- function(time, rho.e){
 
 #' Function for simulating longitudinal continuous outcomes
 #' @param N total sample size (i.e., num of subjects)
-#' @param S = the values of RESI for the fixed effects
-#' @param pi = proportion or probability of being assigned to trt group
-#' @param ni_range = range of num of measurements
-#' @param rho.G = correlation coef between random intercepts and slopes
-#' @param sigma0: SD of random intercepts
-#' @param sigma.t: SD of random slopes
-#' @param sigma.e: SD of errors
-#' @param rho.e: correlation coef of the errors within a subject
-#' @param fixed.design: whether the trt assignment is fixed by design (TRUE) or random. use togther with pi
+#' @param S the values of RESI for the fixed effects
+#' @param pi proportion or probability of being assigned to trt group
+#' @param ni_range range of num of measurements
+#' @param rho.G correlation coef between random intercepts and slopes
+#' @param sigma0 SD of random intercepts
+#' @param sigma.t SD of random slopes
+#' @param sigma.e SD of errors
+#' @param rho.e correlation coef of the errors within a subject
+#' @param fixed.design whether the trt assignment is fixed by design (TRUE) or random. use togther with pi
 #' @export
 sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rho.e, fixed.design = TRUE){
 
@@ -120,14 +120,13 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
 }
 
 
-
+# not exporting for now
 #' Function for the simulations with logistic regression models
 #' @param n total sample size (i.e., num of subjects)
-#' @param S = the values of RESI for the grouping parameter x: logit(P) = alpha + x beta
-#' @param p = the probability of the outcome being 1
-#' @param pi = proportion or probability of being assigned to trt group
-#' @param fixed.design: whether the trt assignment is fixed by design (TRUE) or random. use togther with pi
-#' @export
+#' @param S the values of RESI for the grouping parameter x: logit(P) = alpha + x beta
+#' @param p the probability of the outcome being 1
+#' @param pi proportion or probability of being assigned to trt group
+#' @param fixed.design whether the trt assignment is fixed by design (TRUE) or random. use togther with pi
 
 sim_data_cs_binary <- function(n, S, r, alpha, m, p, pi, fixed.design, num.cores){
   # 1. DATA GENERATION

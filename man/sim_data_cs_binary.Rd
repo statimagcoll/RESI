@@ -9,13 +9,13 @@ sim_data_cs_binary(n, S, r, alpha, m, p, pi, fixed.design, num.cores)
 \arguments{
 \item{n}{total sample size (i.e., num of subjects)}
 
-\item{S}{= the values of RESI for the grouping parameter x: logit(P) = alpha + x beta}
+\item{S}{the values of RESI for the grouping parameter x: logit(P) = alpha + x beta}
 
-\item{p}{= the probability of the outcome being 1}
+\item{p}{the probability of the outcome being 1}
 
-\item{pi}{= proportion or probability of being assigned to trt group}
+\item{pi}{proportion or probability of being assigned to trt group}
 
-\item{fixed.design:}{whether the trt assignment is fixed by design (TRUE) or random. use togther with pi}
+\item{fixed.design}{whether the trt assignment is fixed by design (TRUE) or random. use togther with pi}
 }
 \description{
 Function for the simulations with logistic regression models

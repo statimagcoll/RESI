@@ -1,18 +1,16 @@
-# maybe change to non-exported functions
+# changed to non-exported functions for now
 
 #' Calculating Effective Sample Size
 #'
 #' This function calculate the effective sample size (ESS) from Kang et. al (2022)
-#' @export
+#' @param obj \code{lme}, \code{gee} or \code{geeglm} object
+#' @param total whether to compute ESS for each covariate in the model.
+#' @param ... ignored
 ess <- function(obj, ...) {
 UseMethod("ess")
 }
 
-#' This function calculates the effective sample size from a fitted linear mixed effect model object (lme) or a GEE model object (gee)
-#' @param obj `lme` or `gee` object
-#' @param constr matrix. The linear constraint used to form an hypothesis regarding which the RESI is built. For example, for parameters `beta`, `constr = diag(c(1, 1, 1))` means testing `constr %*% beta = 0`
-#' By default, `constr = NULL` where the ESS for each of the parameters will be computed.
-#' @export
+#' @describeIn ess Calculates effective sample size from a fitted linear mixed effect model object (lme) or a GEE model object (gee)
 ess.lme <- function(obj, total = TRUE, ...){
   # dataset
   data = obj$data
@@ -24,7 +22,7 @@ ess.lme <- function(obj, total = TRUE, ...){
   # 1. RESI (from the original model)
   # WALD STATISTICS
   ## point estimates
-  beta = as.matrix(fixed.effects(obj))
+  beta = as.matrix(nlme::fixed.effects(obj))
   ## sandwich covariance
   cov.beta = clubSandwich::vcovCR(obj, type = "CR3")
   ## wald statistics from the full model
@@ -64,11 +62,7 @@ ess.lme <- function(obj, total = TRUE, ...){
   return(ess)
 }
 
-#' Calculating the effective sample size from a fitted GEE model.
-#' @param obj a fitted `geeglm` object
-#' @param constr matrix, linear constraint
-#' @export
-
+#' @describeIn ess Calculates the effective sample size from a fitted GEE model.
 ess.geeglm <- function(obj, total = TRUE, ...){
   # dataset
   data = obj$data
@@ -97,6 +91,8 @@ ess.geeglm <- function(obj, total = TRUE, ...){
 
   # 2. RESI (from independence model)
   mod.ind = glm(form, data = data)
+  # documentation: constr matrix. The linear constraint used to form an hypothesis regarding which the RESI is built. For example, for parameters `beta`, `constr = diag(c(1, 1, 1))` means testing `constr %*% beta = 0`
+  # By default, `constr = NULL` where the ESS for each of the parameters will be computed.
     # geeglm(form, data = data, id = obj$id, constr = "independence")
   beta.ind = coef(mod.ind)
   cov.beta.ind = sandwich::vcovHC(mod.ind)

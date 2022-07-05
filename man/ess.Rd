@@ -2,10 +2,30 @@
 % Please edit documentation in R/ess.R
 \name{ess}
 \alias{ess}
+\alias{ess.lme}
+\alias{ess.geeglm}
 \title{Calculating Effective Sample Size}
 \usage{
 ess(obj, ...)
+
+\method{ess}{lme}(obj, total = TRUE, ...)
+
+\method{ess}{geeglm}(obj, total = TRUE, ...)
+}
+\arguments{
+\item{obj}{\code{lme}, \code{gee} or \code{geeglm} object}
+
+\item{...}{ignored}
+
+\item{total}{whether to compute ESS for each covariate in the model.}
 }
 \description{
 This function calculate the effective sample size (ESS) from Kang et. al (2022)
 }
+\section{Methods (by class)}{
+\itemize{
+\item \code{lme}: Calculates effective sample size from a fitted linear mixed effect model object (lme) or a GEE model object (gee)
+
+\item \code{geeglm}: Calculates the effective sample size from a fitted GEE model.
+}}
+

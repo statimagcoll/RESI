@@ -20,23 +20,23 @@ sim_data_cont(
 \arguments{
 \item{N}{total sample size (i.e., num of subjects)}
 
-\item{S}{= the values of RESI for the fixed effects}
+\item{S}{the values of RESI for the fixed effects}
 
-\item{pi}{= proportion or probability of being assigned to trt group}
+\item{pi}{proportion or probability of being assigned to trt group}
 
-\item{ni_range}{= range of num of measurements}
+\item{ni_range}{range of num of measurements}
 
-\item{rho.G}{= correlation coef between random intercepts and slopes}
+\item{rho.G}{correlation coef between random intercepts and slopes}
 
-\item{sigma0:}{SD of random intercepts}
+\item{sigma0}{SD of random intercepts}
 
-\item{sigma.t:}{SD of random slopes}
+\item{sigma.t}{SD of random slopes}
 
-\item{sigma.e:}{SD of errors}
+\item{sigma.e}{SD of errors}
 
-\item{rho.e:}{correlation coef of the errors within a subject}
+\item{rho.e}{correlation coef of the errors within a subject}
 
-\item{fixed.design:}{whether the trt assignment is fixed by design (TRUE) or random. use togther with pi}
+\item{fixed.design}{whether the trt assignment is fixed by design (TRUE) or random. use togther with pi}
 }
 \description{
 Function for simulating longitudinal continuous outcomes

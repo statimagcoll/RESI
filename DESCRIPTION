@@ -19,17 +19,21 @@ Collate:
   'resi.R'
   'resi_pe.R'
   'Anova.resi.R'
+  'data.R'
 Imports:
-    lmtest,
-    pracma,
-    sandwich,
-    parallel,
-    car,
     aod,
-    regtools,
+    car,
     clubSandwich,
+    lmtest,
+    mvtnorm,
     nlme,
-    mvtnorm
+    parallel,
+    pracma,
+    regtools,
+    sandwich
 Suggests:
+  splines,
   testthat
 RoxygenNote: 7.2.0
+Depends: 
+    R (>= 2.10)
