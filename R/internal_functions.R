@@ -246,7 +246,6 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
 
 #' @export
 print.summary.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
-  #browser()
   cat("\nAnalysis of Effect sizes (ANOES) based on RESI:")
   cat("\nConfidence level = ", x$alpha)
   cat("\nCall:  ", paste(deparse(x$model.full$call), sep = "\n", collapse = "\n"),  "\n",sep = "")
