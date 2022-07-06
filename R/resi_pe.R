@@ -186,7 +186,7 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 resi_pe.nls <- function(model.full, model.reduced = NULL, data,
                        summary = TRUE, vcovfunc = regtools::nlshc, ...){
   if (missing(data) | is.null(data)){
-    stop('\n Data argument is required for nls model')
+    stop('\nData argument is required for nls model')
   }
 
   # currently not accepting other reduced models for nls
@@ -247,7 +247,7 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data,
 resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                         summary = TRUE, vcovfunc = vcov, ...){
   if (missing(data)){
-    stop('\n Data argument is required for survreg model')
+    stop('\nData argument is required for survreg model')
   }
 
   if (!identical(vcovfunc, vcov)){
@@ -354,7 +354,7 @@ resi_pe.zeroinfl <- resi_pe.hurdle
 resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                        summary = TRUE, vcovfunc = vcov, ...){
   if (missing(data)){
-    stop('\n Data argument is required for coxph model')
+    stop('\nData argument is required for coxph model')
   }
 
   if (!identical(vcovfunc, vcov)){

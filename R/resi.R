@@ -44,6 +44,11 @@
 #' Certain model types require the data used for the model be entered as an argument.
 #' These are: \code{nls, survreg,} and \code{coxph}. Additionally, if a model
 #' includes splines, the data needs to be provided.
+#'
+#' @examples
+#' mod <- lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
+#' resi(model.full = mod, alpha = 0.01)
+#'
 #' @return Returns a list that includes function arguments, RESI point estimates,
 #' and confidence intervals in summary/anova-style tables
 #' @family RESI functions
@@ -136,7 +141,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
   if (missing(data)){
-    data = model.full$model
+    stop('\nData argument is required for nls model')
   }
 
   # point estimation
@@ -188,6 +193,9 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 #' @export
 resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
                         nboot = 1000, boot.method = "nonparam", vcovfunc = vcov, alpha = 0.05, store.boot = FALSE, ...){
+  if (missing(data)){
+    stop('\nData argument is required for survreg model')
+  }
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
   if (boot.method == "bayes"){
     warning("Bayesian bootstrap not currently supported for survreg models, using non-parametric bootstrap")
@@ -202,6 +210,9 @@ resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
 #' @export
 resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
                          nboot = 1000, boot.method = "nonparam", vcovfunc = vcov, alpha = 0.05, store.boot = FALSE, ...){
+  if (missing(data)){
+    stop('\nData argument is required for coxph model')
+  }
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
   if (boot.method == "bayes"){
     warning("Bayesian bootstrap not currently supported for coxph models, using non-parametric bootstrap")
