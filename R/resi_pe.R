@@ -121,6 +121,7 @@ resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @export
 resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                        summary = TRUE, vcovfunc = sandwich::vcovHC, ...){
+  browser()
   # data required with splines
   if (missing(data)){
     data = model.full$model
@@ -267,7 +268,7 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
 
   # Anova table (Chi sq statistics)
   if (anova){
-    suppressMessages(anova.tab <- car::Anova(model.full, ...))
+    suppressMessages(anova.tab <- car::Anova(model.full, test.statistic = "Wald", ...))
     anova.tab[,'RESI'] = chisq2S(anova.tab[,'LR Chisq'], anova.tab[,'Df'], model.full$df.residual)
     output$anova = anova.tab
     names.est = names(output$estimates)
@@ -441,12 +442,12 @@ resi_pe.gee <- function(model.full, ...){
 #' @describeIn resi_pe RESI point estimation for lme object
 #' @importFrom clubSandwich vcovCR
 #' @export
-resi_pe.lme <- function(model.full, ...){
+resi_pe.lme <- function(model.full, vcovfunc = clubSandwich::vcovCR, ...){
   x = as.matrix(summary(model.full)$tTable)
   #sample size
   N = summary(model.full)$dims$ngrps[1]
   # robust se
-  robust.var = diag(clubSandwich::vcovCR(model.full, type = "CR3"))
+  robust.var = diag(vcovfunc(model.full, type = "CR3"))
   robust.se = sqrt(robust.var)
   output = list(model.full = list(call = model.full$call, formula = formula(model.full)),
        coefficients =  as.data.frame(cbind(x, 'Robust.SE' = robust.se, 'Robust Wald' = (x[, 'Value']^2/robust.var), RESI = RESI::chisq2S(x[, 'Value']^2/robust.var, 1, N))))
@@ -454,4 +455,25 @@ resi_pe.lme <- function(model.full, ...){
   return(output)
 }
 
+#' @describeIn resi_pe RESI point estimation for lmerMod object
+#' @export
+resi_pe.lmerMod <- function(model.full, vcovfunc = clubSandwich::vcovCR, ...){
+  x = as.matrix(summary(model.full)$coefficients)
+  #sample size
+  N = summary(model.full)$ngrps
 
+  # robust se
+  if (identical(vcovfunc, stats::vcov)) {
+    output = cbind(x, 'Wald' = x[, 't value']^2, RESI = RESI::chisq2S(x[, 't value']^2, 1, N))
+    naive.var = TRUE
+    } else {
+      robust_var = diag(vcovfunc(model.full, type = "CR3"))
+      robust_se = sqrt(robust_var)
+      output = cbind(x, 'Robust.SE' = robust_se, 'Robust Wald' = (x[, 'Estimate']^2/robust_var), RESI = RESI::chisq2S(x[, 'Estimate']^2/robust_var, 1, N))
+      naive.var = FALSE
+      }
+  # adding ESS and pm-RESI
+  output = list(ess = ess(obj = model.full,xTab = output, robust.var = !(naive.var)), naive.var = naive.var)
+
+  return(output)
+}

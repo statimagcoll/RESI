@@ -11,6 +11,7 @@
 \alias{resi.geeglm}
 \alias{resi.gee}
 \alias{resi.lme}
+\alias{resi.lmerMod}
 \title{Robust Effect Size Index (RESI) point and interval estimation for models}
 \usage{
 resi(model.full, ...)
@@ -100,7 +101,21 @@ resi(model.full, ...)
 
 \method{resi}{gee}(model.full, data, alpha = 0.05, nboot = 1000, ...)
 
-\method{resi}{lme}(model.full, alpha = 0.05, nboot = 1000, ...)
+\method{resi}{lme}(
+  model.full,
+  alpha = 0.05,
+  nboot = 1000,
+  vcovfunc = clubSandwich::vcovCR,
+  ...
+)
+
+\method{resi}{lmerMod}(
+  model.full,
+  vcovfunc = clubSandwich::vcovCR,
+  alpha = 0.05,
+  nboot = 1000,
+  ...
+)
 }
 \arguments{
 \item{model.full}{\code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.}
@@ -176,7 +191,9 @@ includes splines, the data needs to be provided.
 
 \item \code{gee}: RESI point and interval estimation for GEE models
 
-\item \code{lme}: RESI point and interval estimation for LME models
+\item \code{lme}: RESI point and interval estimation for LME (nlme) models
+
+\item \code{lmerMod}: RESI point and interval estimation (Anova-style table) for LME (lme4) models
 }}
 
 \references{

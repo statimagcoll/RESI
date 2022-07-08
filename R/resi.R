@@ -45,10 +45,6 @@
 #' These are: \code{nls, survreg,} and \code{coxph}. Additionally, if a model
 #' includes splines, the data needs to be provided.
 #'
-#' @examples
-#' mod <- lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
-#' resi(model.full = mod, alpha = 0.01)
-#'
 #' @return Returns a list that includes function arguments, RESI point estimates,
 #' and confidence intervals in summary/anova-style tables
 #' @family RESI functions
@@ -66,9 +62,11 @@ resi <- function(model.full, ...){
 #' @export
 resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
                  nboot = 1000, boot.method = 'nonparam', vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE, ...){
+  browser()
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
   if (missing(data)){
+    m = TRUE
     data = model.full$model
   }
 
@@ -83,13 +81,17 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
   if (tolower(boot.method) == "nonparam"){
     for (i in 1:nboot){
       boot.data = boot.samp(data)
-      boot.model.full <- update(model.full, data = boot.data)
+      if (m){
+        tryCatch(update(model.full, data = boot.data), error = function(e){
+          message("Updating model fit failed. Try rerunning with providing data argument")})
+      }
+      else{
+        boot.model.full <- update(model.full, data = boot.data)
+      }
       if (is.null(model.reduced)){
         boot.model.reduced = NULL
       }
-      else{
-        boot.model.reduced = update(model.reduced, data = boot.data)
-      }
+      boot.model.reduced = update(model.reduced, data = boot.data)
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
                                                   data = boot.data, anova = anova, summary = summary,
                                                   vcovfunc = vcovfunc, ...)$estimates)
@@ -133,9 +135,11 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
   return(output)
 }
 
+
+# convergence issues - advise people to refit the model with the starting values = estimates and then run resi
+
 #' @describeIn resi RESI point and interval estimation for nls models
 #' @export
-
 resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
                      nboot = 1000, boot.method = 'nonparam', vcovfunc = regtools::nlshc, alpha = 0.05, store.boot = FALSE, ...){
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
@@ -339,13 +343,15 @@ resi.gee <- function(model.full, data, alpha = 0.05, nboot = 1000, ...){
   return(output)
 }
 
-#' @describeIn resi RESI point and interval estimation for LME models
+# convergence issues - no fix yet
+
+#' @describeIn resi RESI point and interval estimation for LME (nlme) models
 #' @importFrom nlme getGroups
 #' @export
-resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, ...){
+resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSandwich::vcovCR, ...){
   output <- list(alpha = alpha, nboot = nboot)
   # RESI point estimates
-  output = c(output, resi_pe(model.full))
+  output = c(output, resi_pe(model.full = model.full, vcovfunc = vcovfunc))
   data = model.full$data
   # id variable name
   id_var = attr(nlme::getGroups(model.full), "label")
@@ -356,14 +362,42 @@ resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, ...){
   for (i in 1:nboot){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
-    # not working: boot.mod = update(model.full, data = boot.data)
     boot.mod = update(model.full, data = boot.data, fixed = as.formula(model.full$call$fixed), random = as.formula(model.full$call$random))
-    output.boot = cbind(output.boot, resi_pe(boot.mod)$coefficients[, 'RESI'])
+    output.boot = cbind(output.boot, resi_pe(model.full = boot.mod, vcovfunc = vcovfunc)$coefficients[, 'RESI'])
   }
   output.boot = output.boot[, -1]
   RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
   output$coefficients = cbind(output$coefficients, t(RESI.ci))
   output$boot.method = "nonparam"
   class(output) = 'resi'
+  return(output)
+}
+
+#' @describeIn resi RESI point and interval estimation (Anova-style table) for LME (lme4) models
+#' @export
+resi.lmerMod <- function(model.full, vcovfunc = clubSandwich::vcovCR, alpha = 0.05, nboot = 1000, ...){
+  output = resi_pe(model.full, vcovfunc = vcovfunc) # RESI point estimates
+  data = model.full@frame
+  # id variable name
+  id_var = names(model.full@flist)
+  # bootstrap (non-param for now)
+  output.boot = list(RESI = as.matrix(output$ess[, 'RESI']),
+                     pm_RESI = as.matrix(output$ess[, 'pm-RESI']))
+  for (i in 1:nboot){
+    boot.data = boot.samp(data, id.var = id_var)
+    # re-fit the model
+    boot.mod = update(model.full, data = boot.data)
+    rv.boot = resi_pe(boot.mod, vcovfunc = vcovfunc)
+    output.boot$RESI= cbind(output.boot$RESI, rv.boot$ess[, 'RESI'])
+    output.boot$pm_RESI = cbind(output.boot$pm_RESI, rv.boot$ess[, 'pm-RESI'])
+  }
+  output.boot$RESI = output.boot$RESI[, -1]
+  output.boot$pm_RESI = output.boot$pm_RESI[, -1]
+  RESI.ci = apply(output.boot$RESI, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+  rownames(RESI.ci) = paste("RESI", rownames(RESI.ci))
+  pm_RESI.ci = apply(output.boot$pm_RESI, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+  rownames(pm_RESI.ci) = paste("pm-RESI", rownames(pm_RESI.ci))
+  output = list(ess = cbind(output$RESI, t(RESI.ci), t(pm_RESI.ci)), naive.var = output$naive.var)
+
   return(output)
 }

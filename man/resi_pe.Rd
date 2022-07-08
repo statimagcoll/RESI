@@ -13,6 +13,7 @@
 \alias{resi_pe.geeglm}
 \alias{resi_pe.gee}
 \alias{resi_pe.lme}
+\alias{resi_pe.lmerMod}
 \title{Robust Effect Size Index (RESI) Point Estimation}
 \usage{
 resi_pe(model.full, ...)
@@ -97,7 +98,9 @@ resi_pe(model.full, ...)
 
 \method{resi_pe}{gee}(model.full, ...)
 
-\method{resi_pe}{lme}(model.full, ...)
+\method{resi_pe}{lme}(model.full, vcovfunc = clubSandwich::vcovCR, ...)
+
+\method{resi_pe}{lmerMod}(model.full, vcovfunc = clubSandwich::vcovCR, ...)
 }
 \arguments{
 \item{model.full}{\code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.}
@@ -167,6 +170,8 @@ the output.
 \item \code{gee}: RESI point estimation for gee object
 
 \item \code{lme}: RESI point estimation for lme object
+
+\item \code{lmerMod}: RESI point estimation for lmerMod object
 }}
 
 \references{
