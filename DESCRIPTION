@@ -12,6 +12,7 @@ Encoding: UTF-8
 LazyData: true
 Collate: 
   'boot.ci.R'
+  'ess.R'
   'internal_functions.R'
   'summary.resi.R'
   'resi.R'
@@ -20,8 +21,10 @@ Collate:
   'data.R'
 Imports:
     aod,
+    buildmer,
     car,
     clubSandwich,
+    lme4,
     lmtest,
     mvtnorm,
     nlme,
