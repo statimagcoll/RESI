@@ -16,7 +16,7 @@
 #' @importFrom lmtest waldtest
 #' @importFrom regtools nlshc
 #' @importFrom sandwich vcovHC
-#' @importFrom stats coef formula glm hatvalues pf predict quantile residuals update vcov
+#' @importFrom stats coef df.residual formula glm hatvalues pf predict quantile residuals update vcov
 #' @export
 #' @details The Robust Effect Size Index (RESI) is an effect size measure based on M-estimators.
 #' This function is called by \code{\link{resi}} a specified number of times to
@@ -121,8 +121,6 @@ resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @export
 resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                        summary = TRUE, vcovfunc = sandwich::vcovHC, ...){
-  browser()
-  # data required with splines
   if (missing(data)){
     data = model.full$model
   }
@@ -268,8 +266,19 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
 
   # Anova table (Chi sq statistics)
   if (anova){
-    suppressMessages(anova.tab <- car::Anova(model.full, test.statistic = "Wald", ...))
-    anova.tab[,'RESI'] = chisq2S(anova.tab[,'LR Chisq'], anova.tab[,'Df'], model.full$df.residual)
+    # suppressMessages(anova.tab <- car::Anova(model.full, test.statistic = "Wald", error.df = df.residual(model.full), ...))
+    # above currently not working (problem with being able to specify error.df), having to use code from
+    # car:::Anova.II.Wald.survreg
+    V <- vcov(model.full, complete = FALSE)
+    b <- coef(model.full)
+    if (length(b) != nrow(V)) {
+      p <- which(grepl("^Log\\(scale", rownames(V)))
+      if (length(p) > 0)
+        V <- V[-p, -p]
+    }
+    fun <- utils::getFromNamespace("Anova.II.default", "car")
+    anova.tab <- fun(model.full, V, test = "Chisq", error.df = df.residual(model.full))
+    anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], model.full$df.residual)
     output$anova = anova.tab
     names.est = names(output$estimates)
     output$estimates = c(output$estimates, anova.tab$RESI)
