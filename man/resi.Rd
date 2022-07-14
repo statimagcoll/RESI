@@ -171,7 +171,11 @@ bootstrapping is currently available for models other than \code{survreg} and
 
 Certain model types require the data used for the model be entered as an argument.
 These are: \code{nls, survreg,} and \code{coxph}. Additionally, if a model
-includes splines, the data needs to be provided.
+includes certain functions (splines, factor, I), the data needs to be provided.
+
+If running into convergence issues with nls models, it is advised to refit the
+nls model with starting values equal to the estimates provided by the model
+and then try rerunning \code{resi}.
 }
 \section{Methods (by class)}{
 \itemize{
