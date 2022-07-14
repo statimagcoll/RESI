@@ -169,6 +169,7 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     output$estimates = c(output$estimates, anova.tab$RESI)
     names.est = c(names.est, rownames(anova.tab))
     names(output$estimates) = names.est
+    output$estimates = output$estimates[which(output$estimates != "Residuals")]
   }
 
   if(identical(vcovfunc, stats::vcov)){

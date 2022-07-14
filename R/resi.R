@@ -126,7 +126,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
   }
 
   if (anova){
-    CIs = apply(boot.results[,(ncol(boot.results)-nrow(output$anova)+1):ncol(boot.results)], 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    CIs = apply(boot.results[,(ncol(boot.results)-length(which(rownames(output$anova) != "Residuals"))+1):ncol(boot.results)], 2,  quantile, probs = alpha.order, na.rm = TRUE)
     CIs = t(CIs)
     output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
   }
