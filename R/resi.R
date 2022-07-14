@@ -43,7 +43,11 @@
 #'
 #' Certain model types require the data used for the model be entered as an argument.
 #' These are: \code{nls, survreg,} and \code{coxph}. Additionally, if a model
-#' includes splines, the data needs to be provided.
+#' includes certain functions (splines, factor, I), the data needs to be provided.
+#'
+#' If running into convergence issues with nls models, it is advised to refit the
+#' nls model with starting values equal to the estimates provided by the model
+#' and then try rerunning \code{resi}.
 #'
 #' @return Returns a list that includes function arguments, RESI point estimates,
 #' and confidence intervals in summary/anova-style tables
@@ -62,13 +66,16 @@ resi <- function(model.full, ...){
 #' @export
 resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
                  nboot = 1000, boot.method = 'nonparam', vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE, ...){
-  browser()
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
   if (missing(data)){
-    m = TRUE
     data = model.full$model
+    tryCatch(update(model.full, data = data), error = function(e){
+      message("Updating model fit failed. Try rerunning with providing data argument")})
   }
+  # else{
+  #   data = as.data.frame(data)
+  # }
 
   # point estimation
   output <- list(alpha = alpha, nboot = nboot, boot.method = tolower(boot.method))
@@ -81,17 +88,13 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
   if (tolower(boot.method) == "nonparam"){
     for (i in 1:nboot){
       boot.data = boot.samp(data)
-      if (m){
-        tryCatch(update(model.full, data = boot.data), error = function(e){
-          message("Updating model fit failed. Try rerunning with providing data argument")})
-      }
-      else{
-        boot.model.full <- update(model.full, data = boot.data)
-      }
+      boot.model.full <- update(model.full, data = boot.data)
       if (is.null(model.reduced)){
         boot.model.reduced = NULL
       }
-      boot.model.reduced = update(model.reduced, data = boot.data)
+      else{
+        boot.model.reduced = update(model.reduced, data = boot.data)
+      }
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
                                                   data = boot.data, anova = anova, summary = summary,
                                                   vcovfunc = vcovfunc, ...)$estimates)
@@ -134,9 +137,6 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
   class(output) = "resi"
   return(output)
 }
-
-
-# convergence issues - advise people to refit the model with the starting values = estimates and then run resi
 
 #' @describeIn resi RESI point and interval estimation for nls models
 #' @export
@@ -235,6 +235,8 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 
   if (missing(data)){
     data = model.full$model
+    tryCatch(update(model.full, data = data), error = function(e){
+      message("Updating model fit failed. Try rerunning with providing data argument")})
   }
 
   if (is.null(model.reduced)){
@@ -320,7 +322,7 @@ resi.geeglm <- function(model.full, alpha = 0.05, nboot = 1000, ...){
 #' @export
 resi.gee <- function(model.full, data, alpha = 0.05, nboot = 1000, ...){
   if (missing(data)){
-    stop('\n Data argument is required for GEE models from gee package')
+    stop('\nData argument is required for GEE models from gee package')
   }
   output <- list(alpha = alpha, nboot = nboot)
   # RESI point estimates
