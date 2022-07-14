@@ -11,7 +11,6 @@
 \alias{resi.geeglm}
 \alias{resi.gee}
 \alias{resi.lme}
-\alias{resi.lmerMod}
 \title{Robust Effect Size Index (RESI) point and interval estimation for models}
 \usage{
 resi(model.full, ...)
@@ -108,14 +107,6 @@ resi(model.full, ...)
   vcovfunc = clubSandwich::vcovCR,
   ...
 )
-
-\method{resi}{lmerMod}(
-  model.full,
-  vcovfunc = clubSandwich::vcovCR,
-  alpha = 0.05,
-  nboot = 1000,
-  ...
-)
 }
 \arguments{
 \item{model.full}{\code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.}
@@ -196,8 +187,6 @@ and then try rerunning \code{resi}.
 \item \code{gee}: RESI point and interval estimation for GEE models
 
 \item \code{lme}: RESI point and interval estimation for LME (nlme) models
-
-\item \code{lmerMod}: RESI point and interval estimation (Anova-style table) for LME (lme4) models
 }}
 
 \references{
