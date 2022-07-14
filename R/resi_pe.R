@@ -473,16 +473,12 @@ resi_pe.lmerMod <- function(model.full, vcovfunc = clubSandwich::vcovCR, ...){
 
   # robust se
   if (identical(vcovfunc, stats::vcov)) {
-    output = cbind(x, 'Wald' = x[, 't value']^2, RESI = RESI::chisq2S(x[, 't value']^2, 1, N))
-    naive.var = TRUE
+    output = list(coefficients = cbind(x, 'Wald' = x[, 't value']^2, RESI = RESI::chisq2S(x[, 't value']^2, 1, N)), naive.var = TRUE)
     } else {
       robust_var = diag(vcovfunc(model.full, type = "CR3"))
       robust_se = sqrt(robust_var)
-      output = cbind(x, 'Robust.SE' = robust_se, 'Robust Wald' = (x[, 'Estimate']^2/robust_var), RESI = RESI::chisq2S(x[, 'Estimate']^2/robust_var, 1, N))
-      naive.var = FALSE
+      output = list(coefficients = cbind(x, 'Robust.SE' = robust_se, 'Robust Wald' = (x[, 'Estimate']^2/robust_var), RESI = RESI::chisq2S(x[, 'Estimate']^2/robust_var, 1, N)), naive.var = FALSE)
       }
-  # adding ESS and pm-RESI
-  output = list(ess = ess(obj = model.full,xTab = output, robust.var = !(naive.var)), naive.var = naive.var)
 
   return(output)
 }
