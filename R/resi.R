@@ -104,12 +104,12 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
   if (tolower(boot.method)  == "bayes"){
     for (i in 1:nboot){
       boot.data = bayes.samp(data)
-      boot.model.full <- update(model.full, data = boot.data, weights = boot.data[,'g'])
+      boot.model.full <- suppressWarnings(update(model.full, data = boot.data, weights = boot.data[,'g']))
       if (is.null(model.reduced)){
-        boot.model.reduced = update(model.full, formula = as.formula(paste(format(formula(model.full)[[2]]), "~ 1")), data = boot.model.full$model, weights = `(weights)`)
+        boot.model.reduced = suppressWarnings(update(model.full, formula = as.formula(paste(format(formula(model.full)[[2]]), "~ 1")), data = boot.model.full$model, weights = `(weights)`))
       }
       else{
-        boot.model.reduced = update(model.reduced, data = boot.data, weights = boot.data[,'g'])
+        boot.model.reduced = suppressWarnings(update(model.reduced, data = boot.data, weights = boot.data[,'g']))
       }
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
                                                   data = boot.data, anova = anova, summary = summary,
