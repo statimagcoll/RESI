@@ -196,7 +196,7 @@ bayes.samp <- function(data) {
 print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   cat("\nAnalysis of Effect sizes (ANOES) based on RESI:")
   cat("\nConfidence level = ", x$alpha)
-  if (is.null(x$model.reduced)){
+  if (is.null(x$model.reduced$formula)){
     cat("\nCall:  ", paste(deparse(x$model.full$call), sep = "\n", collapse = "\n"),  "\n",sep = "")
   }
   else{
@@ -219,19 +219,23 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
 
   # overall
   if (!(is.null(x$model.reduced))){
-    if ((x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")))){
+    if (is.null(x$model.reduced$formula)){
       cat("\nOverall RESI comparing model to intercept-only model:\n\n")
-      overall = as.data.frame(x$overall)[2,]
-      rownames(overall) = NULL
-      print(round(overall, digits = digits))
-    }
-    else{
-      cat("\nOverall RESI comparing full model to reduced model:\n\n")
-      overall = as.data.frame(x$overall)[2,]
-      rownames(overall) = NULL
-      print(round(overall, digits = digits))
-    }
-  }
+      print(round(x$overall, digits = digits))
+    } else{
+      if ((x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")))){
+        cat("\nOverall RESI comparing model to intercept-only model:\n\n")
+        overall = as.data.frame(x$overall)[2,]
+        rownames(overall) = NULL
+        print(round(overall, digits = digits))
+      }
+      else{
+        cat("\nOverall RESI comparing full model to reduced model:\n\n")
+        overall = as.data.frame(x$overall)[2,]
+        rownames(overall) = NULL
+        print(round(overall, digits = digits))
+      }
+    }}
 
   cat("\nNotes:")
   if (x$naive.var) cat("\n1. The RESI was calculated using the naive covariance estimator.")
