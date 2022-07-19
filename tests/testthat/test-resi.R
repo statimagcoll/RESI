@@ -17,6 +17,7 @@ mod.one.predictor = glm(charges ~ bmi, data = data)
 mod.one.pred.multi = glm(charges ~ region, data = data)
 mod.one.pred.lm = lm(charges ~ region, data = data)
 mod.log = glm(smoker ~ age + region, data = data, family = "binomial")
+mod.pois = glm(age ~ region + charges + sex*smoker, data = data, family = "poisson")
 
 # missing data models
 data.nas = data
@@ -76,9 +77,9 @@ mod.lmerMod2 = lmer(distance ~ age + (age|Subject) + (0+nsex|Subject) +
 
 ## tests
 test_that("Specifying non-allowed vcov produces warning",{
-  expect_warning(resi(mod.nls, data = data.nls, nboot = 10, vcov = sandwich::vcovHC), "Sandwich vcov function not applicable for nls model type, vcovfunc set to regtools::nlshc")
-  expect_warning(resi(mod.surv, data = data.surv, nboot = 10, vcov = sandwich::vcovHC), "vcovfunc argument ignored for survreg objects")
-  expect_warning(resi(mod.coxph, data = data.surv, nboot = 10, vcov = sandwich::vcovHC), "vcovfunc argument ignored for coxph objects")
+  expect_warning(resi(mod.nls, data = data.nls, nboot = 10, vcovfunc = sandwich::vcovHC), "Sandwich vcov function not applicable for nls model type, vcovfunc set to regtools::nlshc")
+  expect_warning(resi(mod.surv, data = data.surv, nboot = 10, vcovfunc = sandwich::vcovHC), "vcovfunc argument ignored for survreg objects")
+  expect_warning(resi(mod.coxph, data = data.surv, nboot = 10, vcovfunc = sandwich::vcovHC), "vcovfunc argument ignored for coxph objects")
 })
 
 test_that("Bayesian bootstrap is not allowed for survival models",{
