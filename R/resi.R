@@ -11,7 +11,9 @@
 #' @param boot.method String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.
 #' @param alpha Numeric, significance level of the constructed CIs. By default, 0.05.
 #' @param store.boot Logical, whether to store all the bootstrapped estimates. By default, `FALSE`.
-#' @param ... Other arguments to be passed to Anova function.
+#' @param Anova.args List, additional arguments to be passed to Anova function.
+#' @param vcov.args List, additional arguments to be passed to vcovfunc.
+#' @param ... Ignored.
 #' @importFrom aod wald.test
 #' @importFrom car Anova
 #' @importFrom lmtest waldtest
@@ -64,8 +66,11 @@ resi <- function(model.full, ...){
 
 #' @describeIn resi RESI point and interval estimation for models
 #' @export
-resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
-                 nboot = 1000, boot.method = 'nonparam', vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE, ...){
+resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+                         summary = TRUE, nboot = 1000, boot.method = 'nonparam',
+                         vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
+                         Anova.args = list(), vcov.args = list(), ...){
+
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
   if (missing(data)){
@@ -73,13 +78,12 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
     tryCatch(update(model.full, data = data), error = function(e){
       message("Updating model fit failed. Try rerunning with providing data argument")})
   }
-  # else{
-  #   data = as.data.frame(data)
-  # }
 
   # point estimation
   output <- list(alpha = alpha, nboot = nboot, boot.method = tolower(boot.method))
-  output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced, data = data, anova = anova, summary = summary, vcovfunc = vcovfunc, ...))
+  output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
+                             data = data, anova = anova, summary = summary,
+                             vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args, ...))
 
   # bootstrapping
   boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
@@ -97,7 +101,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
       }
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
                                                   data = boot.data, anova = anova, summary = summary,
-                                                  vcovfunc = vcovfunc, ...)$estimates)
+                                                  vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args, ...)$estimates)
     }}
 
   # bayesian bootstrap
@@ -113,7 +117,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
       }
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
                                                   data = boot.data, anova = anova, summary = summary,
-                                                  vcovfunc = vcovfunc, ...)$estimates)
+                                                  vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args, ...)$estimates)
     }}
 
   alpha.order = sort(c(alpha/2, 1-alpha/2))
@@ -141,7 +145,10 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
 #' @describeIn resi RESI point and interval estimation for nls models
 #' @export
 resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
-                     nboot = 1000, boot.method = 'nonparam', vcovfunc = regtools::nlshc, alpha = 0.05, store.boot = FALSE, ...){
+                     nboot = 1000, boot.method = 'nonparam',
+                     vcovfunc = regtools::nlshc, alpha = 0.05, store.boot = FALSE,
+                     vcov.args = list(), ...){
+
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
   if (missing(data)){
@@ -150,7 +157,9 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 
   # point estimation
   output <- list(alpha = alpha, nboot = nboot, boot.method = tolower(boot.method))
-  output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced, data = data, anova = anova, summary = summary, vcovfunc = vcovfunc, ...))
+  output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
+                             data = data, anova = anova, summary = summary,
+                             vcovfunc = vcovfunc, vcov.args = vcov.args, ...))
 
   # bootstrapping
   boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
@@ -162,7 +171,8 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
       boot.model.full <- update(model.full, data = boot.data)
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
                                                   data = boot.data, summary = summary,
-                                                  vcovfunc = vcovfunc, ...)$estimates)
+                                                  vcovfunc = vcovfunc, vcov.args = vcov.args,
+                                                  ...)$estimates)
 
     }}
 
@@ -173,7 +183,8 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
       boot.model.full <- update(model.full, data = boot.data, weights = g)
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
                                                   data = boot.data, summary = summary,
-                                                  vcovfunc = vcovfunc, ...)$estimates)
+                                                  vcovfunc = vcovfunc, vcov.args = vcov.args,
+                                                  ...)$estimates)
 
     }}
 
@@ -195,8 +206,10 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 
 #' @describeIn resi RESI point and interval estimation for survreg models
 #' @export
-resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
-                        nboot = 1000, boot.method = "nonparam", vcovfunc = vcov, alpha = 0.05, store.boot = FALSE, ...){
+resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+                         summary = TRUE, nboot = 1000, boot.method = "nonparam",
+                         vcovfunc = vcov, alpha = 0.05, store.boot = FALSE,
+                         Anova.args = list(), ...){
   if (missing(data)){
     stop('\nData argument is required for survreg model')
   }
@@ -205,32 +218,45 @@ resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE, s
     warning("Bayesian bootstrap not currently supported for survreg models, using non-parametric bootstrap")
   }
 
+  dots = list(...)
+  if ("vcov.args" %in% names(dots)){
+    warning("vcov.args ignored for survreg objects")
+  }
+
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
                anova = anova, summary = summary, nboot = nboot, vcovfunc = vcovfunc,
-               boot.method = "nonparam", store.boot = store.boot, ...)
+               boot.method = "nonparam", store.boot = store.boot, Anova.args = Anova.args, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for coxph models
 #' @export
-resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE, summary = TRUE,
-                         nboot = 1000, boot.method = "nonparam", vcovfunc = vcov, alpha = 0.05, store.boot = FALSE, ...){
+resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+                       summary = TRUE, nboot = 1000, boot.method = "nonparam",
+                       vcovfunc = vcov, alpha = 0.05, store.boot = FALSE, Anova.args = list(), ...){
   if (missing(data)){
     stop('\nData argument is required for coxph model')
   }
+
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
   if (boot.method == "bayes"){
     warning("Bayesian bootstrap not currently supported for coxph models, using non-parametric bootstrap")
   }
 
+  dots = list(...)
+  if ("vcov.args" %in% names(dots)){
+    warning("vcov.args ignored for survreg objects")
+  }
+
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
                anova = anova, summary = summary, nboot = nboot, vcovfunc = vcovfunc,
-               boot.method = "nonparam", store.boot = store.boot, ...)
+               boot.method = "nonparam", store.boot = store.boot, Anova.args = Anova.args, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for hurdle models
 #' @export
 resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
-                     nboot = 1000, boot.method = 'nonparam', vcovfunc = sandwich::sandwich, alpha = 0.05, store.boot = FALSE, ...){
+                     nboot = 1000, boot.method = 'nonparam', vcovfunc = sandwich::sandwich,
+                     alpha = 0.05, store.boot = FALSE, vcov.args = list(), ...){
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
   if (missing(data)){
@@ -245,7 +271,9 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 
   # point estimation
   output <- list(alpha = alpha, nboot = nboot, boot.method = tolower(boot.method))
-  output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced, data = data, anova = anova, summary = summary, vcovfunc = vcovfunc, ...))
+  output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
+                             data = data, anova = anova, summary = summary,
+                             vcovfunc = vcovfunc, vcov.args = vcov.args, ...))
 
   # bootstrapping
   boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
@@ -258,7 +286,8 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
       boot.model.reduced <- update(model.full, data = boot.data)
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
                                                   data = boot.data, summary = summary,
-                                                  vcovfunc = vcovfunc, ...)$estimates)
+                                                  vcovfunc = vcovfunc, vcov.args = vcov.args,
+                                                  ...)$estimates)
 
     }}
 
@@ -270,7 +299,8 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
       boot.model.reduced <- suppressMessages(update(model.reduced, data = boot.data, weights = g))
       boot.results[i,] = suppressMessages(resi_pe(model.full = boot.model.full, model.reduced = NULL,
                                                   data = boot.data, summary = summary,
-                                                  vcovfunc = vcovfunc, ...)$estimates)
+                                                  vcovfunc = vcovfunc, vcov.args = vcov.args,
+                                                  ...)$estimates)
     }}
 
 
@@ -352,11 +382,12 @@ resi.gee <- function(model.full, data, alpha = 0.05, nboot = 1000, ...){
 #' @describeIn resi RESI point and interval estimation for LME (nlme) models
 #' @importFrom nlme getGroups
 #' @export
-resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSandwich::vcovCR, ...){
+resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSandwich::vcovCR,
+                     vcov.args = list(), ...){
   warning("\nInterval performance not yet evaluated for lme")
   output <- list(alpha = alpha, nboot = nboot)
   # RESI point estimates
-  output = c(output, resi_pe(model.full = model.full, vcovfunc = vcovfunc))
+  output = c(output, resi_pe(model.full = model.full, vcovfunc = vcovfunc, vcov.args = vcov.args))
   data = model.full$data
   # id variable name
   id_var = attr(nlme::getGroups(model.full), "label")
@@ -367,8 +398,10 @@ resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSand
   for (i in 1:nboot){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
-    boot.mod = update(model.full, data = boot.data, fixed = as.formula(model.full$call$fixed), random = as.formula(model.full$call$random))
-    output.boot = cbind(output.boot, resi_pe(model.full = boot.mod, vcovfunc = vcovfunc)$coefficients[, 'RESI'])
+    boot.mod = update(model.full, data = boot.data, fixed = as.formula(model.full$call$fixed),
+                      random = as.formula(model.full$call$random))
+    output.boot = cbind(output.boot, resi_pe(model.full = boot.mod, vcovfunc = vcovfunc,
+                                             vcov.args = vcov.args)$coefficients[, 'RESI'])
   }
   output.boot = output.boot[, -1]
   RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
@@ -379,9 +412,10 @@ resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSand
 }
 
 #' @export
-resi.lmerMod <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSandwich::vcovCR, ...){
+resi.lmerMod <- function(model.full, alpha = 0.05, nboot = 1000,
+                         vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...){
   warning("\nInterval performance not yet evaluated for lmerMod")
-  output = resi_pe(model.full, vcovfunc = vcovfunc) # RESI point estimates
+  output = resi_pe(model.full, vcovfunc = vcovfunc, vcov.args = vcov.args) # RESI point estimates
   data = model.full@frame
   # id variable name
   id_var = names(model.full@flist)
@@ -391,7 +425,7 @@ resi.lmerMod <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = club
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
     boot.mod = update(model.full, data = boot.data)
-    rv.boot = resi_pe(boot.mod, vcovfunc = vcovfunc)
+    rv.boot = resi_pe(boot.mod, vcovfunc = vcovfunc, vcov.args = vcov.args)
     output.boot = cbind(output.boot, rv.boot$coefficients[, 'RESI'])
   }
   output.boot = output.boot[, -1]

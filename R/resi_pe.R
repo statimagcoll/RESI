@@ -10,7 +10,9 @@
 #' @param vcovfunc The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).
 #' @param summary Logical, whether to produce a summary (coefficients) table with the RESI columns added. By default = `TRUE`.
 #' @param anova Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.
-#' @param ... Other arguments to be passed to Anova function.
+#' @param Anova.args List, additional arguments to be passed to Anova function.
+#' @param vcov.args List, additional arguments to be passed to vcovfunc.
+#' @param ... Ignored.
 #' @importFrom aod wald.test
 #' @importFrom car Anova
 #' @importFrom lmtest waldtest
@@ -47,7 +49,8 @@ resi_pe <- function(model.full, ...){
 #' @describeIn resi_pe RESI point estimation
 #' @export
 resi_pe.default <- function(model.full, model.reduced = NULL, data,
-                    summary = TRUE, vcovfunc = sandwich::vcovHC, ...){
+                    summary = TRUE, vcovfunc = sandwich::vcovHC, Anova.args = list(),
+                    vcov.args = list(), ...){
   if (missing(data)){
       data = model.full$model
   }
@@ -62,8 +65,18 @@ resi_pe.default <- function(model.full, model.reduced = NULL, data,
     }
   }
 
+  # dealing with additional vcov args
+  if (length(vcov.args) == 0){
+    vcovfunc2 <- vcovfunc
+  } else{
+    vcov.args = c(formals(vcovfunc)[1], vcov.args)
+    vcovfunc2 <- function(x) {
+      vcov.args[[1]] = x
+      do.call(vcovfunc, vcov.args)}
+  }
+
   # overall
-  wald.test = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc, test = 'Chisq')
+  wald.test = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc2, test = 'Chisq')
   stats = wald.test$Chisq[2]
   overall.df = wald.test$Df[2]
   res.df = wald.test$Res.Df[2]
@@ -77,7 +90,7 @@ resi_pe.default <- function(model.full, model.reduced = NULL, data,
 
   # summary table (z statistics)
   if (summary){
-    summary.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc)
+    summary.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc2)
     summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
                              summary.tab[,'z value'], summary.tab[,'Pr(>|z|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
@@ -94,12 +107,25 @@ resi_pe.default <- function(model.full, model.reduced = NULL, data,
 #' @describeIn resi_pe RESI point estimation for generalized linear models
 #' @export
 resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                            summary = TRUE, vcovfunc = sandwich::vcovHC, ...){
-  output <- resi_pe.default(model.full, model.reduced, data, summary, vcovfunc)
+                            summary = TRUE, vcovfunc = sandwich::vcovHC,
+                        Anova.args = list(), vcov.args = list(), ...){
+  #browser()
+  output <- resi_pe.default(model.full = model.full, model.reduced = model.reduced,
+                            data = data, summary = summary, vcovfunc = vcovfunc,
+                            Anova.args = Anova.args, vcov.args = vcov.args, ...)
+
+  if (length(vcov.args) == 0){
+    vcovfunc2 <- vcovfunc
+  } else{
+    vcov.args = c(formals(vcovfunc)[1], vcov.args)
+    vcovfunc2 <- function(x) {
+      vcov.args[[1]] = x
+      do.call(vcovfunc, vcov.args)}
+  }
 
   # Anova table (Chi sq statistics)
   if (anova){
-    suppressMessages(anova.tab <- car::Anova(model.full, test.statistic = 'Wald', vcov. = vcovfunc, ...))
+    suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full, test.statistic = 'Wald', vcov. = vcovfunc2), Anova.args)))
     anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], model.full$df.residual)
     output$anova = anova.tab
     names.est = names(output$estimates)
@@ -120,7 +146,8 @@ resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @describeIn resi_pe RESI point estimation for linear models
 #' @export
 resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                       summary = TRUE, vcovfunc = sandwich::vcovHC, ...){
+                       summary = TRUE, vcovfunc = sandwich::vcovHC,
+                       Anova.args = list(), vcov.args = list(), ...){
   if (missing(data)){
     data = model.full$model
   }
@@ -135,8 +162,17 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     }
   }
 
+  if (length(vcov.args) == 0){
+    vcovfunc2 <- vcovfunc
+  } else{
+    vcov.args = c(formals(vcovfunc)[1], vcov.args)
+    vcovfunc2 <- function(x) {
+      vcov.args[[1]] = x
+      do.call(vcovfunc, vcov.args)}
+  }
+
   # overall
-  wald.test = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc, test = 'Chisq')
+  wald.test = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc2, test = 'Chisq')
   stats = wald.test$Chisq[2]
   overall.df = wald.test$Df[2]
   res.df = wald.test$Res.Df[2]
@@ -150,7 +186,7 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # summary table (t statistics)
   if (summary){
-    summary.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc)
+    summary.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc2)
     summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
                             summary.tab[,'t value'], summary.tab[,'Pr(>|t|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
@@ -163,7 +199,8 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # Anova table (F statistics)
   if (anova){
-    suppressMessages(anova.tab <- car::Anova(model.full, vcov. = vcovfunc, ...))
+    suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full,
+                                              vcov. = vcovfunc2), Anova.args)))
     anova.tab[,'RESI'] = f2S(anova.tab[,'F'], anova.tab[,'Df'], res.df)
     output$anova = anova.tab
     output$estimates = c(output$estimates, anova.tab$RESI)
@@ -183,8 +220,8 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
 #' @describeIn resi_pe RESI point estimation for nonlinear least squares models
 #' @export
-resi_pe.nls <- function(model.full, model.reduced = NULL, data,
-                       summary = TRUE, vcovfunc = regtools::nlshc, ...){
+resi_pe.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
+                        vcovfunc = regtools::nlshc, vcov.args = list(), ...){
   if (missing(data) | is.null(data)){
     stop('\nData argument is required for nls model')
   }
@@ -199,13 +236,22 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data,
     warning("Sandwich vcov function not applicable for nls model type, vcovfunc set to regtools::nlshc")
   }
 
+  if (length(vcov.args) == 0){
+    vcovfunc2 <- vcovfunc
+  } else{
+    vcov.args = c(formals(vcovfunc)[1], vcov.args)
+    vcovfunc2 <- function(x) {
+      vcov.args[[1]] = x
+      do.call(vcovfunc, vcov.args)}
+  }
+
   var.names = names(coef(model.full))
-  vcovmat = vcovfunc(model.full)
+  vcovmat = vcovfunc2(model.full)
   rownames(vcovmat) = var.names
   colnames(vcovmat) = var.names
 
   # overall
-  overall.tab = aod::wald.test(vcov(model.full), coef(model.full), Terms = 1:length(coef(model.full)))$result$chi2
+  overall.tab = aod::wald.test(vcovmat, coef(model.full), Terms = 1:length(coef(model.full)))$result$chi2
   stats = overall.tab["chi2"]
   overall.df = overall.tab["df"]
   res.df = nrow(data) - overall.df
@@ -214,6 +260,7 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data,
   overall.tab = as.data.frame(t(overall.tab))
   rownames(overall.tab) = "Wald Test"
   output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
+                 model.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1")),
                  estimates = overall.resi.hat, overall = overall.tab)
   names.est = "Overall"
   names(output$estimates) = names.est
@@ -245,7 +292,7 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data,
 #' @describeIn resi_pe RESI point estimation for survreg
 #' @export
 resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                        summary = TRUE, vcovfunc = vcov, ...){
+                        summary = TRUE, vcovfunc = vcov, Anova.args = list(), ...){
   if (missing(data)){
     stop('\nData argument is required for survreg model')
   }
@@ -253,6 +300,7 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
   if (!identical(vcovfunc, vcov)){
     warning("vcovfunc argument ignored for survreg objects")
   }
+
   if(is.null(model.reduced)){
     form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
     if (is.null(model.full$na.action)){
@@ -278,7 +326,8 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
         V <- V[-p, -p]
     }
     fun <- utils::getFromNamespace("Anova.II.default", "car")
-    anova.tab <- fun(model.full, V, test = "Chisq", error.df = df.residual(model.full))
+    anova.tab <- do.call(fun, c(list(mod = model.full, vcov. = V, test = "Chisq",
+                                     error.df = df.residual(model.full)), Anova.args))
     anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], model.full$df.residual)
     output$anova = anova.tab
     names.est = names(output$estimates)
@@ -297,73 +346,10 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
   return(output)
 }
 
-#' @describeIn resi_pe RESI point estimation for hurdle models
-#' @export
-resi_pe.hurdle <- function(model.full, model.reduced = NULL, data,
-                           summary = TRUE, vcovfunc = sandwich::sandwich, ...){
-  if (missing(data)){
-    data = model.full$model
-  }
-
-  if (is.null(model.reduced)){
-    form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
-    if (nrow(model.full$model) == nrow(data)){
-      model.reduced <- update(model.full, formula = form.reduced, data = data)
-    }
-    else{
-      model.reduced <- update(model.full, formula = form.reduced, data = model.full$model)
-    }
-  }
-
-  if (identical(vcovfunc, sandwich::vcovHC)){
-    vcovfunc = sandwich::sandwich
-  }
-
-  # overall
-  wald.test = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc, test = 'Chisq')
-  stats = wald.test$Chisq[2]
-  overall.df = wald.test$Df[2]
-  res.df = wald.test$Res.Df[2]
-  overall.resi.hat = chisq2S(stats, overall.df, res.df)
-  wald.test[2, 'RESI'] = overall.resi.hat
-  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
-                 model.reduced = list(call = model.reduced$call, formula = formula(model.reduced)),
-                 estimates = overall.resi.hat, overall = wald.test)
-  names.est = "Overall"
-  names(output$estimates) = names.est
-
-  # summary table (z statistics)
-  if (summary){
-    summary.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc, df = 0)
-    summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
-                            summary.tab[,'z value'], summary.tab[,'Pr(>|z|)'], row.names = rownames(summary.tab))
-    colnames(summary.df) = colnames(summary.tab)
-    summary.df[,'RESI'] = z2S(summary.df[,'z value'], nrow(data))
-    output$coefficients = summary.df
-    output$estimates = c(output$estimates, summary.df$RESI)
-    names.est = c(names.est, rownames(summary.df))
-    names(output$estimates) = names.est
-  }
-
-  if(identical(vcovfunc, stats::vcov)){
-    output$naive.var = TRUE
-  }
-  else{
-    output$naive.var = FALSE
-  }
-
-  return(output)
-}
-
-#' @describeIn resi_pe RESI point estimation for zeroinfl models
-#' @export
-resi_pe.zeroinfl <- resi_pe.hurdle
-
-
 #' @describeIn resi_pe RESI point estimation for coxph models
 #' @export
 resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                       summary = TRUE, vcovfunc = vcov, ...){
+                          summary = TRUE, vcovfunc = vcov, Anova.args = list(), ...){
   if (missing(data)){
     stop('\nData argument is required for coxph model')
   }
@@ -388,6 +374,7 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   rownames(overall.tab) = "Wald Test"
   ## the output object
   output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
+                 model.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1")),
                  estimates = overall.resi.hat, overall = overall.tab)
   names.est = "Overall"
   names(output$estimates) = names.est
@@ -406,7 +393,7 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # Anova table (Chi sq statistics)
   if (anova){
-    suppressMessages(anova.tab <- car::Anova(model.full, test.statistic = 'Wald', ...))
+    suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full, test.statistic = 'Wald'), Anova.args)))
     anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], res.df)
     output$anova = anova.tab
     output$estimates = c(output$estimates, anova.tab$RESI)
@@ -424,6 +411,76 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   return(output)
 }
 
+#' @describeIn resi_pe RESI point estimation for hurdle models
+#' @export
+resi_pe.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
+                           vcovfunc = sandwich::sandwich, vcov.args = list(), ...){
+  if (missing(data)){
+    data = model.full$model
+  }
+
+  if (is.null(model.reduced)){
+    form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
+    if (nrow(model.full$model) == nrow(data)){
+      model.reduced <- update(model.full, formula = form.reduced, data = data)
+    }
+    else{
+      model.reduced <- update(model.full, formula = form.reduced, data = model.full$model)
+    }
+  }
+
+  if (identical(vcovfunc, sandwich::vcovHC)){
+    vcovfunc = sandwich::sandwich
+  }
+
+  if (length(vcov.args) == 0){
+    vcovfunc2 <- vcovfunc
+  } else{
+    vcov.args = c(formals(vcovfunc)[1], vcov.args)
+    vcovfunc2 <- function(x) {
+      vcov.args[[1]] = x
+      do.call(vcovfunc, vcov.args)}
+  }
+
+  # overall
+  wald.test = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc2, test = 'Chisq')
+  stats = wald.test$Chisq[2]
+  overall.df = wald.test$Df[2]
+  res.df = wald.test$Res.Df[2]
+  overall.resi.hat = chisq2S(stats, overall.df, res.df)
+  wald.test[2, 'RESI'] = overall.resi.hat
+  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
+                 model.reduced = list(call = model.reduced$call, formula = formula(model.reduced)),
+                 estimates = overall.resi.hat, overall = wald.test)
+  names.est = "Overall"
+  names(output$estimates) = names.est
+
+  # summary table (z statistics)
+  if (summary){
+    summary.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc2, df = 0)
+    summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
+                            summary.tab[,'z value'], summary.tab[,'Pr(>|z|)'], row.names = rownames(summary.tab))
+    colnames(summary.df) = colnames(summary.tab)
+    summary.df[,'RESI'] = z2S(summary.df[,'z value'], nrow(data))
+    output$coefficients = summary.df
+    output$estimates = c(output$estimates, summary.df$RESI)
+    names.est = c(names.est, rownames(summary.df))
+    names(output$estimates) = names.est
+  }
+
+  if(identical(vcovfunc, stats::vcov)){
+    output$naive.var = TRUE
+  }
+  else{
+    output$naive.var = FALSE
+  }
+
+  return(output)
+}
+
+#' @describeIn resi_pe RESI point estimation for zeroinfl models
+#' @export
+resi_pe.zeroinfl <- resi_pe.hurdle
 
 #' @describeIn resi_pe RESI point estimation for geeglm object
 #' @export
@@ -452,22 +509,39 @@ resi_pe.gee <- function(model.full, ...){
 #' @describeIn resi_pe RESI point estimation for lme object
 #' @importFrom clubSandwich vcovCR
 #' @export
-resi_pe.lme <- function(model.full, vcovfunc = clubSandwich::vcovCR, ...){
+resi_pe.lme <- function(model.full, vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...){
   x = as.matrix(summary(model.full)$tTable)
   #sample size
   N = summary(model.full)$dims$ngrps[1]
   # robust se
-  robust.var = diag(vcovfunc(model.full, type = "CR3"))
+  if (length(vcov.args) == 0){
+    vcov.args = c(formals(vcovfunc)[1], list(type = "CR3"))
+  } else{
+    vcov.args = c(formals(vcovfunc)[1], vcov.args)
+    if (!("type" %in% names(vcov.args))){
+      vcov.args = c(vcov.args, list(type = "CR3"))
+    }}
+  vcovfunc2 <- function(x) {
+    vcov.args[[1]] = x
+    do.call(vcovfunc, vcov.args)}
+
+  robust.var = diag(vcovfunc2(model.full))
   robust.se = sqrt(robust.var)
   output = list(model.full = list(call = model.full$call, formula = formula(model.full)),
-       coefficients =  as.data.frame(cbind(x, 'Robust.SE' = robust.se, 'Robust Wald' = (x[, 'Value']^2/robust.var), RESI = RESI::chisq2S(x[, 'Value']^2/robust.var, 1, N))))
-  output$naive.var = FALSE
+       coefficients =  as.data.frame(cbind(x, 'Robust.SE' = robust.se,
+       'Robust Wald' = (x[, 'Value']^2/robust.var), RESI = RESI::chisq2S(x[, 'Value']^2/robust.var, 1, N))))
+  if(identical(vcovfunc, stats::vcov)){
+    output$naive.var = TRUE
+  }
+  else{
+    output$naive.var = FALSE
+  }
   return(output)
 }
 
 #' @describeIn resi_pe RESI point estimation for lmerMod object
 #' @export
-resi_pe.lmerMod <- function(model.full, vcovfunc = clubSandwich::vcovCR, ...){
+resi_pe.lmerMod <- function(model.full, vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...){
   x = as.matrix(summary(model.full)$coefficients)
   #sample size
   N = summary(model.full)$ngrps
@@ -476,7 +550,19 @@ resi_pe.lmerMod <- function(model.full, vcovfunc = clubSandwich::vcovCR, ...){
   if (identical(vcovfunc, stats::vcov)) {
     output = list(coefficients = cbind(x, 'Wald' = x[, 't value']^2, RESI = RESI::chisq2S(x[, 't value']^2, 1, N)), naive.var = TRUE)
     } else {
-      robust_var = diag(vcovfunc(model.full, type = "CR3"))
+      if (length(vcov.args) == 0){
+        if (identical(vcovfunc, clubSandwich::vcovCR)){
+          vcov.args = c(formals(vcovfunc)[1], list(type = "CR3"))
+        }} else{
+            if (identical(vcovfunc, clubSandwich::vcovCR)){
+              if (!("type" %in% names(vcov.args))){
+                vcov.args = c(vcov.args, list(type = "CR3"))}}
+            vcov.args = c(formals(vcovfunc)[1], vcov.args)}
+
+      vcovfunc2 <- function(x) {
+        vcov.args[[1]] = x
+        do.call(vcovfunc, vcov.args)}
+      robust_var = diag(vcovfunc2(model.full))
       robust_se = sqrt(robust_var)
       output = list(coefficients = cbind(x, 'Robust.SE' = robust_se, 'Robust Wald' = (x[, 'Estimate']^2/robust_var), RESI = RESI::chisq2S(x[, 'Estimate']^2/robust_var, 1, N)), naive.var = FALSE)
       }
