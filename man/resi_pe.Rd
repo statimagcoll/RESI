@@ -7,9 +7,9 @@
 \alias{resi_pe.lm}
 \alias{resi_pe.nls}
 \alias{resi_pe.survreg}
+\alias{resi_pe.coxph}
 \alias{resi_pe.hurdle}
 \alias{resi_pe.zeroinfl}
-\alias{resi_pe.coxph}
 \alias{resi_pe.geeglm}
 \alias{resi_pe.gee}
 \alias{resi_pe.lme}
@@ -24,6 +24,8 @@ resi_pe(model.full, ...)
   data,
   summary = TRUE,
   vcovfunc = sandwich::vcovHC,
+  Anova.args = list(),
+  vcov.args = list(),
   ...
 )
 
@@ -34,6 +36,8 @@ resi_pe(model.full, ...)
   anova = TRUE,
   summary = TRUE,
   vcovfunc = sandwich::vcovHC,
+  Anova.args = list(),
+  vcov.args = list(),
   ...
 )
 
@@ -44,6 +48,8 @@ resi_pe(model.full, ...)
   anova = TRUE,
   summary = TRUE,
   vcovfunc = sandwich::vcovHC,
+  Anova.args = list(),
+  vcov.args = list(),
   ...
 )
 
@@ -53,6 +59,7 @@ resi_pe(model.full, ...)
   data,
   summary = TRUE,
   vcovfunc = regtools::nlshc,
+  vcov.args = list(),
   ...
 )
 
@@ -63,24 +70,7 @@ resi_pe(model.full, ...)
   anova = TRUE,
   summary = TRUE,
   vcovfunc = vcov,
-  ...
-)
-
-\method{resi_pe}{hurdle}(
-  model.full,
-  model.reduced = NULL,
-  data,
-  summary = TRUE,
-  vcovfunc = sandwich::sandwich,
-  ...
-)
-
-\method{resi_pe}{zeroinfl}(
-  model.full,
-  model.reduced = NULL,
-  data,
-  summary = TRUE,
-  vcovfunc = sandwich::sandwich,
+  Anova.args = list(),
   ...
 )
 
@@ -91,6 +81,27 @@ resi_pe(model.full, ...)
   anova = TRUE,
   summary = TRUE,
   vcovfunc = vcov,
+  Anova.args = list(),
+  ...
+)
+
+\method{resi_pe}{hurdle}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  summary = TRUE,
+  vcovfunc = sandwich::sandwich,
+  vcov.args = list(),
+  ...
+)
+
+\method{resi_pe}{zeroinfl}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  summary = TRUE,
+  vcovfunc = sandwich::sandwich,
+  vcov.args = list(),
   ...
 )
 
@@ -98,14 +109,14 @@ resi_pe(model.full, ...)
 
 \method{resi_pe}{gee}(model.full, ...)
 
-\method{resi_pe}{lme}(model.full, vcovfunc = clubSandwich::vcovCR, ...)
+\method{resi_pe}{lme}(model.full, vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...)
 
-\method{resi_pe}{lmerMod}(model.full, vcovfunc = clubSandwich::vcovCR, ...)
+\method{resi_pe}{lmerMod}(model.full, vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...)
 }
 \arguments{
 \item{model.full}{\code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.}
 
-\item{...}{Other arguments to be passed to Anova function.}
+\item{...}{Ignored.}
 
 \item{model.reduced}{Fitted model object of same type as model.full. By default `NULL`; the same model as the full model but only having intercept.}
 
@@ -114,6 +125,10 @@ resi_pe(model.full, ...)
 \item{summary}{Logical, whether to produce a summary (coefficients) table with the RESI columns added. By default = `TRUE`.}
 
 \item{vcovfunc}{The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).}
+
+\item{Anova.args}{List, additional arguments to be passed to Anova function.}
+
+\item{vcov.args}{List, additional arguments to be passed to vcovfunc.}
 
 \item{anova}{Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.}
 }
@@ -159,11 +174,11 @@ the output.
 
 \item \code{survreg}: RESI point estimation for survreg
 
+\item \code{coxph}: RESI point estimation for coxph models
+
 \item \code{hurdle}: RESI point estimation for hurdle models
 
 \item \code{zeroinfl}: RESI point estimation for zeroinfl models
-
-\item \code{coxph}: RESI point estimation for coxph models
 
 \item \code{geeglm}: RESI point estimation for geeglm object
 

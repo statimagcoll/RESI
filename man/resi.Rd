@@ -26,6 +26,8 @@ resi(model.full, ...)
   vcovfunc = sandwich::vcovHC,
   alpha = 0.05,
   store.boot = FALSE,
+  Anova.args = list(),
+  vcov.args = list(),
   ...
 )
 
@@ -39,6 +41,7 @@ resi(model.full, ...)
   vcovfunc = regtools::nlshc,
   alpha = 0.05,
   store.boot = FALSE,
+  vcov.args = list(),
   ...
 )
 
@@ -53,6 +56,7 @@ resi(model.full, ...)
   vcovfunc = vcov,
   alpha = 0.05,
   store.boot = FALSE,
+  Anova.args = list(),
   ...
 )
 
@@ -67,6 +71,7 @@ resi(model.full, ...)
   vcovfunc = vcov,
   alpha = 0.05,
   store.boot = FALSE,
+  Anova.args = list(),
   ...
 )
 
@@ -80,6 +85,7 @@ resi(model.full, ...)
   vcovfunc = sandwich::sandwich,
   alpha = 0.05,
   store.boot = FALSE,
+  vcov.args = list(),
   ...
 )
 
@@ -93,6 +99,7 @@ resi(model.full, ...)
   vcovfunc = sandwich::sandwich,
   alpha = 0.05,
   store.boot = FALSE,
+  vcov.args = list(),
   ...
 )
 
@@ -105,13 +112,14 @@ resi(model.full, ...)
   alpha = 0.05,
   nboot = 1000,
   vcovfunc = clubSandwich::vcovCR,
+  vcov.args = list(),
   ...
 )
 }
 \arguments{
 \item{model.full}{\code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.}
 
-\item{...}{Other arguments to be passed to Anova function.}
+\item{...}{Ignored.}
 
 \item{model.reduced}{Fitted model object of same type as model.full. By default `NULL`; the same model as the full model but only having intercept.}
 
@@ -130,6 +138,10 @@ resi(model.full, ...)
 \item{alpha}{Numeric, significance level of the constructed CIs. By default, 0.05.}
 
 \item{store.boot}{Logical, whether to store all the bootstrapped estimates. By default, `FALSE`.}
+
+\item{Anova.args}{List, additional arguments to be passed to Anova function.}
+
+\item{vcov.args}{List, additional arguments to be passed to vcovfunc.}
 }
 \value{
 Returns a list that includes function arguments, RESI point estimates,
