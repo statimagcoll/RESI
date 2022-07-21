@@ -270,7 +270,12 @@ plot.resi <- function(x, ycex.axis = 1, alpha = NULL, ...){
       alpha = alpha[1]
     }
     if (!(alpha %in% x$alpha)){
-      stop('\nSpecified alpha not found in the resi object')
+      if (is.null(x$boot.results)){
+        stop('\nSpecified alpha not found in the resi object')
+      }
+      CIs = apply(x$boot.results[,2:(1+nrow(x$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+      CIs = t(CIs)
+      x$coefficients[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-rev(alpha)/2)*100, '%', sep=''))] = CIs
     }
   }
   ll = paste(alpha/2*100, "%", sep = "")
