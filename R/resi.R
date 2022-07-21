@@ -11,7 +11,7 @@
 #' @param boot.method String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.
 #' @param alpha Numeric, significance level of the constructed CIs. By default, 0.05.
 #' @param store.boot Logical, whether to store all the bootstrapped estimates. By default, `FALSE`.
-#' @param Anova.args List, additional arguments to be passed to Anova function.
+#' @param Anova.args List, additional arguments to be passed to \link[car]{Anova} function.
 #' @param vcov.args List, additional arguments to be passed to vcovfunc.
 #' @param ... Ignored.
 #' @importFrom aod wald.test
@@ -56,6 +56,24 @@
 #' @family RESI functions
 #' @seealso \code{\link{resi_pe}}, \code{\link{vcovHC}}, \code{\link{nlshc}},
 #' \code{\link{f2S}}, \code{\link{chisq2S}}, \code{\link{z2S}}, \code{\link{t2S}}
+#'
+#' @examples
+#' # fit linear model
+#' mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
+#'
+#' # run resi on fitted model with 500 bootstrap replicates
+#' resi(mod, nboot = 500)
+#'
+#' # for some model types and formula structures, data argument is required
+#' library(splines)
+#' mod = glm(smoker ~ ns(age) + region, data = RESI::insurance, family = "binomial")
+#'
+#' # store bootstrap results for calculating different CIs later
+#' # specify additional arguments to the variance-covariance function via vcov.args
+#' resi.obj = resi(mod, data = RESI::insurance, store.boot = TRUE, alpha = 0.01,
+#' vcov.args = list(type = "HC0"))
+#' summary(resi.obj, alpha = c(0.05, 0.1))
+#'
 #' @references Vandekar S, Tao R, Blume J. A Robust Effect Size Index. \emph{Psychometrika}. 2020 Mar;85(1):232-246. doi: 10.1007/s11336-020-09698-2.
 #'
 #' Kang, K., Armstrong, K., Avery, S., McHugo, M., Heckers, S., & Vandekar, S. (2021). Accurate confidence interval estimation for non-centrality parameters and effect size indices. \emph{arXiv preprint arXiv:2111.05966}.
@@ -133,6 +151,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     CIs = apply(boot.results[,(ncol(boot.results)-length(which(rownames(output$anova) != "Residuals"))+1):ncol(boot.results)], 2,  quantile, probs = alpha.order, na.rm = TRUE)
     CIs = t(CIs)
     output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+    class(output$anova) = c("anova_resi", class(output$anova))
   }
 
   if(store.boot){
