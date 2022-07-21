@@ -139,7 +139,7 @@ resi(model.full, ...)
 
 \item{store.boot}{Logical, whether to store all the bootstrapped estimates. By default, `FALSE`.}
 
-\item{Anova.args}{List, additional arguments to be passed to Anova function.}
+\item{Anova.args}{List, additional arguments to be passed to \link[car]{Anova} function.}
 
 \item{vcov.args}{List, additional arguments to be passed to vcovfunc.}
 }
@@ -201,6 +201,24 @@ and then try rerunning \code{resi}.
 \item \code{lme}: RESI point and interval estimation for LME (nlme) models
 }}
 
+\examples{
+# fit linear model
+mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
+
+# run resi on fitted model with 500 bootstrap replicates
+resi(mod, nboot = 500)
+
+# for some model types and formula structures, data argument is required
+library(splines)
+mod = glm(smoker ~ ns(age) + region, data = RESI::insurance, family = "binomial")
+
+# store bootstrap results for calculating different CIs later
+# specify additional arguments to the variance-covariance function via vcov.args
+resi.obj = resi(mod, data = RESI::insurance, store.boot = TRUE, alpha = 0.01,
+vcov.args = list(type = "HC0"))
+summary(resi.obj, alpha = c(0.05, 0.1))
+
+}
 \references{
 Vandekar S, Tao R, Blume J. A Robust Effect Size Index. \emph{Psychometrika}. 2020 Mar;85(1):232-246. doi: 10.1007/s11336-020-09698-2.
 
