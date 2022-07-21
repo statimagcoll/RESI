@@ -132,6 +132,7 @@ resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     output$estimates = c(output$estimates, anova.tab$RESI)
     names.est = c(names.est, rownames(anova.tab))
     names(output$estimates) = names.est
+    class(output$anova) = c("anova_resi", class(output$anova))
   }
 
   if(identical(vcovfunc, stats::vcov)){
@@ -207,6 +208,7 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     names.est = c(names.est, rownames(anova.tab))
     names(output$estimates) = names.est
     output$estimates = output$estimates[which(output$estimates != "Residuals")]
+    class(output$anova) = c("anova_resi", class(output$anova))
   }
 
   if(identical(vcovfunc, stats::vcov)){
@@ -293,6 +295,8 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 #' @export
 resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                         summary = TRUE, vcovfunc = vcov, Anova.args = list(), ...){
+  # add warning for specifying type 3 anova
+
   if (missing(data)){
     stop('\nData argument is required for survreg model')
   }
@@ -334,6 +338,7 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
     output$estimates = c(output$estimates, anova.tab$RESI)
     names.est = c(names.est, rownames(anova.tab))
     names(output$estimates) = names.est
+    class(output$anova) = c("anova_resi", class(output$anova))
   }
 
   if(is.null(model.full$naive.var)){
@@ -399,6 +404,7 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     output$estimates = c(output$estimates, anova.tab$RESI)
     names.est = c(names.est, rownames(anova.tab))
     names(output$estimates) = names.est
+    class(output$anova) = c("anova_resi", class(output$anova))
   }
 
   if(is.null(model.full$naive.var)){
