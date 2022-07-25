@@ -13,6 +13,8 @@
 #' @param store.boot Logical, whether to store all the bootstrapped estimates. By default, `FALSE`.
 #' @param Anova.args List, additional arguments to be passed to \link[car]{Anova} function.
 #' @param vcov.args List, additional arguments to be passed to vcovfunc.
+#' @param t2S.form Numeric, 1 (default) or 2. Formula to be used to convert T statistic to RESI. See details.
+#' @param z2S.form Numeric, 1 (default) or 2. Formula to be used to convert Z statistic to RESI. See details.
 #' @param ... Ignored.
 #' @importFrom aod wald.test
 #' @importFrom car Anova
@@ -33,10 +35,18 @@
 #' of the test statistic. The RESI estimate is consistent for all four
 #' (Chi-square, F, T, and Z) types of statistics used. The Chi-square and F-based
 #' calculations rely on asymptotic theory, so they may be biased in small samples.
-#' When possible, the T and Z statistics are used, as these are unbiased and can
-#' be positive or negative. The RESI based on the Chi-Square and F statistics is
-#' always greater than or equal to 0. The type of statistic used is listed with
-#' the output.
+#' When possible, the T and Z statistics are used. There are two formulas for both
+#' the T and Z statistic conversion. The first, option 1 for `t2S.form` and `z2S.form`,
+#' are based on solving the expected value of the T or Z statistic for the RESI.
+#' The second (option 2) is based on squaring the T or Z statistic and using the
+#' F or Chi-square statistic conversion. Both of these methods are consistent, but
+#' option 2 exhibits a notable amount of finite sample bias, so option 1 is the
+#' default. Option 2 may be appealing because its absolute value will be equal to
+#' the RESI based on the F or Chi-square statistic. The RESI based on the Chi-Square
+#' and F statistics is always greater than or equal to 0. The type of statistic
+#' used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
+#' \code{\link{t2S}} (option 1), \code{\link{z2S}} (option 1), \code{\link{t2S_alt}}
+#' (option 2), and \code{\link{z2S_alt}} (option 2) for more details on the formulas.
 #'
 #' For most model types supported by this package, two bootstrap options are
 #' available. The default is the standard non-parametric bootstrap. Bayesian
@@ -87,7 +97,8 @@ resi <- function(model.full, ...){
 resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                          summary = TRUE, nboot = 1000, boot.method = 'nonparam',
                          vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
-                         Anova.args = list(), vcov.args = list(), ...){
+                         Anova.args = list(), vcov.args = list(), z2S.form = 1,
+                         t2S.form = 1, ...){
 
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
@@ -101,7 +112,8 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   output <- list(alpha = alpha, nboot = nboot, boot.method = tolower(boot.method))
   output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
                              data = data, anova = anova, summary = summary,
-                             vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args, ...))
+                             vcovfunc = vcovfunc, Anova.args = Anova.args,
+                             vcov.args = vcov.args, z2S.form = z2S.form, t2S.form = t2S.form, ...))
 
   # bootstrapping
   boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
@@ -119,7 +131,8 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
       }
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
                                                   data = boot.data, anova = anova, summary = summary,
-                                                  vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args, ...)$estimates)
+                                                  vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args,
+                                                  z2S.form = z2S.form, t2S.form = t2S.form, ...)$estimates)
     }}
 
   # bayesian bootstrap
@@ -135,7 +148,8 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
       }
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
                                                   data = boot.data, anova = anova, summary = summary,
-                                                  vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args, ...)$estimates)
+                                                  vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args,
+                                                  z2S.form = z2S.form, t2S.form = t2S.form, ...)$estimates)
     }}
 
   alpha.order = sort(c(alpha/2, 1-alpha/2))
@@ -166,7 +180,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
                      nboot = 1000, boot.method = 'nonparam',
                      vcovfunc = regtools::nlshc, alpha = 0.05, store.boot = FALSE,
-                     vcov.args = list(), ...){
+                     vcov.args = list(), t2S.form = 1, ...){
 
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
@@ -178,7 +192,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
   output <- list(alpha = alpha, nboot = nboot, boot.method = tolower(boot.method))
   output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
                              data = data, anova = anova, summary = summary,
-                             vcovfunc = vcovfunc, vcov.args = vcov.args, ...))
+                             vcovfunc = vcovfunc, vcov.args = vcov.args, t2S.form = t2S.form, ...))
 
   # bootstrapping
   boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
@@ -191,7 +205,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
                                                   data = boot.data, summary = summary,
                                                   vcovfunc = vcovfunc, vcov.args = vcov.args,
-                                                  ...)$estimates)
+                                                  t2S.form = t2S.form, ...)$estimates)
 
     }}
 
@@ -203,7 +217,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
                                                   data = boot.data, summary = summary,
                                                   vcovfunc = vcovfunc, vcov.args = vcov.args,
-                                                  ...)$estimates)
+                                                  t2S.form = t2S.form, ...)$estimates)
 
     }}
 
@@ -228,7 +242,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                          summary = TRUE, nboot = 1000, boot.method = "nonparam",
                          vcovfunc = vcov, alpha = 0.05, store.boot = FALSE,
-                         Anova.args = list(), ...){
+                         Anova.args = list(), z2S.form = 1, ...){
   if (missing(data)){
     stop('\nData argument is required for survreg model')
   }
@@ -244,14 +258,16 @@ resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
                anova = anova, summary = summary, nboot = nboot, vcovfunc = vcovfunc,
-               boot.method = "nonparam", store.boot = store.boot, Anova.args = Anova.args, ...)
+               boot.method = "nonparam", store.boot = store.boot, Anova.args = Anova.args,
+               z2S.form = z2S.form, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for coxph models
 #' @export
 resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                        summary = TRUE, nboot = 1000, boot.method = "nonparam",
-                       vcovfunc = vcov, alpha = 0.05, store.boot = FALSE, Anova.args = list(), ...){
+                       vcovfunc = vcov, alpha = 0.05, store.boot = FALSE,
+                       Anova.args = list(), z2S.form = 1, ...){
   if (missing(data)){
     stop('\nData argument is required for coxph model')
   }
@@ -268,14 +284,15 @@ resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
                anova = anova, summary = summary, nboot = nboot, vcovfunc = vcovfunc,
-               boot.method = "nonparam", store.boot = store.boot, Anova.args = Anova.args, ...)
+               boot.method = "nonparam", store.boot = store.boot, Anova.args = Anova.args,
+               z2S.form = z2S.form, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for hurdle models
 #' @export
 resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
                      nboot = 1000, boot.method = 'nonparam', vcovfunc = sandwich::sandwich,
-                     alpha = 0.05, store.boot = FALSE, vcov.args = list(), ...){
+                     alpha = 0.05, store.boot = FALSE, vcov.args = list(), z2S.form = 1, ...){
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
   if (missing(data)){
@@ -292,7 +309,7 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
   output <- list(alpha = alpha, nboot = nboot, boot.method = tolower(boot.method))
   output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
                              data = data, anova = anova, summary = summary,
-                             vcovfunc = vcovfunc, vcov.args = vcov.args, ...))
+                             vcovfunc = vcovfunc, vcov.args = vcov.args, z2S.form = z2S.form, ...))
 
   # bootstrapping
   boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
@@ -306,7 +323,7 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
                                                   data = boot.data, summary = summary,
                                                   vcovfunc = vcovfunc, vcov.args = vcov.args,
-                                                  ...)$estimates)
+                                                  z2S.form = z2S.form, ...)$estimates)
 
     }}
 
