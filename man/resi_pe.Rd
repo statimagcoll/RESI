@@ -26,6 +26,7 @@ resi_pe(model.full, ...)
   vcovfunc = sandwich::vcovHC,
   Anova.args = list(),
   vcov.args = list(),
+  z2S.form = 1,
   ...
 )
 
@@ -38,6 +39,7 @@ resi_pe(model.full, ...)
   vcovfunc = sandwich::vcovHC,
   Anova.args = list(),
   vcov.args = list(),
+  z2S.form = 1,
   ...
 )
 
@@ -50,6 +52,7 @@ resi_pe(model.full, ...)
   vcovfunc = sandwich::vcovHC,
   Anova.args = list(),
   vcov.args = list(),
+  t2S.form = 1,
   ...
 )
 
@@ -60,6 +63,7 @@ resi_pe(model.full, ...)
   summary = TRUE,
   vcovfunc = regtools::nlshc,
   vcov.args = list(),
+  t2S.form = 1,
   ...
 )
 
@@ -71,6 +75,7 @@ resi_pe(model.full, ...)
   summary = TRUE,
   vcovfunc = vcov,
   Anova.args = list(),
+  z2S.form = 1,
   ...
 )
 
@@ -82,6 +87,7 @@ resi_pe(model.full, ...)
   summary = TRUE,
   vcovfunc = vcov,
   Anova.args = list(),
+  z2S.form = 1,
   ...
 )
 
@@ -92,6 +98,7 @@ resi_pe(model.full, ...)
   summary = TRUE,
   vcovfunc = sandwich::sandwich,
   vcov.args = list(),
+  z2S.form = 1,
   ...
 )
 
@@ -102,6 +109,7 @@ resi_pe(model.full, ...)
   summary = TRUE,
   vcovfunc = sandwich::sandwich,
   vcov.args = list(),
+  z2S.form = 1,
   ...
 )
 
@@ -130,7 +138,11 @@ resi_pe(model.full, ...)
 
 \item{vcov.args}{List, additional arguments to be passed to vcovfunc.}
 
+\item{z2S.form}{Numeric, 1 (default) or 2. Formula to be used to convert Z statistic to RESI. See details.}
+
 \item{anova}{Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.}
+
+\item{t2S.form}{Numeric, 1 (default) or 2. Formula to be used to convert T statistic to RESI. See details.}
 }
 \value{
 Returns a list containing RESI point estimates

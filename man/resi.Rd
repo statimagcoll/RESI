@@ -28,6 +28,8 @@ resi(model.full, ...)
   store.boot = FALSE,
   Anova.args = list(),
   vcov.args = list(),
+  z2S.form = 1,
+  t2S.form = 1,
   ...
 )
 
@@ -42,6 +44,7 @@ resi(model.full, ...)
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
+  t2S.form = 1,
   ...
 )
 
@@ -57,6 +60,7 @@ resi(model.full, ...)
   alpha = 0.05,
   store.boot = FALSE,
   Anova.args = list(),
+  z2S.form = 1,
   ...
 )
 
@@ -72,6 +76,7 @@ resi(model.full, ...)
   alpha = 0.05,
   store.boot = FALSE,
   Anova.args = list(),
+  z2S.form = 1,
   ...
 )
 
@@ -86,6 +91,7 @@ resi(model.full, ...)
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
+  z2S.form = 1,
   ...
 )
 
@@ -100,6 +106,7 @@ resi(model.full, ...)
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
+  z2S.form = 1,
   ...
 )
 
@@ -142,6 +149,10 @@ resi(model.full, ...)
 \item{Anova.args}{List, additional arguments to be passed to \link[car]{Anova} function.}
 
 \item{vcov.args}{List, additional arguments to be passed to vcovfunc.}
+
+\item{z2S.form}{Numeric, 1 (default) or 2. Formula to be used to convert Z statistic to RESI. See details.}
+
+\item{t2S.form}{Numeric, 1 (default) or 2. Formula to be used to convert T statistic to RESI. See details.}
 }
 \value{
 Returns a list that includes function arguments, RESI point estimates,
@@ -162,10 +173,18 @@ model-misspecification. The RESI is related to the non-centrality parameter
 of the test statistic. The RESI estimate is consistent for all four
 (Chi-square, F, T, and Z) types of statistics used. The Chi-square and F-based
 calculations rely on asymptotic theory, so they may be biased in small samples.
-When possible, the T and Z statistics are used, as these are unbiased and can
-be positive or negative. The RESI based on the Chi-Square and F statistics is
-always greater than or equal to 0. The type of statistic used is listed with
-the output.
+When possible, the T and Z statistics are used. There are two formulas for both
+the T and Z statistic conversion. The first, option 1 for `t2S.form` and `z2S.form`,
+are based on solving the expected value of the T or Z statistic for the RESI.
+The second (option 2) is based on squaring the T or Z statistic and using the
+F or Chi-square statistic conversion. Both of these methods are consistent, but
+option 2 exhibits a notable amount of finite sample bias, so option 1 is the
+default. Option 2 may be appealing because its absolute value will be equal to
+the RESI based on the F or Chi-square statistic. The RESI based on the Chi-Square
+and F statistics is always greater than or equal to 0. The type of statistic
+used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
+\code{\link{t2S}} (option 1), \code{\link{z2S}} (option 1), \code{\link{t2S_alt}}
+(option 2), and \code{\link{z2S_alt}} (option 2) for more details on the formulas.
 
 For most model types supported by this package, two bootstrap options are
 available. The default is the standard non-parametric bootstrap. Bayesian
