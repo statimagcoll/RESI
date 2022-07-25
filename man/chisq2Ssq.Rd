@@ -4,14 +4,14 @@
 \alias{chisq2Ssq}
 \title{Transformation from Wald test statistics to squared RESI}
 \usage{
-chisq2Ssq(chisq, df, rdf)
+chisq2Ssq(chisq, df, n)
 }
 \arguments{
 \item{chisq}{The chi-square statistic for the parameter(s) of interest.}
 
 \item{df}{Number of degrees of freedom of the chi-square statistic.}
 
-\item{rdf}{Model residual degrees of freedom or number of independent samples.}
+\item{n}{Number of independent samples.}
 }
 \value{
 Returns a scalar or vector argument of the squared robust effect size index estimate.
