@@ -26,7 +26,7 @@ resi_pe(model.full, ...)
   vcovfunc = sandwich::vcovHC,
   Anova.args = list(),
   vcov.args = list(),
-  z2S.form = 1,
+  z2S.alt = FALSE,
   ...
 )
 
@@ -39,7 +39,7 @@ resi_pe(model.full, ...)
   vcovfunc = sandwich::vcovHC,
   Anova.args = list(),
   vcov.args = list(),
-  z2S.form = 1,
+  z2S.alt = FALSE,
   ...
 )
 
@@ -52,7 +52,7 @@ resi_pe(model.full, ...)
   vcovfunc = sandwich::vcovHC,
   Anova.args = list(),
   vcov.args = list(),
-  t2S.form = 1,
+  t2S.alt = FALSE,
   ...
 )
 
@@ -63,7 +63,7 @@ resi_pe(model.full, ...)
   summary = TRUE,
   vcovfunc = regtools::nlshc,
   vcov.args = list(),
-  t2S.form = 1,
+  t2S.alt = FALSE,
   ...
 )
 
@@ -75,7 +75,7 @@ resi_pe(model.full, ...)
   summary = TRUE,
   vcovfunc = vcov,
   Anova.args = list(),
-  z2S.form = 1,
+  z2S.alt = FALSE,
   ...
 )
 
@@ -87,7 +87,7 @@ resi_pe(model.full, ...)
   summary = TRUE,
   vcovfunc = vcov,
   Anova.args = list(),
-  z2S.form = 1,
+  z2S.alt = FALSE,
   ...
 )
 
@@ -98,7 +98,7 @@ resi_pe(model.full, ...)
   summary = TRUE,
   vcovfunc = sandwich::sandwich,
   vcov.args = list(),
-  z2S.form = 1,
+  z2S.alt = FALSE,
   ...
 )
 
@@ -109,7 +109,7 @@ resi_pe(model.full, ...)
   summary = TRUE,
   vcovfunc = sandwich::sandwich,
   vcov.args = list(),
-  z2S.form = 1,
+  z2S.alt = FALSE,
   ...
 )
 
@@ -138,11 +138,11 @@ resi_pe(model.full, ...)
 
 \item{vcov.args}{List, additional arguments to be passed to vcovfunc.}
 
-\item{z2S.form}{Numeric, 1 (default) or 2. Formula to be used to convert Z statistic to RESI. See details.}
+\item{z2S.alt}{Logical, whether to use the alternative Z statistic to RESI conversion. By default, `FALSE`. See details.}
 
 \item{anova}{Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.}
 
-\item{t2S.form}{Numeric, 1 (default) or 2. Formula to be used to convert T statistic to RESI. See details.}
+\item{t2S.alt}{Logical, whether to use the alternative T statistic to RESI conversion. By default, `FALSE`. See details.}
 }
 \value{
 Returns a list containing RESI point estimates
@@ -201,6 +201,22 @@ the output.
 \item \code{lmerMod}: RESI point estimation for lmerMod object
 }}
 
+\examples{
+# This function produces point estimates for the RESI. The resi function will
+# provide the same point estimates but adds confidence intervals. See resi for
+# more detailed examples.
+
+## resi_pe for a linear model
+# fit linear model
+mod <- lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
+# run resi_pe on the model
+resi_pe(mod)
+
+# if you want to have RESI estimates in the coefficient table that are equal in absolute
+# value to those in the Anova table (except for those with >1 df and/or included in other
+# interaction terms), you can specify t2S.alt = TRUE to use the alternate conversion.
+resi_pe(mod, t2S.alt = TRUE)
+}
 \references{
 Vandekar S, Tao R, Blume J. A Robust Effect Size Index. \emph{Psychometrika}. 2020 Mar;85(1):232-246. doi: 10.1007/s11336-020-09698-2.
 }
