@@ -2,16 +2,16 @@
 % Please edit documentation in R/internal_functions.R
 \name{t2S}
 \alias{t2S}
-\title{Compute the robust effect size index estimator from t statistic}
+\title{Compute the robust effect size index estimator from t statistic (default)}
 \usage{
 t2S(t, n, rdf)
 }
 \arguments{
 \item{t}{The t statistic for the parameter of interest.}
 
-\item{n}{Number of independent samples}
+\item{n}{Number of independent samples.}
 
-\item{rdf}{Model residual degrees of freedom or number of independent samples.}
+\item{rdf}{Model residual degrees of freedom.}
 }
 \value{
 Returns a scalar or vector argument of the the robust effect size index estimate.
@@ -19,5 +19,11 @@ Returns a scalar or vector argument of the the robust effect size index estimate
 \description{
 This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
 Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
+}
+\details{
+This function computes S, the RESI, from a T statistic using the default
+formula. There is another function, \code{\link{t2S_alt}}, that uses an alternative
+formula. This function's formula is derived by solving the expected value of the
+T statistic for S. It is unbiased and consistent.
 }
 \keyword{power}

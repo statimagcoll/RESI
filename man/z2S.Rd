@@ -18,4 +18,10 @@ Returns a scalar or vector argument of the the robust effect size index estimate
 This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
 Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
 }
+\details{
+This function computes S, the RESI, from a Z statistic using the default
+formula. There is another function, \code{\link{z2S_alt}}, that uses an alternative
+formula. This function's formula is derived by solving the expected value of the
+Z statistic for S. It is unbiased and consistent.
+}
 \keyword{power}
