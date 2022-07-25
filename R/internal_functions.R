@@ -27,18 +27,45 @@ chisq2S <- function(chisq, df, n){
   sqrt(ifelse(S<0, 0, S))
 }
 
-#' Compute the robust effect size index estimator from t statistic
+#' Compute the robust effect size index estimator from t statistic (default)
 #'
 #' This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
 #' Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
 #' @param t The t statistic for the parameter of interest.
-#' @param n Number of independent samples
-#' @param rdf Model residual degrees of freedom or number of independent samples.
+#' @param n Number of independent samples.
+#' @param rdf Model residual degrees of freedom.
+#' @details This function computes S, the RESI, from a T statistic using the default
+#' formula. There is another function, \code{\link{t2S_alt}}, that uses an alternative
+#' formula. This function's formula is derived by solving the expected value of the
+#' T statistic for S. It is unbiased and consistent.
 #' @keywords power
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
 #' @export
 t2S <- function(t, n, rdf){
   (t*sqrt(2))/(sqrt(n*rdf))*exp(lgamma(rdf/2) - lgamma((rdf-1)/2))
+}
+
+#' Compute the robust effect size index estimator from t statistic (alternative)
+#'
+#' This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
+#' Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
+#' @param t The t statistic for the parameter of interest.
+#' @param df Number of degrees of freedom of the t statistic.
+#' @param rdf Model residual degrees of freedom or number of independent samples.
+#' @details This function computes S, the RESI, from a T statistic using the alternative
+#' formula. There is another function, \code{\link{t2S}}, that is the default for
+#' \code{\link{resi}}. This function's formula is derived by squaring the T statistic
+#' and using the \code{\link{f2S}} formula. This function may be appealing for its
+#' intuitive relationship to the F statistic; the absolute value of RESI estimates
+#' using this formula will be equal to a RESI estimate using an F statistic for
+#' the same model. However, this estimator does have finite sample bias, which is an
+#' important consideration for the coverage of the bootstrapping that \code{resi} uses.
+#' @keywords power
+#' @return Returns a scalar or vector argument of the the robust effect size index estimate.
+#' @export
+t2S_alt <- function(t, df, rdf){
+  Ssq = (t^2*df*(rdf-2)/rdf - df)/rdf
+  sqrt(ifelse(Ssq<0, 0, Ssq))*(sqrt(t^2)/t)
 }
 
 #' Compute the robust effect size index estimator from Z statistic
@@ -47,6 +74,10 @@ t2S <- function(t, n, rdf){
 #' Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
 #' @param z The Z statistic for the parameter of interest.
 #' @param n Number of independent samples.
+#' @details This function computes S, the RESI, from a Z statistic using the default
+#' formula. There is another function, \code{\link{z2S_alt}}, that uses an alternative
+#' formula. This function's formula is derived by solving the expected value of the
+#' Z statistic for S. It is unbiased and consistent.
 #' @keywords power
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
 #' @export
@@ -54,6 +85,27 @@ z2S <- function(z, n){
   z/sqrt(n)
 }
 
+#' Compute the robust effect size index estimator from Z statistic
+#'
+#' This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
+#' Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
+#' @param z The Z statistic for the parameter of interest.
+#' @param df Number of degrees of freedom of the Z statistic.
+#' @param n Number of independent samples.
+#' @details This function computes S, the RESI, from a Z statistic using the alternative
+#' formula. There is another function, \code{\link{z2S}}, that is the default for
+#' \code{\link{resi}}. This function's formula is derived by squaring the Z statistic
+#' and using the \code{\link{chisq2S}} formula. This function may be appealing for its
+#' intuitive relationship to the Chi-square statistic; the absolute value of RESI estimates
+#' using this formula will be equal to a RESI estimate using a Chi-square statistic for
+#' the same model. However, this estimator does have finite sample bias, which is an
+#' important consideration for the coverage of the bootstrapping that \code{resi} uses.
+#' @keywords power
+#' @return Returns a scalar or vector argument of the the robust effect size index estimate.
+#' @export
+z2S_alt <- function(z, df, n){
+  ifelse((z^2-df)<0, 0, sqrt((z^2-df)/n)*(sqrt(z^2)/z))
+}
 
 #' Compute the robust effect size index estimator from F-statistic
 #'
