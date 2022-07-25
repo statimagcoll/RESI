@@ -28,8 +28,8 @@ resi(model.full, ...)
   store.boot = FALSE,
   Anova.args = list(),
   vcov.args = list(),
-  z2S.form = 1,
-  t2S.form = 1,
+  z2S.alt = FALSE,
+  t2S.alt = FALSE,
   ...
 )
 
@@ -44,7 +44,7 @@ resi(model.full, ...)
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
-  t2S.form = 1,
+  t2S.alt = FALSE,
   ...
 )
 
@@ -60,7 +60,7 @@ resi(model.full, ...)
   alpha = 0.05,
   store.boot = FALSE,
   Anova.args = list(),
-  z2S.form = 1,
+  z2S.alt = FALSE,
   ...
 )
 
@@ -76,7 +76,7 @@ resi(model.full, ...)
   alpha = 0.05,
   store.boot = FALSE,
   Anova.args = list(),
-  z2S.form = 1,
+  z2S.alt = FALSE,
   ...
 )
 
@@ -91,7 +91,7 @@ resi(model.full, ...)
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
-  z2S.form = 1,
+  z2S.alt = FALSE,
   ...
 )
 
@@ -106,7 +106,7 @@ resi(model.full, ...)
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
-  z2S.form = 1,
+  z2S.alt = FALSE,
   ...
 )
 
@@ -150,9 +150,9 @@ resi(model.full, ...)
 
 \item{vcov.args}{List, additional arguments to be passed to vcovfunc.}
 
-\item{z2S.form}{Numeric, 1 (default) or 2. Formula to be used to convert Z statistic to RESI. See details.}
+\item{z2S.alt}{Logical, whether to use the alternative Z statistic to RESI conversion. By default, `FALSE`. See details.}
 
-\item{t2S.form}{Numeric, 1 (default) or 2. Formula to be used to convert T statistic to RESI. See details.}
+\item{t2S.alt}{Logical, whether to use the alternative T statistic to RESI conversion. By default, `FALSE`. See details.}
 }
 \value{
 Returns a list that includes function arguments, RESI point estimates,
@@ -174,17 +174,17 @@ of the test statistic. The RESI estimate is consistent for all four
 (Chi-square, F, T, and Z) types of statistics used. The Chi-square and F-based
 calculations rely on asymptotic theory, so they may be biased in small samples.
 When possible, the T and Z statistics are used. There are two formulas for both
-the T and Z statistic conversion. The first, option 1 for `t2S.form` and `z2S.form`,
+the T and Z statistic conversion. The first (default, t2S.alt/z2S.alt = FALSE)
 are based on solving the expected value of the T or Z statistic for the RESI.
-The second (option 2) is based on squaring the T or Z statistic and using the
+The alternative is based on squaring the T or Z statistic and using the
 F or Chi-square statistic conversion. Both of these methods are consistent, but
-option 2 exhibits a notable amount of finite sample bias, so option 1 is the
-default. Option 2 may be appealing because its absolute value will be equal to
-the RESI based on the F or Chi-square statistic. The RESI based on the Chi-Square
-and F statistics is always greater than or equal to 0. The type of statistic
+the alternative exhibits a notable amount of finite sample bias. The alternative
+may be appealing because its absolute value will be equal to the RESI based on
+the F or Chi-square statistic. The RESI based on the Chi-Square and F statistics
+is always greater than or equal to 0. The type of statistic
 used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
-\code{\link{t2S}} (option 1), \code{\link{z2S}} (option 1), \code{\link{t2S_alt}}
-(option 2), and \code{\link{z2S_alt}} (option 2) for more details on the formulas.
+\code{\link{t2S}}, \code{\link{z2S}}, \code{\link{t2S_alt}}, and
+\code{\link{z2S_alt}} for more details on the formulas.
 
 For most model types supported by this package, two bootstrap options are
 available. The default is the standard non-parametric bootstrap. Bayesian
@@ -221,21 +221,55 @@ and then try rerunning \code{resi}.
 }}
 
 \examples{
+## RESI on a linear model
 # fit linear model
 mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
 
 # run resi on fitted model with 500 bootstrap replicates
 resi(mod, nboot = 500)
 
+# fit a reduced model for comparison
+mod.red = lm(charges ~ bmi, data = RESI::insurance)
+
+# running resi and including the reduced model will provide almost the exact same
+# output. The difference is that the "overall" portion of the output will compare
+# the full model to the reduced model. The "summary" and "anova" elements will be
+# the same.
+resi(model.full = mod, model.reduced = mod.red, nboot = 500)
+
 # for some model types and formula structures, data argument is required
 library(splines)
-mod = glm(smoker ~ ns(age) + region, data = RESI::insurance, family = "binomial")
+# fit logistic regression model with splines
+mod = glm(smoker ~ ns(age, df = 3) + region, data = RESI::insurance, family = "binomial")
 
 # store bootstrap results for calculating different CIs later
 # specify additional arguments to the variance-covariance function via vcov.args
 resi.obj = resi(mod, data = RESI::insurance, store.boot = TRUE, alpha = 0.01,
 vcov.args = list(type = "HC0"))
 summary(resi.obj, alpha = c(0.05, 0.1))
+car::Anova(resi.obj, alpha = 0.1)
+
+# the result of resi, as well as the summary or Anova of a `resi` object can be plotted
+# if the resi object was created with the store.boot = `TRUE` option, any alpha
+# can be specified
+plot(resi.obj, alpha = 0.05)
+# if the variable names on the y-axis are too long, you can reduce their size with
+# the ycex.axis argument (or use regular common solutions like changing the margins)
+plot(resi.obj, alpha = 0.05, ycex.alpha = 0.5)
+
+## RESI on a survival model with alternate Z2S
+# load survival library
+library(survival)
+
+# fit coxph model on example data from survival package
+# Note: for survival models, you need to specify robust variance in the model
+# creation. resi will ignore the vcovfunc argument for this reason.
+mod.coxph =  coxph(Surv(time, status) ~ age + sex + wt.loss, data=lung, robust = TRUE)
+
+# run resi on the model
+# to use the alternative Z to RESI formula (which is equal in absolute value to the
+# chi-square to RESI (S) formula), specify z2S.alt = TRUE.
+resi(mod.coxph, data = lung, z2S.alt = TRUE)
 
 }
 \references{
