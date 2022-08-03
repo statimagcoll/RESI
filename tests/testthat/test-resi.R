@@ -13,11 +13,7 @@ mod.s.r = glm(charges ~ region * ns(age, df=3), data = data)
 mod.lm = lm(charges ~ region * age + bmi + sex, data = data)
 mod.lm.s = lm(charges ~ region*ns(age, df = 3) + bmi + sex, data = data)
 mod.lm.s.r = lm(charges ~ region * ns(age, df=3), data = data)
-mod.one.predictor = glm(charges ~ bmi, data = data)
-mod.one.pred.multi = glm(charges ~ region, data = data)
-mod.one.pred.lm = lm(charges ~ region, data = data)
 mod.log = glm(smoker ~ age + region, data = data, family = "binomial")
-mod.pois = glm(age ~ region + charges + sex*smoker, data = data, family = "poisson")
 
 # missing data models
 data.nas = data
@@ -34,30 +30,19 @@ mod.nls <-nls(Y~a * X/(b + X), data = data.nls, start = list(a = 1, b = 2))
 
 #survival
 data.surv = survival::lung
-data.surv.test = data.surv[203:nrow(data.surv),]
-rownames(data.surv.test) = letters[1:26]
 mod.surv = survreg(Surv(time, status) ~ age + sex + ph.karno, data=data.surv,
                    dist='weibull', robust = TRUE)
-# check for missing value
-mod.surv.red = survreg(Surv(time, status) ~ age, data=data.surv,
+mod.surv.red = survreg(Surv(time, status) ~ age, data=data.surv[which(!(1:nrow(data.surv)%in% mod.surv$na.action)),],
                        dist='weibull', robust = TRUE)
 mod.surv.nr = survreg(Surv(time, status) ~ age + sex + ph.karno, data=data.surv,
                       dist='weibull', robust = FALSE)
-mod.survexp = survreg(Surv(time, status) ~ age + sex + ph.karno, data=data.surv,
-                      dist='exp', robust = FALSE)
 mod.coxph =  coxph(Surv(time, status) ~ age + sex + wt.loss, data=lung, robust = TRUE)
 mod.coxph.red =  coxph(Surv(time, status) ~ age, data=lung, robust = TRUE)
-mod.coxph.nr = coxph(Surv(time, status) ~ age + sex + wt.loss, data=lung, robust = FALSE)
-mod.coxph.na = coxph(Surv(time, status) ~ age + ph.karno + wt.loss, data=lung, robust = TRUE)
 
 # hurdle
 data.hurdle = pscl::bioChemists
-data.hurdle.na = data.hurdle
-data.hurdle.na[12:17, 'kid5'] = NA
 mod.hurdle = pscl::hurdle(art ~ fem + mar + kid5 + phd + ment | fem + mar + kid5 + phd + ment, data = data.hurdle)
-mod.hurd.r = pscl::hurdle(art ~ kid5 + phd | kid5 + phd, data = data.hurdle)
-mod.hurdle.na = pscl::hurdle(art ~ fem + mar + kid5 + phd + ment | fem + mar + kid5 + phd + ment, data = data.hurdle.na)
-mod.hurdle.r.na = pscl::hurdle(art ~ mar + phd | mar + phd, data = data.hurdle.na)
+mod.hurdle.r = pscl::hurdle(art ~ kid5 + phd | kid5 + phd, data = data.hurdle)
 
 # zeroinfl
 mod.zinf = pscl::zeroinfl(art ~ fem + mar + kid5 + phd + ment | fem + mar + kid5 + phd + ment, data = data.hurdle)
@@ -77,9 +62,32 @@ mod.lmerMod2 = lmer(distance ~ age + (age|Subject) + (0+nsex|Subject) +
 
 ## tests
 test_that("Specifying non-allowed vcov produces warning",{
-  expect_warning(resi(mod.nls, data = data.nls, nboot = 10, vcovfunc = sandwich::vcovHC), "Sandwich vcov function not applicable for nls model type, vcovfunc set to regtools::nlshc")
-  expect_warning(resi(mod.surv, data = data.surv, nboot = 10, vcovfunc = sandwich::vcovHC), "vcovfunc argument ignored for survreg objects")
-  expect_warning(resi(mod.coxph, data = data.surv, nboot = 10, vcovfunc = sandwich::vcovHC), "vcovfunc argument ignored for coxph objects")
+  expect_warning(resi(mod.nls, data = data.nls, nboot = 1, vcovfunc = sandwich::vcovHC), "Sandwich vcov function not applicable for nls model type, vcovfunc set to regtools::nlshc")
+  expect_warning(resi(mod.surv, data = data.surv, nboot = 1, vcovfunc = sandwich::vcovHC), "vcovfunc argument ignored for survreg objects")
+  expect_warning(resi(mod.coxph, data = data.surv, nboot = 1, vcovfunc = sandwich::vcovHC), "vcovfunc argument ignored for coxph objects")
+})
+
+test_that("boot.method = 'bayes' only works for lm and nls", {
+  expect_true(resi(mod.lm, nboot = 1, boot.method = "bayes")$boot.method == "bayes")
+  expect_true(resi(mod.nls, data = data.nls, nboot = 1, boot.method = "bayes")$boot.method == "bayes")
+  expect_true(resi(mod, nboot = 1, boot.method = "bayes")$boot.method == "nonparam")
+  expect_true(resi(mod.surv, data = data.surv, nboot = 1, boot.method = "bayes")$boot.method == "nonparam")
+  expect_true(resi(mod.coxph, data = data.surv, nboot = 1, boot.method = "bayes")$boot.method == "nonparam")
+  expect_true(resi(mod.hurdle, nboot = 1, boot.method = "bayes")$boot.method == "nonparam")
+  expect_true(resi(mod.zinf, nboot = 1, boot.method = "bayes")$boot.method == "nonparam")
+})
+
+test_that("data is needed for certain models", {
+  expect_error(resi(mod.s, nboot = 1))
+  expect_error(resi(mod.lm.s, nboot = 1))
+  expect_error(resi(mod.nls, nboot = 1))
+  expect_error(resi(mod.surv, nboot = 1))
+  expect_error(resi(mod.coxph, nboot = 1))
+  expect_error(resi(mod.gee))
+})
+
+test_that("boot.results stores correctly",{
+  expect_equal(colnames(resi(mod.log, nboot = 2, store.boot = TRUE)$boot.results), c("Overall", "(Intercept)", "age", "regionnorthwest", "regionsoutheast", "regionsouthwest", "age", "region"))
 })
 
 test_that("resi produces the correct estimates", {
@@ -100,15 +108,20 @@ test_that("resi produces the correct estimates", {
   expect_equal(unname(resi(mod.gee, nboot = 10, data = data.gee)$coefficients[,'RESI']), c(0.0000, 0.4850899, 0.0000, 0.5591547, 0.2889370), tolerance = 1e-07)
   expect_equal(unname(resi(mod.geeglm, nboot = 10, data = data.gee)$coefficients[,'RESI']), c(0.0000, 0.4850899, 0.000, 0.5591547, 0.2889370), tolerance = 1e-07)
   expect_equal(unname(resi(mod.lme, nboot = 10, data = data.gee)$coefficients[,'RESI']), c(3.659090, 1.739166, 0.512371), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.lmerMod, nboot = 10)$coefficients[,'RESI']),c(8.434942, 1.533073), tolerance = 1e-07)
 })
 
 test_that("RESI estimates are in between the confidence limits", {
-  resi.obj = resi(mod, nboot = 500)
+  resi.obj = resi(mod, nboot = 500, store.boot = TRUE)
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
   expect_true(all(resi.obj$anova$RESI >= resi.obj$anova$`2.5%`) & all(resi.obj$anova$RESI <= resi.obj$anova$`97.5%`))
-  resi.obj = resi(mod.lm, nboot = 500)
+  An.obj = car::Anova(resi.obj, alpha = 0.01)
+  expect_true(all(An.obj$RESI >= An.obj$`0.05%`) & all(An.obj$RESI <= An.obj$`99.5%`))
+  resi.obj = resi(mod.lm, nboot = 500, store.boot = TRUE)
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
   expect_true(all(resi.obj$anova[1:5, "RESI"] >= resi.obj$anova[1:5, "2.5%"]) & all(resi.obj$anova[1:5, "RESI"] <= resi.obj$anova[1:5, "RESI"]))
+  An.obj = car::Anova(resi.obj, alpha = 0.01)
+  expect_true(all(An.obj$RESI[1:5] >= An.obj$`0.05%`[1:5]) & all(An.obj$RESI[1:5] <= An.obj$`99.5%`[1:5]))
   resi.obj = resi(mod.nls, data = data.nls)
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
   resi.obj = resi(mod.surv, data = data.surv, nboot = 500)
@@ -121,9 +134,6 @@ test_that("RESI estimates are in between the confidence limits", {
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
   resi.obj = resi(mod.zinf, nboot = 500)
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
-  # gee interval not passing, but warning is included already
-  # resi.obj = resi(mod.gee, data = data.gee, nboot = 1000)
-  # expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
   resi.obj = resi(mod.geeglm, data = data.gee, nboot = 500)
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
   resi.obj = resi(mod.lme, nboot = 500)
@@ -151,6 +161,32 @@ test_that("Specifying a reduced model only changes overall output", {
   expect_equal(resi.obj$coefficients$RESI, resi.objr$coefficients$RESI)
   expect_equal(resi.obj$anova$RESI, resi.objr$anova$RESI)
   expect_false(resi.obj$overall$RESI[2] == resi.objr$overall$RESI[2])
+  resi.obj = resi(mod.lm.s, data = data, nboot = 10)
+  resi.objr = resi(mod.lm.s, model.reduced = mod.lm.s.r, data = data, nboot = 10)
+  expect_equal(resi.obj$coefficients$RESI, resi.objr$coefficients$RESI)
+  expect_equal(resi.obj$anova$RESI, resi.objr$anova$RESI)
+  expect_false(resi.obj$overall$RESI[2] == resi.objr$overall$RESI[2])
+  resi.obj = resi(mod.surv, data = data.surv, nboot = 10)
+  resi.objr = resi(mod.surv, model.reduced = mod.surv.red, data = data.surv[which(!(1:nrow(data.surv)%in% mod.surv$na.action)),], nboot = 10)
+  expect_false(resi.obj$overall$RESI[2] == resi.objr$overall$RESI[2])
+  resi.obj = resi(mod.hurdle, nboot = 10)
+  resi.objr = resi(mod.hurdle, model.reduced = mod.hurdle.r, nboot = 10)
+  expect_equal(resi.obj$coefficients$RESI, resi.objr$coefficients$RESI)
+  expect_equal(resi.obj$anova$RESI, resi.objr$anova$RESI)
+  expect_false(resi.obj$overall$RESI[2] == resi.objr$overall$RESI[2])
+})
+
+test_that("specifying additional vcov args works",{
+  expect_false(any(resi(mod, nboot = 1, vcov.args = list(type = "HC0"))$coefficients[,'RESI'] == resi(mod, nboot = 1)$coefficients[,'RESI']))
+})
+
+test_that("specifying additional Anova args works",{
+  expect_false(all(resi(mod, nboot = 1, Anova.args = list(type = "3"))$anova[2:6,'RESI'] == resi(mod, nboot = 1)$anova[,'RESI']))
+  expect_false(length(resi(mod.surv, data = data.surv, nboot = 1, Anova.args = list(type = "3"))$anova$RESI) == length(resi(mod.surv, data = data.surv, nboot = 1)$anova$RESI))
+})
+
+test_that("vcovfunc = vcov changes naive.var to TRUE",{
+  expect_true(resi(mod, vcovfunc = vcov)$naive.var == TRUE)
 })
 
 # important because some resi_pe methods use waldtest and some use wald.test
