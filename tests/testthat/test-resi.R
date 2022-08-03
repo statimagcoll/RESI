@@ -82,11 +82,6 @@ test_that("Specifying non-allowed vcov produces warning",{
   expect_warning(resi(mod.coxph, data = data.surv, nboot = 10, vcovfunc = sandwich::vcovHC), "vcovfunc argument ignored for coxph objects")
 })
 
-test_that("Bayesian bootstrap is not allowed for survival models",{
-  expect_warning(resi(mod.surv, data = data.surv, nboot = 10, boot.method = "bayes"), "Bayesian bootstrap not currently supported for survreg models, using non-parametric bootstrap")
-  expect_warning(resi(mod.coxph, data = data.surv, nboot = 10, boot.method = "bayes"), "Bayesian bootstrap not currently supported for coxph models, using non-parametric bootstrap")
-})
-
 test_that("resi produces the correct estimates", {
   expect_equal(unname(resi(mod, nboot = 1)$estimates), c(0.35982590, -0.06733537, -0.02670248, -0.03341748, -0.00246893, 0.14980504, 0.15238719,
                                                          0.05839381, 0.01667149, 0.03610640, -0.01497171, 0.03655364, 0.29533571, 0.14991488,
@@ -111,10 +106,6 @@ test_that("RESI estimates are in between the confidence limits", {
   resi.obj = resi(mod, nboot = 500)
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
   expect_true(all(resi.obj$anova$RESI >= resi.obj$anova$`2.5%`) & all(resi.obj$anova$RESI <= resi.obj$anova$`97.5%`))
-  # bayes option for glm not seeming right currently
-  # resi.obj = resi(mod, boot.method = "bayes")
-  # expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
-  # expect_true(all(resi.obj$anova$RESI >= resi.obj$anova$`2.5%`) & all(resi.obj$anova$RESI <= resi.obj$anova$`97.5%`))
   resi.obj = resi(mod.lm, nboot = 500)
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
   expect_true(all(resi.obj$anova[1:5, "RESI"] >= resi.obj$anova[1:5, "2.5%"]) & all(resi.obj$anova[1:5, "RESI"] <= resi.obj$anova[1:5, "RESI"]))
@@ -128,11 +119,10 @@ test_that("RESI estimates are in between the confidence limits", {
   expect_true(all(resi.obj$anova$RESI >= resi.obj$anova$`2.5%`) & all(resi.obj$anova$RESI <= resi.obj$anova$`97.5%`))
   resi.obj = resi(mod.hurdle, nboot = 500)
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
-  # resi.obj = resi(mod.hurdle, boot.method = "bayes", nboot = 500)
-  # expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
   resi.obj = resi(mod.zinf, nboot = 500)
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
-  # resi.obj = resi(mod.gee, data = data.gee, nboot = 500)
+  # gee interval not passing, but warning is included already
+  # resi.obj = resi(mod.gee, data = data.gee, nboot = 1000)
   # expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
   resi.obj = resi(mod.geeglm, data = data.gee, nboot = 500)
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
@@ -140,20 +130,30 @@ test_that("RESI estimates are in between the confidence limits", {
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
 })
 
-test_that("z2S.form = 2 returns same abs. RESI as Chi-sq",{
-  resi.obj = resi(mod, nboot = 1, z2S.form = 2)
+test_that("unbiased = FALSE returns same abs. RESI as Chi-sq/F",{
+  resi.obj = resi(mod, nboot = 1, unbiased = FALSE)
   expect_equal(abs(resi.obj$coefficients[6:7, 'RESI']), resi.obj$anova[3:4, 'RESI'], tolerance = 1e-07)
-  resi.obj = resi(mod.surv, data = data.surv, nboot = 1, z2S.form = 2)
+  resi.obj = resi(mod.surv, data = data.surv, nboot = 1, unbiased = FALSE)
   expect_equal(abs(resi.obj$coefficients[2:4, 'RESI']), resi.obj$anova[1:3, 'RESI'], tolerance = 1e-07)
-  resi.obj = resi(mod.coxph, data = data.surv, nboot = 1, z2S.form = 2)
+  resi.obj = resi(mod.coxph, data = data.surv, nboot = 1, unbiased = FALSE)
   expect_equal(abs(resi.obj$coefficients[1:3, 'RESI']), resi.obj$anova[1:3, 'RESI'], tolerance = 1e-07)
-})
-
-test_that("t2S.form = 2 returns same abs. RESI as F", {
-  resi.obj = resi(mod.lm, nboot = 1, t2S.form = 2)
+  resi.obj = resi(mod.lm, nboot = 1, unbiased = FALSE)
   expect_equal(abs(resi.obj$coefficients[6:7,'RESI']), resi.obj$anova[3:4,'RESI'], tolerance = 1e-07)
 })
 
+test_that("Using a matrix for data works", {
+  expect_true(class(resi(mod.nls, nboot = 10, data = as.matrix(data.nls))) == "resi")
+})
+
+test_that("Specifying a reduced model only changes overall output", {
+  resi.obj = resi(mod, nboot = 10)
+  resi.objr = resi(mod, model.reduced = mod.r, nboot = 10)
+  expect_equal(resi.obj$coefficients$RESI, resi.objr$coefficients$RESI)
+  expect_equal(resi.obj$anova$RESI, resi.objr$anova$RESI)
+  expect_false(resi.obj$overall$RESI[2] == resi.objr$overall$RESI[2])
+})
+
+# important because some resi_pe methods use waldtest and some use wald.test
 test_that("wald.test and waldtest still consistent",{
   expect_equal(unname(lmtest::waldtest(mod.lm, vcov = vcovHC, test = "Chisq")$Chisq[2]),
                unname(aod::wald.test(vcovHC(mod.lm), coef(mod.lm),
