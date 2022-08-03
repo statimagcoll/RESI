@@ -12,8 +12,7 @@
 #' @param anova Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.
 #' @param Anova.args List, additional arguments to be passed to Anova function.
 #' @param vcov.args List, additional arguments to be passed to vcovfunc.
-#' @param t2S.alt Logical, whether to use the alternative T statistic to RESI conversion. By default, `FALSE`. See details.
-#' @param z2S.alt Logical, whether to use the alternative Z statistic to RESI conversion. By default, `FALSE`. See details.
+#' @param unbiased Logical, whether to use the unbiased or alternative T/Z statistic to RESI conversion. By default, `TRUE`. See details.
 #' @param ... Ignored.
 #' @importFrom aod wald.test
 #' @importFrom car Anova
@@ -31,16 +30,23 @@
 #' index and can be easily be compared across models. The RESI can also be
 #' converted to Cohen's \emph{d} (\code{\link{S2d}}) under model homoskedasticity.
 #'
-#' This function computes the RESI point estimates based on Chi-square, F, T, or Z
-#' statistics. The robust (sandwich) variance is used by default, allowing for
-#' consistency under model-misspecification. The RESI is related to the non-centrality
-#' parameter of the test statistic. The RESI estimate is consistent for all four
+#' The RESI is related to the non-centrality parameter
+#' of the test statistic. The RESI estimate is consistent for all four
 #' (Chi-square, F, T, and Z) types of statistics used. The Chi-square and F-based
 #' calculations rely on asymptotic theory, so they may be biased in small samples.
-#' When possible, the T and Z statistics are used, as these are unbiased and can
-#' be positive or negative. The RESI based on the Chi-Square and F statistics is
-#' always greater than or equal to 0. The type of statistic used is listed with
-#' the output.
+#' When possible, the T and Z statistics are used. There are two formulas for both
+#' the T and Z statistic conversion. The first (default, unbiased = TRUE)
+#' are based on solving the expected value of the T or Z statistic for the RESI.
+#' The alternative is based on squaring the T or Z statistic and using the
+#' F or Chi-square statistic conversion. Both of these methods are consistent, but
+#' the alternative exhibits a notable amount of finite sample bias. The alternative
+#' may be appealing because its absolute value will be equal to the RESI based on
+#' the F or Chi-square statistic. The RESI based on the Chi-Square and F statistics
+#' is always greater than or equal to 0. The type of statistic
+#' used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
+#' \code{\link{t2S}}, \code{\link{z2S}}, \code{\link{t2S_alt}}, and
+#' \code{\link{z2S_alt}} for more details on the formulas.
+#'
 #' @return Returns a list containing RESI point estimates
 #' @examples
 #' # This function produces point estimates for the RESI. The resi function will
@@ -55,8 +61,8 @@
 #'
 #' # if you want to have RESI estimates in the coefficient table that are equal in absolute
 #' # value to those in the Anova table (except for those with >1 df and/or included in other
-#' # interaction terms), you can specify t2S.alt = TRUE to use the alternate conversion.
-#' resi_pe(mod, t2S.alt = TRUE)
+#' # interaction terms), you can specify unbiased = FALSE to use the alternate conversion.
+#' resi_pe(mod, unbiased = FALSE)
 #' @references Vandekar S, Tao R, Blume J. A Robust Effect Size Index. \emph{Psychometrika}. 2020 Mar;85(1):232-246. doi: 10.1007/s11336-020-09698-2.
 
 resi_pe <- function(model.full, ...){
@@ -67,9 +73,12 @@ resi_pe <- function(model.full, ...){
 #' @export
 resi_pe.default <- function(model.full, model.reduced = NULL, data,
                     summary = TRUE, vcovfunc = sandwich::vcovHC, Anova.args = list(),
-                    vcov.args = list(), z2S.alt = FALSE, ...){
+                    vcov.args = list(), unbiased = TRUE, ...){
   if (missing(data)){
       data = model.full$model
+  }
+  else{
+    data = as.data.frame(data)
   }
 
   if (is.null(model.reduced)){
@@ -111,11 +120,11 @@ resi_pe.default <- function(model.full, model.reduced = NULL, data,
     summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
                              summary.tab[,'z value'], summary.tab[,'Pr(>|z|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
-    if (!z2S.alt){
+    if (unbiased){
       summary.df[,'RESI'] = z2S(summary.df[,'z value'], nrow(data))
     }
     else{
-      summary.df[,'RESI'] = suppressWarnings(z2S_alt(summary.df[,'z value'], 1, nrow(data)))
+      summary.df[,'RESI'] = suppressWarnings(z2S_alt(summary.df[,'z value'], nrow(data)))
     }
     output$coefficients = summary.df
     output$estimates = c(output$estimates, summary.df$RESI)
@@ -129,11 +138,11 @@ resi_pe.default <- function(model.full, model.reduced = NULL, data,
 #' @describeIn resi_pe RESI point estimation for generalized linear models
 #' @export
 resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                            summary = TRUE, vcovfunc = sandwich::vcovHC,
-                        Anova.args = list(), vcov.args = list(), z2S.alt = FALSE, ...){
+                        summary = TRUE, vcovfunc = sandwich::vcovHC,
+                        Anova.args = list(), vcov.args = list(), unbiased = TRUE, ...){
   output <- resi_pe.default(model.full = model.full, model.reduced = model.reduced,
                             data = data, summary = summary, vcovfunc = vcovfunc,
-                            Anova.args = Anova.args, vcov.args = vcov.args, z2S.alt = z2S.alt, ...)
+                            Anova.args = Anova.args, vcov.args = vcov.args, unbiased = unbiased, ...)
 
   if (length(vcov.args) == 0){
     vcovfunc2 <- vcovfunc
@@ -169,9 +178,12 @@ resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @export
 resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                        summary = TRUE, vcovfunc = sandwich::vcovHC,
-                       Anova.args = list(), vcov.args = list(), t2S.alt = FALSE, ...){
+                       Anova.args = list(), vcov.args = list(), unbiased = TRUE, ...){
   if (missing(data)){
     data = model.full$model
+  }
+  else{
+    data = as.data.frame(data)
   }
 
   if (is.null(model.reduced)){
@@ -212,10 +224,10 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
                             summary.tab[,'t value'], summary.tab[,'Pr(>|t|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
-    if (!t2S.alt){
+    if (unbiased){
       summary.df[,'RESI'] = t2S(summary.df[,'t value'], nrow(data), model.full$df.residual)
     } else{
-      summary.df[,'RESI'] = t2S_alt(summary.df[,'t value'], 1, model.full$df.residual)
+      summary.df[,'RESI'] = t2S_alt(summary.df[,'t value'], model.full$df.residual)
     }
 
     output$coefficients = summary.df
@@ -249,10 +261,11 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @describeIn resi_pe RESI point estimation for nonlinear least squares models
 #' @export
 resi_pe.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
-                        vcovfunc = regtools::nlshc, vcov.args = list(), t2S.alt = FALSE, ...){
+                        vcovfunc = regtools::nlshc, vcov.args = list(), unbiased = TRUE, ...){
   if (missing(data) | is.null(data)){
     stop('\nData argument is required for nls model')
   }
+  data = as.data.frame(data)
 
   # currently not accepting other reduced models for nls
   if (!is.null(model.reduced)){
@@ -299,10 +312,10 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
     summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
                             summary.tab[,'t value'], summary.tab[,'Pr(>|t|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
-    if (!t2S.alt){
+    if (unbiased){
       summary.df[,'RESI'] = t2S(summary.df[,'t value'], nrow(data), res.df)
     } else{
-      summary.df[,'RESI'] = t2S_alt(summary.df[,'t value'], 1, res.df)
+      summary.df[,'RESI'] = t2S_alt(summary.df[,'t value'], res.df)
     }
     output$coefficients = summary.df
     output$estimates = c(output$estimates, summary.df$RESI)
@@ -324,11 +337,13 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 #' @describeIn resi_pe RESI point estimation for survreg
 #' @export
 resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                        summary = TRUE, vcovfunc = vcov, Anova.args = list(), z2S.alt = FALSE, ...){
-  # add warning for specifying type 3 anova
+                        summary = TRUE, vcovfunc = vcov, Anova.args = list(), unbiased = TRUE, ...){
 
   if (missing(data)){
     stop('\nData argument is required for survreg model')
+  }
+  else{
+    data = as.data.frame(data)
   }
 
   if (!identical(vcovfunc, vcov)){
@@ -345,7 +360,7 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
     }
   }
 
-  output = resi_pe.default(model.full, model.reduced, data, summary, vcovfunc = vcov, z2S.alt = z2S.alt)
+  output = resi_pe.default(model.full, model.reduced, data, summary, vcovfunc = vcov, unbiased = unbiased)
 
   # Anova table (Chi sq statistics)
   if (anova){
@@ -359,7 +374,18 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
       if (length(p) > 0)
         V <- V[-p, -p]
     }
-    fun <- utils::getFromNamespace("Anova.II.default", "car")
+
+    if ("type" %in% names(Anova.args)){
+      if (Anova.args$type %in% c(3, "III")){
+        fun <- utils::getFromNamespace("Anova.III.default", "car")
+      }
+      else{
+        fun <- utils::getFromNamespace("Anova.III.default", "car")
+      }
+    } else{
+      fun <- utils::getFromNamespace("Anova.II.default", "car")
+    }
+
     anova.tab <- do.call(fun, c(list(mod = model.full, vcov. = V, test = "Chisq",
                                      error.df = df.residual(model.full)), Anova.args))
     anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], nrow(data))
@@ -384,9 +410,12 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
 #' @describeIn resi_pe RESI point estimation for coxph models
 #' @export
 resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                          summary = TRUE, vcovfunc = vcov, Anova.args = list(), z2S.alt = FALSE, ...){
+                          summary = TRUE, vcovfunc = vcov, Anova.args = list(), unbiased = TRUE, ...){
   if (missing(data)){
     stop('\nData argument is required for coxph model')
+  }
+  else{
+    data = as.data.frame(data)
   }
 
   if (!identical(vcovfunc, vcov)){
@@ -419,10 +448,10 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
                             summary.tab[,'z value'], summary.tab[,'Pr(>|z|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
-    if (!z2S.alt){
+    if (unbiased){
       summary.df[,'RESI'] = z2S(summary.df[,'z value'], model.full$n)
     } else{
-      summary.df[,'RESI'] = suppressWarnings(z2S_alt(summary.df[,'z value'], 1, model.full$n))
+      summary.df[,'RESI'] = suppressWarnings(z2S_alt(summary.df[,'z value'], model.full$n))
     }
     output$coefficients = summary.df
     output$estimates = c(output$estimates, summary.df$RESI)
@@ -454,9 +483,12 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @describeIn resi_pe RESI point estimation for hurdle models
 #' @export
 resi_pe.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
-                           vcovfunc = sandwich::sandwich, vcov.args = list(), z2S.alt = FALSE, ...){
+                           vcovfunc = sandwich::sandwich, vcov.args = list(), unbiased = TRUE, ...){
   if (missing(data)){
     data = model.full$model
+  }
+  else{
+    data = as.data.frame(data)
   }
 
   if (is.null(model.reduced)){
@@ -501,11 +533,11 @@ resi_pe.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRU
     summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
                             summary.tab[,'z value'], summary.tab[,'Pr(>|z|)'], row.names = rownames(summary.tab))
     colnames(summary.df) = colnames(summary.tab)
-    if (!z2S.alt){
+    if (unbiased){
       summary.df[,'RESI'] = z2S(summary.df[,'z value'], nrow(data))
     }
     else{
-      summary.df[,'RESI'] = suppressWarnings(z2S_alt(summary.df[,'z value'], 1, nrow(data)))
+      summary.df[,'RESI'] = suppressWarnings(z2S_alt(summary.df[,'z value'], nrow(data)))
     }
     output$coefficients = summary.df
     output$estimates = c(output$estimates, summary.df$RESI)

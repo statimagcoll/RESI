@@ -13,8 +13,7 @@
 #' @param store.boot Logical, whether to store all the bootstrapped estimates. By default, `FALSE`.
 #' @param Anova.args List, additional arguments to be passed to \link[car]{Anova} function.
 #' @param vcov.args List, additional arguments to be passed to vcovfunc.
-#' @param t2S.alt Logical, whether to use the alternative T statistic to RESI conversion. By default, `FALSE`. See details.
-#' @param z2S.alt Logical, whether to use the alternative Z statistic to RESI conversion. By default, `FALSE`. See details.
+#' @param unbiased Logical, whether to use the unbiased or alternative T/Z statistic to RESI conversion. By default, `TRUE`. See details.
 #' @param ... Ignored.
 #' @importFrom aod wald.test
 #' @importFrom car Anova
@@ -36,7 +35,7 @@
 #' (Chi-square, F, T, and Z) types of statistics used. The Chi-square and F-based
 #' calculations rely on asymptotic theory, so they may be biased in small samples.
 #' When possible, the T and Z statistics are used. There are two formulas for both
-#' the T and Z statistic conversion. The first (default, t2S.alt/z2S.alt = FALSE)
+#' the T and Z statistic conversion. The first (default, unbiased = TRUE)
 #' are based on solving the expected value of the T or Z statistic for the RESI.
 #' The alternative is based on squaring the T or Z statistic and using the
 #' F or Chi-square statistic conversion. Both of these methods are consistent, but
@@ -48,10 +47,10 @@
 #' \code{\link{t2S}}, \code{\link{z2S}}, \code{\link{t2S_alt}}, and
 #' \code{\link{z2S_alt}} for more details on the formulas.
 #'
-#' For most model types supported by this package, two bootstrap options are
-#' available. The default is the standard non-parametric bootstrap. Bayesian
-#' bootstrapping is currently available for models other than \code{survreg} and
-#' \code{coxph}.
+#' For most \code{lm} and \code{nls} model types, there is a Bayesian bootstrap
+#' option available as an alternative to the default, standard non-parametric
+#' bootstrap. The interpretation of a Bayesian bootstrapped interval is similar to
+#' that of a credible interval.
 #'
 #' Certain model types require the data used for the model be entered as an argument.
 #' These are: \code{nls, survreg,} and \code{coxph}. Additionally, if a model
@@ -115,8 +114,8 @@
 #'
 #' # run resi on the model
 #' # to use the alternative Z to RESI formula (which is equal in absolute value to the
-#' # chi-square to RESI (S) formula), specify z2S.alt = TRUE.
-#' resi(mod.coxph, data = lung, z2S.alt = TRUE)
+#' # chi-square to RESI (S) formula), specify unbiased = FALSE.
+#' resi(mod.coxph, data = lung, unbiased = FALSE)
 #'
 #' @references Vandekar S, Tao R, Blume J. A Robust Effect Size Index. \emph{Psychometrika}. 2020 Mar;85(1):232-246. doi: 10.1007/s11336-020-09698-2.
 #'
@@ -126,13 +125,88 @@ resi <- function(model.full, ...){
   UseMethod("resi")
 }
 
+# take out bayes option for glm
+
 #' @describeIn resi RESI point and interval estimation for models
 #' @export
 resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+                         summary = TRUE, nboot = 1000,
+                         vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
+                         Anova.args = list(), vcov.args = list(), unbiased = TRUE, ...){
+  dots = list(...)
+  if ("boot.method" %in% names(dots)){
+    message("Only nonparametric bootstrap supported for model type")
+  }
+
+  if (missing(data)){
+    data = model.full$model
+    tryCatch(update(model.full, data = data), error = function(e){
+      message("Updating model fit failed. Try rerunning with providing data argument")})
+  }
+  else{
+    data = as.data.frame(data)
+  }
+
+  # point estimation
+  output <- list(alpha = alpha, nboot = nboot, boot.method = "nonparam")
+  output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
+                             data = data, anova = anova, summary = summary,
+                             vcovfunc = vcovfunc, Anova.args = Anova.args,
+                             vcov.args = vcov.args, unbiased = unbiased, ...))
+
+  # bootstrapping
+  boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
+  colnames(boot.results) = names(output$estimates)
+  # non-parametric bootstrap
+  for (i in 1:nboot){
+    boot.data = boot.samp(data)
+    boot.model.full <- update(model.full, data = boot.data)
+    if (is.null(model.reduced)){
+      boot.model.reduced = NULL
+    }
+    else{
+      boot.model.reduced = update(model.reduced, data = boot.data)
+    }
+    boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
+                                                data = boot.data, anova = anova, summary = summary,
+                                                vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args,
+                                                unbiased = unbiased, ...)$estimates)
+  }
+
+
+  alpha.order = sort(c(alpha/2, 1-alpha/2))
+  output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
+
+  if (summary){
+    CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    CIs = t(CIs)
+    output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+  }
+
+  if (anova){
+    CIs = apply(boot.results[,(ncol(boot.results)-length(which(rownames(output$anova) != "Residuals"))+1):ncol(boot.results)], 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    CIs = t(CIs)
+    output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+    class(output$anova) = c("anova_resi", class(output$anova))
+  }
+
+  if(store.boot){
+    output$boot.results = boot.results
+  }
+  class(output) = "resi"
+  return(output)
+}
+
+#' @describeIn resi RESI point and interval estimation for models
+#' @export
+resi.glm <- resi.default
+
+#' @describeIn resi RESI point and interval estimation for lm models
+#' @export
+resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                          summary = TRUE, nboot = 1000, boot.method = 'nonparam',
                          vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
-                         Anova.args = list(), vcov.args = list(), z2S.alt = FALSE,
-                         t2S.alt = FALSE, ...){
+                         Anova.args = list(), vcov.args = list(), unbiased = TRUE, ...){
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
   if (missing(data)){
@@ -140,13 +214,16 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     tryCatch(update(model.full, data = data), error = function(e){
       message("Updating model fit failed. Try rerunning with providing data argument")})
   }
+  else{
+    data = as.data.frame(data)
+  }
 
   # point estimation
   output <- list(alpha = alpha, nboot = nboot, boot.method = tolower(boot.method))
   output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
                              data = data, anova = anova, summary = summary,
                              vcovfunc = vcovfunc, Anova.args = Anova.args,
-                             vcov.args = vcov.args, z2S.alt = z2S.alt, t2S.alt = t2S.alt, ...))
+                             vcov.args = vcov.args, unbiased = unbiased, ...))
 
   # bootstrapping
   boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
@@ -165,7 +242,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
                                                   data = boot.data, anova = anova, summary = summary,
                                                   vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args,
-                                                  z2S.alt = z2S.alt, t2S.alt = t2S.alt, ...)$estimates)
+                                                  unbiased = unbiased, ...)$estimates)
     }}
 
   # bayesian bootstrap
@@ -182,7 +259,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
                                                   data = boot.data, anova = anova, summary = summary,
                                                   vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args,
-                                                  z2S.alt = z2S.alt, t2S.alt = t2S.alt, ...)$estimates)
+                                                  unbiased = unbiased, ...)$estimates)
     }}
 
   alpha.order = sort(c(alpha/2, 1-alpha/2))
@@ -213,19 +290,20 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
                      nboot = 1000, boot.method = 'nonparam',
                      vcovfunc = regtools::nlshc, alpha = 0.05, store.boot = FALSE,
-                     vcov.args = list(), t2S.alt = FALSE, ...){
+                     vcov.args = list(), unbiased = TRUE, ...){
 
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
   if (missing(data)){
     stop('\nData argument is required for nls model')
   }
+  data = as.data.frame(data)
 
   # point estimation
   output <- list(alpha = alpha, nboot = nboot, boot.method = tolower(boot.method))
   output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
                              data = data, anova = anova, summary = summary,
-                             vcovfunc = vcovfunc, vcov.args = vcov.args, t2S.alt = t2S.alt, ...))
+                             vcovfunc = vcovfunc, vcov.args = vcov.args, unbiased = unbiased, ...))
 
   # bootstrapping
   boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
@@ -238,7 +316,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
                                                   data = boot.data, summary = summary,
                                                   vcovfunc = vcovfunc, vcov.args = vcov.args,
-                                                  t2S.alt = t2S.alt, ...)$estimates)
+                                                  unbiased = unbiased, ...)$estimates)
 
     }}
 
@@ -250,7 +328,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
                                                   data = boot.data, summary = summary,
                                                   vcovfunc = vcovfunc, vcov.args = vcov.args,
-                                                  t2S.alt = t2S.alt, ...)$estimates)
+                                                  unbiased = unbiased, ...)$estimates)
 
     }}
 
@@ -273,65 +351,75 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 #' @describeIn resi RESI point and interval estimation for survreg models
 #' @export
 resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                         summary = TRUE, nboot = 1000, boot.method = "nonparam",
+                         summary = TRUE, nboot = 1000,
                          vcovfunc = vcov, alpha = 0.05, store.boot = FALSE,
-                         Anova.args = list(), z2S.alt = FALSE, ...){
+                         Anova.args = list(), unbiased = TRUE, ...){
   if (missing(data)){
     stop('\nData argument is required for survreg model')
   }
-  boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
-  if (boot.method == "bayes"){
-    warning("Bayesian bootstrap not currently supported for survreg models, using non-parametric bootstrap")
+  else{
+    data = as.data.frame(data)
   }
 
   dots = list(...)
   if ("vcov.args" %in% names(dots)){
     warning("vcov.args ignored for survreg objects")
   }
+  if ("boot.method" %in% names(dots)){
+    message("Only nonparametric bootstrap supported for model type")
+  }
 
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
                anova = anova, summary = summary, nboot = nboot, vcovfunc = vcovfunc,
-               boot.method = "nonparam", store.boot = store.boot, Anova.args = Anova.args,
-               z2S.alt = z2S.alt, ...)
+               store.boot = store.boot, Anova.args = Anova.args,
+               unbiased = unbiased, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for coxph models
 #' @export
 resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                       summary = TRUE, nboot = 1000, boot.method = "nonparam",
+                       summary = TRUE, nboot = 1000,
                        vcovfunc = vcov, alpha = 0.05, store.boot = FALSE,
-                       Anova.args = list(), z2S.alt = FALSE, ...){
+                       Anova.args = list(), unbiased = TRUE, ...){
   if (missing(data)){
     stop('\nData argument is required for coxph model')
   }
-
-  boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
-  if (boot.method == "bayes"){
-    warning("Bayesian bootstrap not currently supported for coxph models, using non-parametric bootstrap")
+  else{
+    data = as.data.frame(data)
   }
 
   dots = list(...)
   if ("vcov.args" %in% names(dots)){
     warning("vcov.args ignored for survreg objects")
   }
+  if ("boot.method" %in% names(dots)){
+    message("Only nonparametric bootstrap supported for model type")
+  }
 
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
                anova = anova, summary = summary, nboot = nboot, vcovfunc = vcovfunc,
-               boot.method = "nonparam", store.boot = store.boot, Anova.args = Anova.args,
-               z2S.alt = z2S.alt, ...)
+               store.boot = store.boot, Anova.args = Anova.args,
+               unbiased = unbiased, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for hurdle models
 #' @export
 resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
-                     nboot = 1000, boot.method = 'nonparam', vcovfunc = sandwich::sandwich,
-                     alpha = 0.05, store.boot = FALSE, vcov.args = list(), z2S.alt = FALSE, ...){
-  boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
+                     nboot = 1000, vcovfunc = sandwich::sandwich,
+                     alpha = 0.05, store.boot = FALSE, vcov.args = list(), unbiased = TRUE, ...){
+
+  dots = list(...)
+  if ("boot.method" %in% names(dots)){
+    message("Only nonparametric bootstrap supported for model type")
+  }
 
   if (missing(data)){
     data = model.full$model
     tryCatch(update(model.full, data = data), error = function(e){
       message("Updating model fit failed. Try rerunning with providing data argument")})
+  }
+  else{
+    data = as.data.frame(data)
   }
 
   if (is.null(model.reduced)){
@@ -339,38 +427,25 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
   }
 
   # point estimation
-  output <- list(alpha = alpha, nboot = nboot, boot.method = tolower(boot.method))
+  output <- list(alpha = alpha, nboot = nboot, boot.method = "nonparam")
   output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
                              data = data, anova = anova, summary = summary,
-                             vcovfunc = vcovfunc, vcov.args = vcov.args, z2S.alt = z2S.alt, ...))
+                             vcovfunc = vcovfunc, vcov.args = vcov.args, unbiased = unbiased, ...))
 
   # bootstrapping
   boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
   colnames(boot.results) = names(output$estimates)
   # non-parametric bootstrap
-  if (tolower(boot.method) == "nonparam"){
-    for (i in 1:nboot){
-      boot.data = boot.samp(data)
-      boot.model.full <- update(model.full, data = boot.data)
-      boot.model.reduced <- update(model.full, data = boot.data)
-      boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
-                                                  data = boot.data, summary = summary,
-                                                  vcovfunc = vcovfunc, vcov.args = vcov.args,
-                                                  z2S.alt = z2S.alt, ...)$estimates)
+  for (i in 1:nboot){
+    boot.data = boot.samp(data)
+    boot.model.full <- update(model.full, data = boot.data)
+    boot.model.reduced <- update(model.full, data = boot.data)
+    boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
+                                                data = boot.data, summary = summary,
+                                                vcovfunc = vcovfunc, vcov.args = vcov.args,
+                                                unbiased = unbiased, ...)$estimates)
 
-    }}
-
-  # bayesian bootstrap
-  if (tolower(boot.method)  == "bayes"){
-    for (i in 1:nboot){
-      boot.data = suppressMessages(bayes.samp(data))
-      boot.model.full <- suppressMessages(update(model.full, data = boot.data, weights = g))
-      boot.model.reduced <- suppressMessages(update(model.reduced, data = boot.data, weights = g))
-      boot.results[i,] = suppressMessages(resi_pe(model.full = boot.model.full, model.reduced = NULL,
-                                                  data = boot.data, summary = summary,
-                                                  vcovfunc = vcovfunc, vcov.args = vcov.args,
-                                                  ...)$estimates)
-    }}
+  }
 
 
   output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
@@ -423,6 +498,9 @@ resi.geeglm <- function(model.full, alpha = 0.05, nboot = 1000, ...){
 resi.gee <- function(model.full, data, alpha = 0.05, nboot = 1000, ...){
   if (missing(data)){
     stop('\nData argument is required for GEE models from gee package')
+  }
+  else{
+    data = as.data.frame(data)
   }
   warning("\nInterval performance not yet evaluated for gee")
   output <- list(alpha = alpha, nboot = nboot)
