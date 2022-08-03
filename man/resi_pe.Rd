@@ -26,7 +26,7 @@ resi_pe(model.full, ...)
   vcovfunc = sandwich::vcovHC,
   Anova.args = list(),
   vcov.args = list(),
-  z2S.alt = FALSE,
+  unbiased = TRUE,
   ...
 )
 
@@ -39,7 +39,7 @@ resi_pe(model.full, ...)
   vcovfunc = sandwich::vcovHC,
   Anova.args = list(),
   vcov.args = list(),
-  z2S.alt = FALSE,
+  unbiased = TRUE,
   ...
 )
 
@@ -52,7 +52,7 @@ resi_pe(model.full, ...)
   vcovfunc = sandwich::vcovHC,
   Anova.args = list(),
   vcov.args = list(),
-  t2S.alt = FALSE,
+  unbiased = TRUE,
   ...
 )
 
@@ -63,7 +63,7 @@ resi_pe(model.full, ...)
   summary = TRUE,
   vcovfunc = regtools::nlshc,
   vcov.args = list(),
-  t2S.alt = FALSE,
+  unbiased = TRUE,
   ...
 )
 
@@ -75,7 +75,7 @@ resi_pe(model.full, ...)
   summary = TRUE,
   vcovfunc = vcov,
   Anova.args = list(),
-  z2S.alt = FALSE,
+  unbiased = TRUE,
   ...
 )
 
@@ -87,7 +87,7 @@ resi_pe(model.full, ...)
   summary = TRUE,
   vcovfunc = vcov,
   Anova.args = list(),
-  z2S.alt = FALSE,
+  unbiased = TRUE,
   ...
 )
 
@@ -98,7 +98,7 @@ resi_pe(model.full, ...)
   summary = TRUE,
   vcovfunc = sandwich::sandwich,
   vcov.args = list(),
-  z2S.alt = FALSE,
+  unbiased = TRUE,
   ...
 )
 
@@ -109,7 +109,7 @@ resi_pe(model.full, ...)
   summary = TRUE,
   vcovfunc = sandwich::sandwich,
   vcov.args = list(),
-  z2S.alt = FALSE,
+  unbiased = TRUE,
   ...
 )
 
@@ -138,11 +138,9 @@ resi_pe(model.full, ...)
 
 \item{vcov.args}{List, additional arguments to be passed to vcovfunc.}
 
-\item{z2S.alt}{Logical, whether to use the alternative Z statistic to RESI conversion. By default, `FALSE`. See details.}
+\item{unbiased}{Logical, whether to use the unbiased or alternative T/Z statistic to RESI conversion. By default, `TRUE`. See details.}
 
 \item{anova}{Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.}
-
-\item{t2S.alt}{Logical, whether to use the alternative T statistic to RESI conversion. By default, `FALSE`. See details.}
 }
 \value{
 Returns a list containing RESI point estimates
@@ -163,16 +161,22 @@ The RESI, denoted as S, is applicable across many model types. It is a unitless
 index and can be easily be compared across models. The RESI can also be
 converted to Cohen's \emph{d} (\code{\link{S2d}}) under model homoskedasticity.
 
-This function computes the RESI point estimates based on Chi-square, F, T, or Z
-statistics. The robust (sandwich) variance is used by default, allowing for
-consistency under model-misspecification. The RESI is related to the non-centrality
-parameter of the test statistic. The RESI estimate is consistent for all four
+The RESI is related to the non-centrality parameter
+of the test statistic. The RESI estimate is consistent for all four
 (Chi-square, F, T, and Z) types of statistics used. The Chi-square and F-based
 calculations rely on asymptotic theory, so they may be biased in small samples.
-When possible, the T and Z statistics are used, as these are unbiased and can
-be positive or negative. The RESI based on the Chi-Square and F statistics is
-always greater than or equal to 0. The type of statistic used is listed with
-the output.
+When possible, the T and Z statistics are used. There are two formulas for both
+the T and Z statistic conversion. The first (default, unbiased = TRUE)
+are based on solving the expected value of the T or Z statistic for the RESI.
+The alternative is based on squaring the T or Z statistic and using the
+F or Chi-square statistic conversion. Both of these methods are consistent, but
+the alternative exhibits a notable amount of finite sample bias. The alternative
+may be appealing because its absolute value will be equal to the RESI based on
+the F or Chi-square statistic. The RESI based on the Chi-Square and F statistics
+is always greater than or equal to 0. The type of statistic
+used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
+\code{\link{t2S}}, \code{\link{z2S}}, \code{\link{t2S_alt}}, and
+\code{\link{z2S_alt}} for more details on the formulas.
 }
 \section{Methods (by class)}{
 \itemize{
@@ -214,8 +218,8 @@ resi_pe(mod)
 
 # if you want to have RESI estimates in the coefficient table that are equal in absolute
 # value to those in the Anova table (except for those with >1 df and/or included in other
-# interaction terms), you can specify t2S.alt = TRUE to use the alternate conversion.
-resi_pe(mod, t2S.alt = TRUE)
+# interaction terms), you can specify unbiased = FALSE to use the alternate conversion.
+resi_pe(mod, unbiased = FALSE)
 }
 \references{
 Vandekar S, Tao R, Blume J. A Robust Effect Size Index. \emph{Psychometrika}. 2020 Mar;85(1):232-246. doi: 10.1007/s11336-020-09698-2.

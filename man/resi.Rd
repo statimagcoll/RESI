@@ -3,6 +3,8 @@
 \name{resi}
 \alias{resi}
 \alias{resi.default}
+\alias{resi.glm}
+\alias{resi.lm}
 \alias{resi.nls}
 \alias{resi.survreg}
 \alias{resi.coxph}
@@ -22,14 +24,45 @@ resi(model.full, ...)
   anova = TRUE,
   summary = TRUE,
   nboot = 1000,
+  vcovfunc = sandwich::vcovHC,
+  alpha = 0.05,
+  store.boot = FALSE,
+  Anova.args = list(),
+  vcov.args = list(),
+  unbiased = TRUE,
+  ...
+)
+
+\method{resi}{glm}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  summary = TRUE,
+  nboot = 1000,
+  vcovfunc = sandwich::vcovHC,
+  alpha = 0.05,
+  store.boot = FALSE,
+  Anova.args = list(),
+  vcov.args = list(),
+  unbiased = TRUE,
+  ...
+)
+
+\method{resi}{lm}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  summary = TRUE,
+  nboot = 1000,
   boot.method = "nonparam",
   vcovfunc = sandwich::vcovHC,
   alpha = 0.05,
   store.boot = FALSE,
   Anova.args = list(),
   vcov.args = list(),
-  z2S.alt = FALSE,
-  t2S.alt = FALSE,
+  unbiased = TRUE,
   ...
 )
 
@@ -44,7 +77,7 @@ resi(model.full, ...)
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
-  t2S.alt = FALSE,
+  unbiased = TRUE,
   ...
 )
 
@@ -55,12 +88,11 @@ resi(model.full, ...)
   anova = TRUE,
   summary = TRUE,
   nboot = 1000,
-  boot.method = "nonparam",
   vcovfunc = vcov,
   alpha = 0.05,
   store.boot = FALSE,
   Anova.args = list(),
-  z2S.alt = FALSE,
+  unbiased = TRUE,
   ...
 )
 
@@ -71,12 +103,11 @@ resi(model.full, ...)
   anova = TRUE,
   summary = TRUE,
   nboot = 1000,
-  boot.method = "nonparam",
   vcovfunc = vcov,
   alpha = 0.05,
   store.boot = FALSE,
   Anova.args = list(),
-  z2S.alt = FALSE,
+  unbiased = TRUE,
   ...
 )
 
@@ -86,12 +117,11 @@ resi(model.full, ...)
   data,
   summary = TRUE,
   nboot = 1000,
-  boot.method = "nonparam",
   vcovfunc = sandwich::sandwich,
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
-  z2S.alt = FALSE,
+  unbiased = TRUE,
   ...
 )
 
@@ -101,12 +131,11 @@ resi(model.full, ...)
   data,
   summary = TRUE,
   nboot = 1000,
-  boot.method = "nonparam",
   vcovfunc = sandwich::sandwich,
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
-  z2S.alt = FALSE,
+  unbiased = TRUE,
   ...
 )
 
@@ -138,8 +167,6 @@ resi(model.full, ...)
 
 \item{nboot}{Numeric, the number of bootstrap replicates. By default, 1000.}
 
-\item{boot.method}{String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.}
-
 \item{vcovfunc}{The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).}
 
 \item{alpha}{Numeric, significance level of the constructed CIs. By default, 0.05.}
@@ -150,9 +177,9 @@ resi(model.full, ...)
 
 \item{vcov.args}{List, additional arguments to be passed to vcovfunc.}
 
-\item{z2S.alt}{Logical, whether to use the alternative Z statistic to RESI conversion. By default, `FALSE`. See details.}
+\item{unbiased}{Logical, whether to use the unbiased or alternative T/Z statistic to RESI conversion. By default, `TRUE`. See details.}
 
-\item{t2S.alt}{Logical, whether to use the alternative T statistic to RESI conversion. By default, `FALSE`. See details.}
+\item{boot.method}{String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.}
 }
 \value{
 Returns a list that includes function arguments, RESI point estimates,
@@ -174,7 +201,7 @@ of the test statistic. The RESI estimate is consistent for all four
 (Chi-square, F, T, and Z) types of statistics used. The Chi-square and F-based
 calculations rely on asymptotic theory, so they may be biased in small samples.
 When possible, the T and Z statistics are used. There are two formulas for both
-the T and Z statistic conversion. The first (default, t2S.alt/z2S.alt = FALSE)
+the T and Z statistic conversion. The first (default, unbiased = TRUE)
 are based on solving the expected value of the T or Z statistic for the RESI.
 The alternative is based on squaring the T or Z statistic and using the
 F or Chi-square statistic conversion. Both of these methods are consistent, but
@@ -186,10 +213,10 @@ used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
 \code{\link{t2S}}, \code{\link{z2S}}, \code{\link{t2S_alt}}, and
 \code{\link{z2S_alt}} for more details on the formulas.
 
-For most model types supported by this package, two bootstrap options are
-available. The default is the standard non-parametric bootstrap. Bayesian
-bootstrapping is currently available for models other than \code{survreg} and
-\code{coxph}.
+For most \code{lm} and \code{nls} model types, there is a Bayesian bootstrap
+option available as an alternative to the default, standard non-parametric
+bootstrap. The interpretation of a Bayesian bootstrapped interval is similar to
+that of a credible interval.
 
 Certain model types require the data used for the model be entered as an argument.
 These are: \code{nls, survreg,} and \code{coxph}. Additionally, if a model
@@ -202,6 +229,10 @@ and then try rerunning \code{resi}.
 \section{Methods (by class)}{
 \itemize{
 \item \code{default}: RESI point and interval estimation for models
+
+\item \code{glm}: RESI point and interval estimation for models
+
+\item \code{lm}: RESI point and interval estimation for lm models
 
 \item \code{nls}: RESI point and interval estimation for nls models
 
@@ -268,8 +299,8 @@ mod.coxph =  coxph(Surv(time, status) ~ age + sex + wt.loss, data=lung, robust =
 
 # run resi on the model
 # to use the alternative Z to RESI formula (which is equal in absolute value to the
-# chi-square to RESI (S) formula), specify z2S.alt = TRUE.
-resi(mod.coxph, data = lung, z2S.alt = TRUE)
+# chi-square to RESI (S) formula), specify unbiased = FALSE.
+resi(mod.coxph, data = lung, unbiased = FALSE)
 
 }
 \references{

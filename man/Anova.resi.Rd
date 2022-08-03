@@ -22,3 +22,13 @@ After running the \code{\link{resi}} function on a fitted model, this function c
 \details{
 The resi function uses the car::Anova function to compute the Anova table.
 }
+\examples{
+# fit a model
+mod = lm(charges ~ bmi + sex, data = RESI::insurance)
+
+# run resi with the store.boot = TRUE option
+resi.obj = resi(mod, nboot = 100, store.boot = TRUE, alpha = 0.01)
+
+# run anova, specifying a different alpha level if desired
+anova(resi.obj, alpha = 0.05)
+}

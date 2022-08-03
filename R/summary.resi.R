@@ -5,6 +5,15 @@
 #' @param alpha an optional new specification for the confidence level. Can be vector-valued
 #' @param ... ignored
 #' @return Returns a `summary.resi` object containing the computed summary table
+#' @examples
+#' # fit a model
+#' mod = lm(charges ~ bmi + sex, data = RESI::insurance)
+#'
+#' # run resi with the store.boot = TRUE option
+#' resi.obj = resi(mod, nboot = 100, store.boot = TRUE, alpha = 0.01)
+#'
+#' # run summary, specifying a different alpha level if desired
+#' car::Anova(resi.obj, alpha = 0.05)
 #' @export
 summary.resi <- function(object, alpha = NULL, ...){
   if(is.null(object$coefficients)){
