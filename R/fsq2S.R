@@ -1,0 +1,15 @@
+#' Covert Cohen's \emph{f}^2 to S
+#'
+#' Converts Cohen's \emph{f}^2 to robust effect size index (S)
+#' using the formula from Vandekar, Rao, & Blume (2020).
+#' @param fsq Numeric, value of Cohen's \emph{f}^2.
+#' @keywords power
+#' @return Returns an estimate the robust effect size index
+#' @examples
+#' # consider a moderate effect size of f^2 = 0.3
+#' fsq2S(0.3)
+#' # This corresponds to a RESI of 0.5477226
+#' @export
+fsq2S <- function(fsq){
+  sqrt(fsq)
+}
