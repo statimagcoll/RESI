@@ -133,6 +133,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                          summary = TRUE, nboot = 1000,
                          vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
                          Anova.args = list(), vcov.args = list(), unbiased = TRUE, ...){
+
   dots = list(...)
   if ("boot.method" %in% names(dots)){
     message("Only nonparametric bootstrap supported for model type")
@@ -354,6 +355,7 @@ resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                          summary = TRUE, nboot = 1000,
                          vcovfunc = vcov, alpha = 0.05, store.boot = FALSE,
                          Anova.args = list(), unbiased = TRUE, ...){
+
   if (missing(data)){
     stop('\nData argument is required for survreg model')
   }
@@ -541,7 +543,7 @@ resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSand
   # bootstrap
   output.boot = as.matrix(output$coefficients[, 'RESI'])
   tryCatch(update(model.full, data = data), error = function(e){
-    message("Need to run `library(nlme)`")})
+    message("Try running `library(nlme)`")})
   for (i in 1:nboot){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
