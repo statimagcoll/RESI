@@ -33,7 +33,7 @@ Anova.resi <- function(object, alpha = NULL, ...){
     }
     else{
       output = object$anova[,1:(which(colnames(object$anova) == 'RESI'))]
-      CIs = apply(object$boot.results[,(ncol(object$boot.results)-nrow(object$anova)+1):ncol(object$boot.results)], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+      CIs = apply(object$boot.results[,(ncol(object$boot.results)-nrow(object$anova[which(rownames(object$anova) != "Residuals"),])+1):ncol(object$boot.results)], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
       CIs = t(CIs)
       output[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-rev(alpha)/2)*100, '%', sep=''))] = CIs
     }
