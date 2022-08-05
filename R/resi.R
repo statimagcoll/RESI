@@ -248,6 +248,7 @@ resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # bayesian bootstrap
   if (tolower(boot.method)  == "bayes"){
+    `(weights)` = NULL
     for (i in 1:nboot){
       boot.data = bayes.samp(data)
       boot.model.full <- suppressWarnings(update(model.full, data = boot.data, weights = boot.data[,'g']))
@@ -323,6 +324,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 
   # bayesian bootstrap
   if (tolower(boot.method)  == "bayes"){
+    g = NULL
     for (i in 1:nboot){
       boot.data = bayes.samp(data)
       boot.model.full <- update(model.full, data = boot.data, weights = g)
