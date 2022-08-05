@@ -544,12 +544,11 @@ resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSand
   id_var = attr(nlme::getGroups(model.full), "label")
   # bootstrap
   output.boot = as.matrix(output$coefficients[, 'RESI'])
-  tryCatch(update(model.full, data = data), error = function(e){
-    message("Try running `library(nlme)`")})
+  fun <- utils::getFromNamespace("update.lme", "nlme")
   for (i in 1:nboot){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
-    boot.mod = update(model.full, data = boot.data, fixed = as.formula(model.full$call$fixed),
+    boot.mod = fun(model.full, data = boot.data, fixed = as.formula(model.full$call$fixed),
                       random = as.formula(model.full$call$random))
     output.boot = cbind(output.boot, resi_pe(model.full = boot.mod, vcovfunc = vcovfunc,
                                              vcov.args = vcov.args)$coefficients[, 'RESI'])
