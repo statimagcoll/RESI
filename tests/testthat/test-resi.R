@@ -105,7 +105,7 @@ test_that("resi produces the correct estimates", {
   expect_equal(unname(resi(mod.zinf, nboot = 1)$estimates[c(1, 2, 5, 8, 10)]), c(0.23725614, 0.11892936, -0.07014934, -0.03481673, -0.03461235), tolerance = 1e-07)
   expect_equal(unname(resi(mod.gee, nboot = 10, data = data.gee)$coefficients[,'RESI']), c(0.0000, 0.4850899, 0.0000, 0.5591547, 0.2889370), tolerance = 1e-07)
   expect_equal(unname(resi(mod.geeglm, nboot = 10, data = data.gee)$coefficients[,'RESI']), c(0.0000, 0.4850899, 0.000, 0.5591547, 0.2889370), tolerance = 1e-07)
-  expect_equal(unname(resi(mod.lme, nboot = 10, data = data.gee)$coefficients[,'RESI']), c(3.659090, 1.739166, 0.512371), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.lme, nboot = 10)$coefficients[,'RESI']), c(3.659090, 1.739166, 0.512371), tolerance = 1e-07)
   expect_equal(unname(resi(mod.lmerMod, nboot = 10)$coefficients[,'RESI']),c(8.434942, 1.533073), tolerance = 1e-07)
 })
 
