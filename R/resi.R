@@ -545,6 +545,8 @@ resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSand
   # bootstrap
   output.boot = as.matrix(output$coefficients[, 'RESI'])
   fun <- utils::getFromNamespace("update.lme", "nlme")
+  tryCatch(fun(model.full, data = data), error = function(e){
+    message("Try running `library(nlme)`")})
   for (i in 1:nboot){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
