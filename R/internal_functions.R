@@ -7,7 +7,7 @@
 #' @return Returns a scalar or vector argument of the squared robust effect size index estimate.
 #' @noRd
 chisq2Ssq = function(chisq, df, n){
-  S = (chisq - df)/rdf
+  S = (chisq - df)/n
 }
 
 #' Non-parametric bootstrap sampling

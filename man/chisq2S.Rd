@@ -22,6 +22,11 @@ Vector arguments are accepted. If different length arguments are passed they are
 For mixed effects models, RESI is conditional on the average correlation
 structure within subjects.
 }
+\details{
+The formula for converting a Chi-square statistic to RESI is:
+
+\eqn{ S = \sqrt(max( 0, (chisq - df)/n))}
+}
 \examples{
 # obtain Chi-sq value by fitting an lm and running a Wald test
 mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
@@ -37,4 +42,3 @@ df = abs(wt$Df[2])
 chisq2S(chisq, df = df, n = nrow(mod$model))
 
 }
-\keyword{power}

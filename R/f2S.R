@@ -5,7 +5,9 @@
 #' @param f The chi-square statistic for the parameter of interest.
 #' @param df Number of degrees of freedom of the chi-square statistic.
 #' @param rdf Model residual degrees of freedom or number of independent samples.
-#' @keywords power
+#' @details The formula for converting an F statistic to S is:
+#'
+#' \eqn{ S = \sqrt(max(0, (f * df * (rdf - 2)/rdf - 1)/rdf))}
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
 #' # to obtain example F values, first fit a glm
 #' mod = glm(charges ~ region * age + bmi + sex, data = RESI::insurance)

@@ -16,6 +16,11 @@ Returns an estimate of Cohen's \emph{f}^2 based on the RESI
 Converts robust effect size index (S) to Cohen's \emph{f}^2
 (effect size for multiple regression) using the formula from Vandekar, Rao, & Blume (2020).
 }
+\details{
+The formula for the conversion is:
+
+\eqn{ f^2 = S^2}
+}
 \examples{
 # fit a linear regression model with continuous outcome and predictor
 mod = lm(charges ~ age, data = RESI::insurance)
@@ -30,4 +35,3 @@ S = t2S(t, n = 1338, rdf = 1336)
 S2fsq(S)
 
 }
-\keyword{power}

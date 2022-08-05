@@ -8,7 +8,10 @@
 #' formula. There is another function, \code{\link{z2S_alt}}, that uses an alternative
 #' formula. This function's formula is derived by solving the expected value of the
 #' Z statistic for S. It is unbiased and consistent.
-#' @keywords power
+#'
+#' The formula for this conversion is:
+#'
+#' \eqn{ S = Z/\sqrt(n)}
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
 #' @examples
 #' # to obtain example z values, first fit a glm

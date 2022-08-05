@@ -30,4 +30,8 @@ f2S(fs, df = dfs, rdf = mod$df.residual)
 This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
 Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
 }
-\keyword{power}
+\details{
+The formula for converting an F statistic to S is:
+
+\eqn{ S = \sqrt(max(0, (f * df * (rdf - 2)/rdf - 1)/rdf))}
+}

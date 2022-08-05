@@ -23,6 +23,10 @@ This function computes S, the RESI, from a Z statistic using the default
 formula. There is another function, \code{\link{z2S_alt}}, that uses an alternative
 formula. This function's formula is derived by solving the expected value of the
 Z statistic for S. It is unbiased and consistent.
+
+The formula for this conversion is:
+
+\eqn{ S = Z/\sqrt(n)}
 }
 \examples{
 # to obtain example z values, first fit a glm
@@ -33,4 +37,3 @@ zs = lmtest::coeftest(mod, vcov. = sandwich::vcovHC)[,'z value']
 # get RESI estimates
 z2S(zs, n = nrow(RESI::insurance))
 }
-\keyword{power}

@@ -3,7 +3,9 @@
 #' Converts robust effect size index (S) to R^2, the partial
 #' coefficient of determination, using the formula from Vandekar, Rao, & Blume (2020).
 #' @param S Numeric, the robust effect size index.
-#' @keywords power
+#' @details The formula for the conversion is:
+#'
+#' \eqn{ R^2 = S^2 / (1 + S^2)}
 #' @return Returns an estimate of R^2 based on the RESI
 #' @examples
 #' # fit a simple linear regression with a binary predictor

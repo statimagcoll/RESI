@@ -25,6 +25,10 @@ This function computes S, the RESI, from a T statistic using the default
 formula. There is another function, \code{\link{t2S_alt}}, that uses an alternative
 formula. This function's formula is derived by solving the expected value of the
 T statistic for S. It is unbiased and consistent.
+
+The formula for the conversion is:
+
+\eqn{S = (t * \sqrt(2) * \Gamma(rdf/2)) / (\sqrt(n * rdf) * \Gamma((rdf - 1)/2))}
 }
 \examples{
 # to obtain t values, first fit a lm
@@ -36,4 +40,3 @@ ts = lmtest::coeftest(mod, vcov. = sandwich::vcovHC)[,'t value']
 t2S(ts, n = nrow(RESI::insurance), rdf = mod$df.residual)
 
 }
-\keyword{power}

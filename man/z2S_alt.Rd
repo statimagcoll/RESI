@@ -27,6 +27,10 @@ intuitive relationship to the Chi-square statistic; the absolute value of RESI e
 using this formula will be equal to a RESI estimate using a Chi-square statistic for
 the same model. However, this estimator does have finite sample bias, which is an
 important consideration for the coverage of the bootstrapping that \code{resi} uses.
+
+The formula for this conversion is:
+
+\eqn{ \sqrt(max(0, (Z^2 - 1)/n)) * sign(Z)}
 }
 \examples{
 # to obtain example z values, first fit a glm
@@ -37,4 +41,3 @@ zs = lmtest::coeftest(mod, vcov. = sandwich::vcovHC)[,'z value']
 # get RESI estimates
 z2S(zs, n = nrow(RESI::insurance))
 }
-\keyword{power}

@@ -9,7 +9,11 @@
 #' formula. There is another function, \code{\link{t2S_alt}}, that uses an alternative
 #' formula. This function's formula is derived by solving the expected value of the
 #' T statistic for S. It is unbiased and consistent.
-#' @keywords power
+#'
+#' The formula for the conversion is:
+#'
+#' \eqn{S = (t * \sqrt(2) * \Gamma(rdf/2)) / (\sqrt(n * rdf) * \Gamma((rdf - 1)/2))}
+#'
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
 #' @examples
 #' # to obtain t values, first fit a lm

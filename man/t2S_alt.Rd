@@ -27,6 +27,10 @@ intuitive relationship to the F statistic; the absolute value of RESI estimates
 using this formula will be equal to a RESI estimate using an F statistic for
 the same model. However, this estimator does have finite sample bias, which is an
 important consideration for the coverage of the bootstrapping that \code{resi} uses.
+
+The formula for this conversion is:
+
+\eqn{ \sqrt(max(0, (t^2 * (rdf - 2)/rdf - 1)/rdf))}
 }
 \examples{
 # to obtain t values, first fit a lm
@@ -37,4 +41,3 @@ ts = lmtest::coeftest(mod, vcov. = sandwich::vcovHC)[,'t value']
 # get RESI estimates
 t2S_alt(ts, rdf = mod$df.residual)
 }
-\keyword{power}

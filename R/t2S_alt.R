@@ -12,6 +12,10 @@
 #' using this formula will be equal to a RESI estimate using an F statistic for
 #' the same model. However, this estimator does have finite sample bias, which is an
 #' important consideration for the coverage of the bootstrapping that \code{resi} uses.
+#'
+#' The formula for this conversion is:
+#'
+#' \eqn{ \sqrt(max(0, (t^2 * (rdf - 2)/rdf - 1)/rdf))}
 #' @examples
 #' # to obtain t values, first fit a lm
 #' mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
@@ -20,7 +24,6 @@
 #'
 #' # get RESI estimates
 #' t2S_alt(ts, rdf = mod$df.residual)
-#' @keywords power
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
 #' @export
 t2S_alt <- function(t, rdf){

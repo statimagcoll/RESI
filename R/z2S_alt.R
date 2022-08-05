@@ -12,7 +12,10 @@
 #' using this formula will be equal to a RESI estimate using a Chi-square statistic for
 #' the same model. However, this estimator does have finite sample bias, which is an
 #' important consideration for the coverage of the bootstrapping that \code{resi} uses.
-#' @keywords power
+#'
+#' The formula for this conversion is:
+#'
+#' \eqn{ \sqrt(max(0, (Z^2 - 1)/n)) * sign(Z)}
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
 #' @examples
 #' # to obtain example z values, first fit a glm
