@@ -33,20 +33,16 @@ Collate:
   'print.R'
 Imports:
     aod,
-    buildmer,
     car,
     clubSandwich,
-    lme4,
     lmtest,
-    mvtnorm,
     nlme,
-    parallel,
-    pracma,
     regtools,
     sandwich
 Suggests:
     gee,
     geepack,
+    lme4,
     pscl,
     splines,
     survival,
