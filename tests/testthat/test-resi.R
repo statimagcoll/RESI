@@ -98,8 +98,6 @@ test_that("resi produces the correct estimates", {
                                                             0.058360820, 0.016662071, 0.036086004, -0.014963251, 0.036616942, 0.296220354, 0.150361134,
                                                             0.051742893, 0.016116372))
   expect_equal(unname(resi(mod.s, nboot = 1, data = data)$estimates[c(1, 6, 11, 24)]), c(0.35634034, 0.06143486, 0.00748577, 0.05339006), tolerance = 1e-07)
-  # expect_equal(unname(resi(mod.nls, nboot = 1, data = data.nls)$estimates), c(11.763649, 8.979576, 1.352517), tolerance = 1e-07)
-  # need to figure out what is happening with nls
   expect_equal(unname(resi(mod.surv, nboot = 1, data = data.surv)$estimates), c(0.19357703, 0.51465342, -0.08062289, 0.20010885, 0.10512266, -0.27578597, 0.04597918,
                                                                                 0.18883217, 0.08163828), tolerance = 1e-07)
   expect_equal(unname(resi(mod.coxph, nboot = 1, data = data.surv)$estimates), c(0.224354226, 0.136138740, -0.213293162, 0.008641209, 0.117732151, 0.202042262, 0.000000000))
