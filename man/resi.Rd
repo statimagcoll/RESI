@@ -252,21 +252,25 @@ and then try rerunning \code{resi}.
 }}
 
 \examples{
+## for timing purposes, a small number of bootstrap replicates is used in the
+## examples. Run them with a higher or default `nboot` argument for better performance
+
 ## RESI on a linear model
 # fit linear model
 mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
 
-# run resi on fitted model with 500 bootstrap replicates
-resi(mod, nboot = 500)
+# run resi on fitted model with desired number of bootstrap replicates
+resi(mod, nboot = 50)
 
 # fit a reduced model for comparison
 mod.red = lm(charges ~ bmi, data = RESI::insurance)
 
 # running resi and including the reduced model will provide almost the exact same
-# output. The difference is that the "overall" portion of the output will compare
-# the full model to the reduced model. The "summary" and "anova" elements will be
-# the same.
-resi(model.full = mod, model.reduced = mod.red, nboot = 500)
+# output as not including a reduced model. The difference is that the "overall"
+# portion of the output will compare the full model to the reduced model.
+# The "summary" and "anova" RESI estimates will be the same. (The bootstrapped
+# confidence intervals may differ.)
+resi(model.full = mod, model.reduced = mod.red, nboot = 10)
 
 # for some model types and formula structures, data argument is required
 library(splines)
@@ -276,8 +280,8 @@ mod = glm(smoker ~ ns(age, df = 3) + region, data = RESI::insurance, family = "b
 # store bootstrap results for calculating different CIs later
 # specify additional arguments to the variance-covariance function via vcov.args
 resi.obj = resi(mod, data = RESI::insurance, store.boot = TRUE, alpha = 0.01,
-vcov.args = list(type = "HC0"))
-summary(resi.obj, alpha = c(0.05, 0.1))
+vcov.args = list(type = "HC0"), nboot = 25)
+summary(resi.obj, alpha = c(0.1))
 car::Anova(resi.obj, alpha = 0.1)
 
 # the result of resi, as well as the summary or Anova of a `resi` object can be plotted
@@ -286,7 +290,7 @@ car::Anova(resi.obj, alpha = 0.1)
 plot(resi.obj, alpha = 0.05)
 # if the variable names on the y-axis are too long, you can reduce their size with
 # the ycex.axis argument (or use regular common solutions like changing the margins)
-plot(resi.obj, alpha = 0.05, ycex.alpha = 0.5)
+plot(resi.obj, alpha = 0.05, ycex.axis = 0.5)
 
 ## RESI on a survival model with alternate Z2S
 # load survival library
@@ -300,7 +304,7 @@ mod.coxph =  coxph(Surv(time, status) ~ age + sex + wt.loss, data=lung, robust =
 # run resi on the model
 # to use the alternative Z to RESI formula (which is equal in absolute value to the
 # chi-square to RESI (S) formula), specify unbiased = FALSE.
-resi(mod.coxph, data = lung, unbiased = FALSE)
+resi(mod.coxph, data = lung, unbiased = FALSE, nboot = 25)
 
 }
 \references{
