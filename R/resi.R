@@ -119,7 +119,7 @@
 #' # run resi on the model
 #' # to use the alternative Z to RESI formula (which is equal in absolute value to the
 #' # chi-square to RESI (S) formula), specify unbiased = FALSE.
-#' resi(mod.coxph, data = lung, unbiased = FALSE, nboot = 25)
+#' resi(mod.coxph, data = lung, unbiased = FALSE, nboot = 10)
 #'
 #' @references Vandekar S, Tao R, Blume J. A Robust Effect Size Index. \emph{Psychometrika}. 2020 Mar;85(1):232-246. doi: 10.1007/s11336-020-09698-2.
 #'

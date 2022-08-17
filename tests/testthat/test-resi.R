@@ -132,10 +132,6 @@ test_that("RESI estimates are in between the confidence limits", {
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
   resi.obj = resi(mod.zinf, nboot = 500)
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
-  resi.obj = resi(mod.geeglm, data = data.gee, nboot = 500)
-  expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
-  resi.obj = resi(mod.lme, nboot = 500)
-  expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
 })
 
 test_that("unbiased = FALSE returns same abs. RESI as Chi-sq/F",{

@@ -304,7 +304,7 @@ mod.coxph =  coxph(Surv(time, status) ~ age + sex + wt.loss, data=lung, robust =
 # run resi on the model
 # to use the alternative Z to RESI formula (which is equal in absolute value to the
 # chi-square to RESI (S) formula), specify unbiased = FALSE.
-resi(mod.coxph, data = lung, unbiased = FALSE, nboot = 25)
+resi(mod.coxph, data = lung, unbiased = FALSE, nboot = 10)
 
 }
 \references{
