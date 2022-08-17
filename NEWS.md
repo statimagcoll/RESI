@@ -1,3 +1,3 @@
-## RESI 1.0.1
+## RESI 1.0.2
 
 * First version
