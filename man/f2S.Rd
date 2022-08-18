@@ -7,7 +7,7 @@
 f2S(f, df, rdf)
 }
 \arguments{
-\item{f}{The chi-square statistic for the parameter of interest.}
+\item{f}{The F statistic for the parameter of interest.}
 
 \item{df}{Number of degrees of freedom of the chi-square statistic.}
 
