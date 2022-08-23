@@ -44,9 +44,11 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
   # c(unlist(sapply(ni-1, seq, from = 0)))  # minus one since we start at time = 0
 
   # generate the trt group
+  # the trt group for each subject
   if (fixed.design) {
     trt = sample(rep(0:1, times = c(ceiling(N*pi), N - ceiling(N*pi)) ), replace = FALSE)
   } else {trt = rbinom(N, 1, pi)}
+  # duplicate it for longitudinal data
   trt = rep(trt, times = ni)
 
   # Cov of random effects
@@ -115,7 +117,7 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
   data_sim = data.frame(id = id, num_obs = rep(ni, times = ni), time = time, trt = trt,
                         gamma_0 = gamma_0, gamma_t = gamma_t, error = e, y = y)
 
-  return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta, true_sd = sd))
+  return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta, true_sd = sd, cov_y = Sigma_y ))
 }
 
 
