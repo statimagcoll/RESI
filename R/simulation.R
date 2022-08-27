@@ -106,6 +106,32 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
   beta_trt = sqrt(N * S[3]^2 * var_trt)
   beta = c(beta_int, beta_time, beta_trt) # YEAH!!!!
 
+# 2.2 Deriving the true values of pm-RESI
+  # The covariance of \hat{\beta} given X
+  # assuming the model is correctly specified.
+  # The covariance matrix of \hat{beta} under independence assumption
+  sum = 0
+  rep = 1e5
+  for (i in 1:rep){
+    # X_i^T Sigma^{-1} T
+    X = cbind(1, time = time_points, trt = rbinom(1, 1, pi))
+    sum = sum + t(X) %*% solve(diag(diag(Sigma_y))) %*% X
+  }
+  # The covariance matrix of \hat{\beta} under independence assumption
+  COV_beta_ind = solve(sum) * rep
+  var_int_ind = COV_beta_ind[1, 1]/N
+  var_time_ind = COV_beta_ind[2, 2]/N
+  var_trt_ind = COV_beta_ind[3, 3]/N
+  # The true pm-RESI
+  pm_resi_int = sqrt( S[1]^2 * var_int / var_int_ind)
+  pm_resi_time = sqrt( S[2]^2 * var_time / var_time_ind)
+  pm_resi_trt = sqrt( S[3]^2 * var_trt / var_trt_ind)
+  pm_resi = c(pm_resi_int, pm_resi_time, pm_resi_trt)
+  # The true ESS
+  ESS_int = sum(ni) * var_int_ind / var_int
+  ESS_time = sum(ni) * var_time_ind / var_time
+  ESS_trt = sum(ni) * var_trt_ind / var_trt
+  ESS = c(ESS_int, ESS_time, ESS_trt)
 
 # 3. CALCULATING THE OUTCOME VALUES
   ## design matrix for fixed effects
@@ -117,7 +143,8 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
   data_sim = data.frame(id = id, num_obs = rep(ni, times = ni), time = time, trt = trt,
                         gamma_0 = gamma_0, gamma_t = gamma_t, error = e, y = y)
 
-  return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta, true_sd = sd, cov_y = Sigma_y ))
+  return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta, true_sd = sd, cov_y = Sigma_y,
+              pm_resi = pm_resi, ESS = ESS))
 }
 
 
