@@ -107,6 +107,7 @@ ess.lmerMod <- function(obj, xTab, robust.var = TRUE){
 
 #' Calculating the effective sample size from a fitted GEE model.
 #' @param obj a fitted `geeglm` object
+#' @param xTab a matrix containing model output and added RESI point estimate(s)
 #' @param constr matrix, linear constraint
 #' @export
 
@@ -131,14 +132,15 @@ ess.geeglm <- function(obj, xTab, robust.var = TRUE){
 
   # the (wald) statistics under independence
   stat_ind = xTab[, "Estimate"]^2/diag(cov_ind) #using the same estimates
-  # the RESI estimates under the
+  # the RESI estimates under using the independence Wald
   resi_ind = RESI::chisq2Ssq(stat_ind, 1, N)
   # the pm-RESI
   resi_pm = sqrt(N/tot_obs * resi_ind^2)
-  # the ESS
-  ess = xTab[, "RESI"]^2/resi_ind^2 * tot_obs
   # weights
   w = xTab[, "RESI"]^2/resi_ind^2
+  # the ESS
+  ess = w * tot_obs
+
   output = cbind(xTab, 'pm-RESI' = resi_pm, 'ESS' = ess, "weights" = w)
   return(output)
   # # dataset
