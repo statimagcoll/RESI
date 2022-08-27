@@ -133,7 +133,7 @@ ess.geeglm <- function(obj, xTab, robust.var = TRUE){
   # the (wald) statistics under independence
   stat_ind = xTab[, "Estimate"]^2/diag(cov_ind) #using the same estimates
   # the RESI estimates under using the independence Wald
-  resi_ind = RESI::chisq2Ssq(stat_ind, 1, N)
+  resi_ind = RESI::chisq2S(stat_ind, 1, N)
   # the pm-RESI
   resi_pm = sqrt(N/tot_obs * resi_ind^2)
   # weights
