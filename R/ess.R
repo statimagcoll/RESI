@@ -124,11 +124,12 @@ ess.geeglm <- function(obj, xTab, robust.var = TRUE){
   # The Covariance Matrix from the independence model
   mod_ind = glm(form, data = data)
 
-  if (robust.var) {
-    cov_ind = sandwich::vcovHC(mod_ind)
-  } else {
-    cov_ind = vcov(mod_ind)
-  }
+  # if (robust.var) {
+  #   cov_ind = sandwich::vcovHC(mod_ind)
+  # } else {
+  #   cov_ind = vcov(mod_ind)
+  # }
+  cov_ind = vcov(mod_ind)
 
   # the (wald) statistics under independence
   stat_ind = xTab[, "Estimate"]^2/diag(cov_ind) #using the same estimates
