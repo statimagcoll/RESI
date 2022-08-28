@@ -129,18 +129,19 @@ ess.geeglm <- function(obj, xTab, robust.var = TRUE){
   # } else {
   #   cov_ind = vcov(mod_ind)
   # }
-  cov_ind = vcov(mod_ind)
+  cov_ind = vcov(mod_ind) # var(\hat{\beta})
 
-  # the (wald) statistics under independence
-  stat_ind = xTab[, "Estimate"]^2/diag(cov_ind) #using the same estimates
-  # the RESI estimates under using the independence Wald
-  resi_ind = RESI::chisq2S(stat_ind, 1, N)
-  # the pm-RESI
-  resi_pm = sqrt(N/tot_obs * resi_ind^2)
   # weights
-  w = xTab[, "RESI"]^2/resi_ind^2
+  w = diag(cov_ind) / xTab[, "Std.err"]^2
   # the ESS
   ess = w * tot_obs
+  # the pm-RESI
+  resi_pm = sqrt(N/ess * xTab[, "RESI"]^2)
+
+  # # the (wald) statistics under independence
+  # stat_ind = xTab[, "Estimate"]^2/diag(cov_ind) #using the same estimates
+  # # the RESI estimates under using the independence Wald
+  # resi_ind = RESI::chisq2S(stat_ind, 1, N)
 
   output = cbind(xTab, 'pm-RESI' = resi_pm, 'ESS' = ess, "weights" = w)
   return(output)

@@ -109,15 +109,13 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
 # 2.2 Deriving the true values of pm-RESI
   # The covariance of \hat{\beta} given X
   # assuming the model is correctly specified.
-  # The covariance matrix of \hat{beta} under independence assumption
+  # The covariance matrix of \sqrt{N}*(\hat{\beta} - \beta_0) under independence assumption
   sum = 0
   rep = 1e5
   for (i in 1:rep){
-    # X_i^T Sigma^{-1} T
     X = cbind(1, time = time_points, trt = rbinom(1, 1, pi))
     sum = sum + t(X) %*% solve(diag(diag(Sigma_y))) %*% X
   }
-  # The covariance matrix of \hat{\beta} under independence assumption
   COV_beta_ind = solve(sum) * rep
   var_int_ind = COV_beta_ind[1, 1]/N
   var_time_ind = COV_beta_ind[2, 2]/N
