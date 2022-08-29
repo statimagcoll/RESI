@@ -131,10 +131,10 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
     # duplicate it for longitudinal data
     trt_temp = rep(trt_temp, times = ni)
     X = cbind(1, time = time, trt = trt_temp)
-    sum = sum + t(X) %*% X * (sigma.e^2)
+    sum = sum + t(X) %*% X
   }
 
-  COV_beta_ind = solve(sum) * rep  # = the variance of \hat{\beta|ind}
+  COV_beta_ind = solve(sum) *  (sigma.e^2 + sigma0^2) * rep  # = the variance of \hat{\beta|ind}
 
   tot_obs = sum(ni)
   var_int_ind = COV_beta_ind[1, 1]
@@ -165,7 +165,7 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
                         gamma_0 = gamma_0, gamma_t = gamma_t, error = e, y = y)
 
   return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta, true_sd = sd, cov_y = Sigma_y,
-              pm_resi = pm_resi, ESS = ESS, info = "Function updated on 8/29/2022 2:56pm"))
+              pm_resi = pm_resi, ESS = ESS, info = "Function updated on 8/29/2022 3:16pm"))
 }
 
 
