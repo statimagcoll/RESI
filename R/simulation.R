@@ -121,16 +121,25 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
   # sum = t(X) %*% solve(diag(rep(2, rep*unique(ni)))) %*% X
 
   sum = 0
-  rep = 1e5
+  rep = 1e3
   for (i in 1:rep){
-    X = cbind(1, time = time_points, trt = rbinom(1, 1, pi))
-    sum = sum + t(X) %*% solve(diag(diag(Sigma_y))) %*% X
+    # generate the trt group
+    # the trt group for each subject
+    if (fixed.design) {
+      trt_temp = sample(rep(0:1, times = c(ceiling(N*pi), N - ceiling(N*pi)) ), replace = FALSE)
+    } else {trt_temp = rbinom(N, 1, pi)}
+    # duplicate it for longitudinal data
+    trt_temp = rep(trt_temp, times = ni)
+    X = cbind(1, time = time, trt = trt_temp)
+    sum = sum + t(X) %*% X * (sigma.e^2 + sigma0^2)
   }
-  COV_beta_ind = solve(sum) * rep * unique(ni) # = the variance of \sqrt{tot_obs} * (\hat{\beta|ind} - \beta_0)
+
+  COV_beta_ind = solve(sum) * rep  # = the variance of \hat{\beta|ind}
+
   tot_obs = sum(ni)
-  var_int_ind = COV_beta_ind[1, 1] / tot_obs
-  var_time_ind = COV_beta_ind[2, 2] / tot_obs
-  var_trt_ind = COV_beta_ind[3, 3] / tot_obs
+  var_int_ind = COV_beta_ind[1, 1]
+  var_time_ind = COV_beta_ind[2, 2]
+  var_trt_ind = COV_beta_ind[3, 3]
   # The true pm-RESI
   pm_resi_int = sqrt( S[1]^2 * var_int / var_int_ind)
   pm_resi_time = sqrt( S[2]^2 * var_time / var_time_ind)
@@ -153,7 +162,7 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
                         gamma_0 = gamma_0, gamma_t = gamma_t, error = e, y = y)
 
   return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta, true_sd = sd, cov_y = Sigma_y,
-              pm_resi = pm_resi, ESS = ESS))
+              pm_resi = pm_resi, ESS = ESS, info = "Function updated on 8/29/2022"))
 }
 
 
