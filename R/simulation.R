@@ -110,16 +110,27 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
   # The covariance of \hat{\beta} given X
   # assuming the model is correctly specified.
   # The covariance matrix of \sqrt{N}*(\hat{\beta} - \beta_0) under independence assumption
+
+  # rep = 1e3
+  # if (fixed.design) {
+  #   trt_temp = sample(rep(0:1, times = c(ceiling(rep*pi), rep - ceiling(rep*pi)) ), replace = FALSE)
+  # } else {trt_temp = rbinom(rep, 1, pi)}
+  # # duplicate it for longitudinal data
+  # trt_temp = rep(trt_temp, each = unique(ni))
+  # X = cbind(1, time = time_points, trt = trt_temp)
+  # sum = t(X) %*% solve(diag(rep(2, rep*unique(ni)))) %*% X
+
   sum = 0
   rep = 1e5
   for (i in 1:rep){
     X = cbind(1, time = time_points, trt = rbinom(1, 1, pi))
     sum = sum + t(X) %*% solve(diag(diag(Sigma_y))) %*% X
   }
-  COV_beta_ind = solve(sum) * rep
-  var_int_ind = COV_beta_ind[1, 1]/N
-  var_time_ind = COV_beta_ind[2, 2]/N
-  var_trt_ind = COV_beta_ind[3, 3]/N
+  COV_beta_ind = solve(sum) * rep * unique(ni)
+
+  var_int_ind = COV_beta_ind[1, 1] / N
+  var_time_ind = COV_beta_ind[2, 2] / N
+  var_trt_ind = COV_beta_ind[3, 3] / N
   # The true pm-RESI
   pm_resi_int = sqrt( S[1]^2 * var_int / var_int_ind)
   pm_resi_time = sqrt( S[2]^2 * var_time / var_time_ind)
