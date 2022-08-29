@@ -121,7 +121,7 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
   # sum = t(X) %*% solve(diag(rep(2, rep*unique(ni)))) %*% X
 
   sum = 0
-  rep = 1e3
+  rep = 1e5
   for (i in 1:rep){
     # generate the trt group
     # the trt group for each subject
@@ -131,7 +131,7 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
     # duplicate it for longitudinal data
     trt_temp = rep(trt_temp, times = ni)
     X = cbind(1, time = time, trt = trt_temp)
-    sum = sum + t(X) %*% X * (sigma.e^2 + sigma0^2)
+    sum = sum + t(X) %*% X * (sigma.e^2)
   }
 
   COV_beta_ind = solve(sum) * rep  # = the variance of \hat{\beta|ind}
