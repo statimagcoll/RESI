@@ -124,12 +124,11 @@ ess.geeglm <- function(obj, xTab, robust.var = TRUE){
   # The Covariance Matrix from the independence model
   mod_ind = glm(form, data = data)
 
-  # if (robust.var) {
-  #   cov_ind = sandwich::vcovHC(mod_ind)
-  # } else {
-  #   cov_ind = vcov(mod_ind)
-  # }
-  cov_ind = vcov(mod_ind) # var(\hat{\beta})
+  if (robust.var) {
+    cov_ind = sandwich::vcovHC(mod_ind)
+  } else {
+    cov_ind = vcov(mod_ind)
+  }
 
   # weights
   w = diag(cov_ind) / xTab[, "Std.err"]^2

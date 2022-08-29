@@ -126,11 +126,11 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
     X = cbind(1, time = time_points, trt = rbinom(1, 1, pi))
     sum = sum + t(X) %*% solve(diag(diag(Sigma_y))) %*% X
   }
-  COV_beta_ind = solve(sum) * rep * unique(ni)
-
-  var_int_ind = COV_beta_ind[1, 1] / N
-  var_time_ind = COV_beta_ind[2, 2] / N
-  var_trt_ind = COV_beta_ind[3, 3] / N
+  COV_beta_ind = solve(sum) * rep * unique(ni) # = the variance of \sqrt{tot_obs} * (\hat{\beta|ind} - \beta_0)
+  tot_obs = sum(ni)
+  var_int_ind = COV_beta_ind[1, 1] / tot_obs
+  var_time_ind = COV_beta_ind[2, 2] / tot_obs
+  var_trt_ind = COV_beta_ind[3, 3] / tot_obs
   # The true pm-RESI
   pm_resi_int = sqrt( S[1]^2 * var_int / var_int_ind)
   pm_resi_time = sqrt( S[2]^2 * var_time / var_time_ind)
