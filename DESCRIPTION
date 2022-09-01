@@ -1,7 +1,7 @@
 Package: RESI
 Type: Package
 Title: Robust Effect Size Index (RESI) Estimation
-Version: 1.0.2
+Version: 1.0.4
 Authors@R: 
   c(person('Megan', 'Jones', email='megan.n.taylor@vanderbilt.edu', role=c('aut', 'cre')),
   person('Kaidi', 'Kang', email = 'kaidi.kang@vanderbilt.edu', role = c('aut')),
@@ -42,8 +42,10 @@ Imports:
 Suggests:
     gee,
     geepack,
+    knitr,
     lme4,
     pscl,
+    rmarkdown,
     splines,
     survival,
     testthat (>= 3.0.0)
