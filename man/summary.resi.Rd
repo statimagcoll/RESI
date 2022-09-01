@@ -14,10 +14,10 @@
 \item{...}{ignored}
 }
 \value{
-Returns a `summary.resi` object containing the computed summary table
+Returns a `summary.resi` object containing the computed coefficients table
 }
 \description{
-After running the \code{\link{resi}} function on a fitted model, this function can be used to print the summary component. If the resi function was run with the `store.boot = TRUE` option to store the full matrix of bootstrapped estimates, the user can specify a different alpha level for this function's confidence intervals.
+After running the \code{\link{resi}} function on a fitted model, this function can be used to print the coefficients table component. If the resi function was run with the `store.boot = TRUE` option to store the full matrix of bootstrapped estimates, the user can specify a different alpha level for this function's confidence intervals.
 }
 \examples{
 # fit a model
@@ -27,5 +27,5 @@ mod = lm(charges ~ bmi + sex, data = RESI::insurance)
 resi.obj = resi(mod, nboot = 100, store.boot = TRUE, alpha = 0.01)
 
 # run summary, specifying a different alpha level if desired
-car::Anova(resi.obj, alpha = 0.05)
+summary(resi.obj, alpha = 0.05)
 }

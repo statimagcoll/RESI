@@ -22,7 +22,7 @@ resi_pe(model.full, ...)
   model.full,
   model.reduced = NULL,
   data,
-  summary = TRUE,
+  coefficients = TRUE,
   vcovfunc = sandwich::vcovHC,
   Anova.args = list(),
   vcov.args = list(),
@@ -35,7 +35,7 @@ resi_pe(model.full, ...)
   model.reduced = NULL,
   data,
   anova = TRUE,
-  summary = TRUE,
+  coefficients = TRUE,
   vcovfunc = sandwich::vcovHC,
   Anova.args = list(),
   vcov.args = list(),
@@ -48,7 +48,7 @@ resi_pe(model.full, ...)
   model.reduced = NULL,
   data,
   anova = TRUE,
-  summary = TRUE,
+  coefficients = TRUE,
   vcovfunc = sandwich::vcovHC,
   Anova.args = list(),
   vcov.args = list(),
@@ -60,7 +60,7 @@ resi_pe(model.full, ...)
   model.full,
   model.reduced = NULL,
   data,
-  summary = TRUE,
+  coefficients = TRUE,
   vcovfunc = regtools::nlshc,
   vcov.args = list(),
   unbiased = TRUE,
@@ -72,7 +72,7 @@ resi_pe(model.full, ...)
   model.reduced = NULL,
   data,
   anova = TRUE,
-  summary = TRUE,
+  coefficients = TRUE,
   vcovfunc = vcov,
   Anova.args = list(),
   unbiased = TRUE,
@@ -84,7 +84,7 @@ resi_pe(model.full, ...)
   model.reduced = NULL,
   data,
   anova = TRUE,
-  summary = TRUE,
+  coefficients = TRUE,
   vcovfunc = vcov,
   Anova.args = list(),
   unbiased = TRUE,
@@ -95,7 +95,7 @@ resi_pe(model.full, ...)
   model.full,
   model.reduced = NULL,
   data,
-  summary = TRUE,
+  coefficients = TRUE,
   vcovfunc = sandwich::sandwich,
   vcov.args = list(),
   unbiased = TRUE,
@@ -106,7 +106,7 @@ resi_pe(model.full, ...)
   model.full,
   model.reduced = NULL,
   data,
-  summary = TRUE,
+  coefficients = TRUE,
   vcovfunc = sandwich::sandwich,
   vcov.args = list(),
   unbiased = TRUE,
@@ -130,7 +130,7 @@ resi_pe(model.full, ...)
 
 \item{data}{Data.frame or object coercible to data.frame of model.full data (required for some model types).}
 
-\item{summary}{Logical, whether to produce a summary (coefficients) table with the RESI columns added. By default = `TRUE`.}
+\item{coefficients}{Logical, whether to produce a coefficients (summary) table with the RESI columns added. By default = `TRUE`.}
 
 \item{vcovfunc}{The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).}
 
@@ -147,7 +147,7 @@ Returns a list containing RESI point estimates
 }
 \description{
 This function will estimate the robust effect size (RESI) from Vandekar, Rao, & Blume (2020).
-The overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in summary-style table.
+The overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in coefficients-style table.
 RESI is (optionally) estimated for each variable/interaction in an Anova-style table
 for models with existing Anova methods. This function is the building block for the \code{\link{resi}} function.
 }

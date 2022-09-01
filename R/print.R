@@ -11,7 +11,7 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
     if (!(x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")))) cat("Reduced Model:", paste(deparse(x$model.reduced$call), sep = "\n", collapse = "\n"), "\n\n", sep = "")
   }
 
-  # summary table
+  # coefficients table
   if (!is.null(x$coefficients)){
     cat("\nCoefficient Table \n")
     print(round(x$coefficients, digits = digits))

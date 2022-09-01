@@ -1,11 +1,11 @@
 #' Robust Effect Size Index (RESI) point and interval estimation for models
 #'
-#' This function will estimate the robust effect size (RESI) from Vandekar, Rao, & Blume (2020) and its confidence interval in various ways for a fitted model object. The overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in summary-style table. RESI is (optionally) estimated for each variable/interaction in an Anova-style table for models with existing Anova methods. CIs can be calculated using either non-parametric or Bayesian bootstrapping.
+#' This function will estimate the robust effect size (RESI) from Vandekar, Rao, & Blume (2020) and its confidence interval in various ways for a fitted model object. The overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in coefficients-style table. RESI is (optionally) estimated for each variable/interaction in an Anova-style table for models with existing Anova methods. CIs can be calculated using either non-parametric or Bayesian bootstrapping.
 #' @param model.full \code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.
 #' @param model.reduced Fitted model object of same type as model.full. By default `NULL`; the same model as the full model but only having intercept.
 #' @param data Data.frame or object coercible to data.frame of model.full data (required for some model types).
 #' @param vcovfunc The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).
-#' @param summary Logical, whether to produce a summary (coefficients) table with the RESI columns added. By default = `TRUE`.
+#' @param coefficients Logical, whether to produce a coefficients (summary) table with the RESI columns added. By default = `TRUE`.
 #' @param anova Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.
 #' @param nboot Numeric, the number of bootstrap replicates. By default, 1000.
 #' @param boot.method String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.
@@ -61,7 +61,7 @@
 #' and then try rerunning \code{resi}.
 #'
 #' @return Returns a list that includes function arguments, RESI point estimates,
-#' and confidence intervals in summary/anova-style tables
+#' and confidence intervals in coefficients/anova-style tables
 #' @family RESI functions
 #' @seealso \code{\link{resi_pe}}, \code{\link{vcovHC}}, \code{\link{nlshc}},
 #' \code{\link{f2S}}, \code{\link{chisq2S}}, \code{\link{z2S}}, \code{\link{t2S}}
@@ -134,7 +134,7 @@ resi <- function(model.full, ...){
 #' @describeIn resi RESI point and interval estimation for models
 #' @export
 resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                         summary = TRUE, nboot = 1000,
+                         coefficients = TRUE, nboot = 1000,
                          vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
                          Anova.args = list(), vcov.args = list(), unbiased = TRUE, ...){
 
@@ -155,7 +155,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   # point estimation
   output <- list(alpha = alpha, nboot = nboot, boot.method = "nonparam")
   output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
-                             data = data, anova = anova, summary = summary,
+                             data = data, anova = anova, coefficients = coefficients,
                              vcovfunc = vcovfunc, Anova.args = Anova.args,
                              vcov.args = vcov.args, unbiased = unbiased, ...))
 
@@ -173,7 +173,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
       boot.model.reduced = update(model.reduced, data = boot.data)
     }
     boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
-                                                data = boot.data, anova = anova, summary = summary,
+                                                data = boot.data, anova = anova, coefficients = coefficients,
                                                 vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args,
                                                 unbiased = unbiased, ...)$estimates)
   }
@@ -182,7 +182,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   alpha.order = sort(c(alpha/2, 1-alpha/2))
   output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
 
-  if (summary){
+  if (coefficients){
     CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = alpha.order, na.rm = TRUE)
     CIs = t(CIs)
     output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
@@ -209,7 +209,7 @@ resi.glm <- resi.default
 #' @describeIn resi RESI point and interval estimation for lm models
 #' @export
 resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                         summary = TRUE, nboot = 1000, boot.method = 'nonparam',
+                         coefficients = TRUE, nboot = 1000, boot.method = 'nonparam',
                          vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
                          Anova.args = list(), vcov.args = list(), unbiased = TRUE, ...){
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
@@ -226,7 +226,7 @@ resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   # point estimation
   output <- list(alpha = alpha, nboot = nboot, boot.method = tolower(boot.method))
   output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
-                             data = data, anova = anova, summary = summary,
+                             data = data, anova = anova, coefficients = coefficients,
                              vcovfunc = vcovfunc, Anova.args = Anova.args,
                              vcov.args = vcov.args, unbiased = unbiased, ...))
 
@@ -245,7 +245,7 @@ resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
         boot.model.reduced = update(model.reduced, data = boot.data)
       }
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
-                                                  data = boot.data, anova = anova, summary = summary,
+                                                  data = boot.data, anova = anova, coefficients = coefficients,
                                                   vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args,
                                                   unbiased = unbiased, ...)$estimates)
     }}
@@ -263,7 +263,7 @@ resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
         boot.model.reduced = suppressWarnings(update(model.reduced, data = boot.data, weights = boot.data[,'g']))
       }
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
-                                                  data = boot.data, anova = anova, summary = summary,
+                                                  data = boot.data, anova = anova, coefficients = coefficients,
                                                   vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args,
                                                   unbiased = unbiased, ...)$estimates)
     }}
@@ -271,7 +271,7 @@ resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   alpha.order = sort(c(alpha/2, 1-alpha/2))
   output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
 
-  if (summary){
+  if (coefficients){
     CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = alpha.order, na.rm = TRUE)
     CIs = t(CIs)
     output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
@@ -293,7 +293,7 @@ resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
 #' @describeIn resi RESI point and interval estimation for nls models
 #' @export
-resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
+resi.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE,
                      nboot = 1000, boot.method = 'nonparam',
                      vcovfunc = regtools::nlshc, alpha = 0.05, store.boot = FALSE,
                      vcov.args = list(), unbiased = TRUE, ...){
@@ -308,7 +308,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
   # point estimation
   output <- list(alpha = alpha, nboot = nboot, boot.method = tolower(boot.method))
   output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
-                             data = data, anova = anova, summary = summary,
+                             data = data, anova = anova, coefficients = coefficients,
                              vcovfunc = vcovfunc, vcov.args = vcov.args, unbiased = unbiased, ...))
 
   # bootstrapping
@@ -320,7 +320,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
       boot.data = boot.samp(data)
       boot.model.full <- update(model.full, data = boot.data)
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
-                                                  data = boot.data, summary = summary,
+                                                  data = boot.data, coefficients = coefficients,
                                                   vcovfunc = vcovfunc, vcov.args = vcov.args,
                                                   unbiased = unbiased, ...)$estimates)
 
@@ -333,7 +333,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
       boot.data = bayes.samp(data)
       boot.model.full <- update(model.full, data = boot.data, weights = g)
       boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
-                                                  data = boot.data, summary = summary,
+                                                  data = boot.data, coefficients = coefficients,
                                                   vcovfunc = vcovfunc, vcov.args = vcov.args,
                                                   unbiased = unbiased, ...)$estimates)
 
@@ -342,7 +342,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
   alpha.order = sort(c(alpha/2, 1-alpha/2))
   output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
 
-  if (summary){
+  if (coefficients){
     CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = alpha.order, na.rm = TRUE)
     CIs = t(CIs)
     output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
@@ -358,7 +358,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 #' @describeIn resi RESI point and interval estimation for survreg models
 #' @export
 resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                         summary = TRUE, nboot = 1000,
+                         coefficients = TRUE, nboot = 1000,
                          vcovfunc = vcov, alpha = 0.05, store.boot = FALSE,
                          Anova.args = list(), unbiased = TRUE, ...){
 
@@ -378,7 +378,7 @@ resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   }
 
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
-               anova = anova, summary = summary, nboot = nboot, vcovfunc = vcovfunc,
+               anova = anova, coefficients = coefficients, nboot = nboot, vcovfunc = vcovfunc,
                store.boot = store.boot, Anova.args = Anova.args,
                unbiased = unbiased, ...)
 }
@@ -386,7 +386,7 @@ resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @describeIn resi RESI point and interval estimation for coxph models
 #' @export
 resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                       summary = TRUE, nboot = 1000,
+                       coefficients = TRUE, nboot = 1000,
                        vcovfunc = vcov, alpha = 0.05, store.boot = FALSE,
                        Anova.args = list(), unbiased = TRUE, ...){
   if (missing(data)){
@@ -405,14 +405,14 @@ resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   }
 
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
-               anova = anova, summary = summary, nboot = nboot, vcovfunc = vcovfunc,
+               anova = anova, coefficients = coefficients, nboot = nboot, vcovfunc = vcovfunc,
                store.boot = store.boot, Anova.args = Anova.args,
                unbiased = unbiased, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for hurdle models
 #' @export
-resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
+resi.hurdle <- function(model.full, model.reduced = NULL, data, coefficients = TRUE,
                      nboot = 1000, vcovfunc = sandwich::sandwich,
                      alpha = 0.05, store.boot = FALSE, vcov.args = list(), unbiased = TRUE, ...){
 
@@ -437,7 +437,7 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
   # point estimation
   output <- list(alpha = alpha, nboot = nboot, boot.method = "nonparam")
   output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
-                             data = data, anova = anova, summary = summary,
+                             data = data, anova = anova, coefficients = coefficients,
                              vcovfunc = vcovfunc, vcov.args = vcov.args, unbiased = unbiased, ...))
 
   # bootstrapping
@@ -449,7 +449,7 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
     boot.model.full <- update(model.full, data = boot.data)
     boot.model.reduced <- update(model.full, data = boot.data)
     boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
-                                                data = boot.data, summary = summary,
+                                                data = boot.data, coefficients = coefficients,
                                                 vcovfunc = vcovfunc, vcov.args = vcov.args,
                                                 unbiased = unbiased, ...)$estimates)
 
@@ -458,7 +458,7 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 
   output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
 
-  if (summary){
+  if (coefficients){
     CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
     CIs = t(CIs)
     output$coefficients[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = CIs

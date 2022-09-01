@@ -1,10 +1,10 @@
 #' Summary method for resi objects
 #'
-#' After running the \code{\link{resi}} function on a fitted model, this function can be used to print the summary component. If the resi function was run with the `store.boot = TRUE` option to store the full matrix of bootstrapped estimates, the user can specify a different alpha level for this function's confidence intervals.
+#' After running the \code{\link{resi}} function on a fitted model, this function can be used to print the coefficients table component. If the resi function was run with the `store.boot = TRUE` option to store the full matrix of bootstrapped estimates, the user can specify a different alpha level for this function's confidence intervals.
 #' @param object an object resulting from resi function
 #' @param alpha an optional new specification for the confidence level. Can be vector-valued
 #' @param ... ignored
-#' @return Returns a `summary.resi` object containing the computed summary table
+#' @return Returns a `summary.resi` object containing the computed coefficients table
 #' @examples
 #' # fit a model
 #' mod = lm(charges ~ bmi + sex, data = RESI::insurance)
@@ -13,11 +13,11 @@
 #' resi.obj = resi(mod, nboot = 100, store.boot = TRUE, alpha = 0.01)
 #'
 #' # run summary, specifying a different alpha level if desired
-#' car::Anova(resi.obj, alpha = 0.05)
+#' summary(resi.obj, alpha = 0.05)
 #' @export
 summary.resi <- function(object, alpha = NULL, ...){
   if(is.null(object$coefficients)){
-    stop('\nresi function was not run with summary = TRUE option')
+    stop('\nresi function was not run with coefficients = TRUE option')
   }
 
   output = list(alpha = alpha, model.full = object$model.full)
