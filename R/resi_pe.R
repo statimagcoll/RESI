@@ -1,14 +1,14 @@
 #' Robust Effect Size Index (RESI) Point Estimation
 #'
 #' This function will estimate the robust effect size (RESI) from Vandekar, Rao, & Blume (2020).
-#' The overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in summary-style table.
+#' The overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in coefficients-style table.
 #' RESI is (optionally) estimated for each variable/interaction in an Anova-style table
 #' for models with existing Anova methods. This function is the building block for the \code{\link{resi}} function.
 #' @param model.full \code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.
 #' @param model.reduced Fitted model object of same type as model.full. By default `NULL`; the same model as the full model but only having intercept.
 #' @param data Data.frame or object coercible to data.frame of model.full data (required for some model types).
 #' @param vcovfunc The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).
-#' @param summary Logical, whether to produce a summary (coefficients) table with the RESI columns added. By default = `TRUE`.
+#' @param coefficients Logical, whether to produce a coefficients (summary) table with the RESI columns added. By default = `TRUE`.
 #' @param anova Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.
 #' @param Anova.args List, additional arguments to be passed to Anova function.
 #' @param vcov.args List, additional arguments to be passed to vcovfunc.
@@ -72,7 +72,7 @@ resi_pe <- function(model.full, ...){
 #' @describeIn resi_pe RESI point estimation
 #' @export
 resi_pe.default <- function(model.full, model.reduced = NULL, data,
-                    summary = TRUE, vcovfunc = sandwich::vcovHC, Anova.args = list(),
+                    coefficients = TRUE, vcovfunc = sandwich::vcovHC, Anova.args = list(),
                     vcov.args = list(), unbiased = TRUE, ...){
   if (missing(data)){
       data = model.full$model
@@ -114,21 +114,21 @@ resi_pe.default <- function(model.full, model.reduced = NULL, data,
   names.est = "Overall"
   names(output$estimates) = names.est
 
-  # summary table (z statistics)
-  if (summary){
-    summary.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc2)
-    summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
-                             summary.tab[,'z value'], summary.tab[,'Pr(>|z|)'], row.names = rownames(summary.tab))
-    colnames(summary.df) = colnames(summary.tab)
+  # coefficients table (z statistics)
+  if (coefficients){
+    coefficients.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc2)
+    coefficients.df = data.frame(coefficients.tab[,'Estimate'], coefficients.tab[,'Std. Error'],
+                             coefficients.tab[,'z value'], coefficients.tab[,'Pr(>|z|)'], row.names = rownames(coefficients.tab))
+    colnames(coefficients.df) = colnames(coefficients.tab)
     if (unbiased){
-      summary.df[,'RESI'] = z2S(summary.df[,'z value'], nrow(data))
+      coefficients.df[,'RESI'] = z2S(coefficients.df[,'z value'], nrow(data))
     }
     else{
-      summary.df[,'RESI'] = suppressWarnings(z2S_alt(summary.df[,'z value'], nrow(data)))
+      coefficients.df[,'RESI'] = suppressWarnings(z2S_alt(coefficients.df[,'z value'], nrow(data)))
     }
-    output$coefficients = summary.df
-    output$estimates = c(output$estimates, summary.df$RESI)
-    names.est = c(names.est, rownames(summary.df))
+    output$coefficients = coefficients.df
+    output$estimates = c(output$estimates, coefficients.df$RESI)
+    names.est = c(names.est, rownames(coefficients.df))
     names(output$estimates) = names.est
   }
 
@@ -138,10 +138,10 @@ resi_pe.default <- function(model.full, model.reduced = NULL, data,
 #' @describeIn resi_pe RESI point estimation for generalized linear models
 #' @export
 resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                        summary = TRUE, vcovfunc = sandwich::vcovHC,
+                        coefficients = TRUE, vcovfunc = sandwich::vcovHC,
                         Anova.args = list(), vcov.args = list(), unbiased = TRUE, ...){
   output <- resi_pe.default(model.full = model.full, model.reduced = model.reduced,
-                            data = data, summary = summary, vcovfunc = vcovfunc,
+                            data = data, coefficients = coefficients, vcovfunc = vcovfunc,
                             Anova.args = Anova.args, vcov.args = vcov.args, unbiased = unbiased, ...)
 
   if (length(vcov.args) == 0){
@@ -157,7 +157,7 @@ resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   if (anova){
     suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full, test.statistic = 'Wald', vcov. = vcovfunc2), Anova.args)))
     anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], nrow(data))
-    output$anova = anova.tab
+    output$anova = anova.tab[which(rownames(anova.tab) != "Residuals"),]
     names.est = names(output$estimates)
     output$estimates = c(output$estimates, anova.tab$RESI)
     names.est = c(names.est, rownames(anova.tab))
@@ -177,7 +177,7 @@ resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @describeIn resi_pe RESI point estimation for linear models
 #' @export
 resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                       summary = TRUE, vcovfunc = sandwich::vcovHC,
+                       coefficients = TRUE, vcovfunc = sandwich::vcovHC,
                        Anova.args = list(), vcov.args = list(), unbiased = TRUE, ...){
   if (missing(data)){
     data = model.full$model
@@ -218,21 +218,21 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   names.est = "Overall"
   names(output$estimates) = names.est
 
-  # summary table (t statistics)
-  if (summary){
-    summary.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc2)
-    summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
-                            summary.tab[,'t value'], summary.tab[,'Pr(>|t|)'], row.names = rownames(summary.tab))
-    colnames(summary.df) = colnames(summary.tab)
+  # coefficients table (t statistics)
+  if (coefficients){
+    coefficients.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc2)
+    coefficients.df = data.frame(coefficients.tab[,'Estimate'], coefficients.tab[,'Std. Error'],
+                            coefficients.tab[,'t value'], coefficients.tab[,'Pr(>|t|)'], row.names = rownames(coefficients.tab))
+    colnames(coefficients.df) = colnames(coefficients.tab)
     if (unbiased){
-      summary.df[,'RESI'] = t2S(summary.df[,'t value'], nrow(data), model.full$df.residual)
+      coefficients.df[,'RESI'] = t2S(coefficients.df[,'t value'], nrow(data), model.full$df.residual)
     } else{
-      summary.df[,'RESI'] = t2S_alt(summary.df[,'t value'], model.full$df.residual)
+      coefficients.df[,'RESI'] = t2S_alt(coefficients.df[,'t value'], model.full$df.residual)
     }
 
-    output$coefficients = summary.df
-    output$estimates = c(output$estimates, summary.df$RESI)
-    names.est = c(names.est, rownames(summary.df))
+    output$coefficients = coefficients.df
+    output$estimates = c(output$estimates, coefficients.df$RESI)
+    names.est = c(names.est, rownames(coefficients.df))
     names(output$estimates) = names.est
   }
 
@@ -241,7 +241,7 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full,
                                               vcov. = vcovfunc2), Anova.args)))
     anova.tab[,'RESI'] = f2S(anova.tab[,'F'], anova.tab[,'Df'], res.df)
-    output$anova = anova.tab
+    output$anova = anova.tab[which(rownames(anova.tab) != "Residuals"),]
     output$estimates = c(output$estimates, anova.tab$RESI)
     names.est = c(names.est, rownames(anova.tab))
     names(output$estimates) = names.est
@@ -260,7 +260,7 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
 #' @describeIn resi_pe RESI point estimation for nonlinear least squares models
 #' @export
-resi_pe.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
+resi_pe.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE,
                         vcovfunc = regtools::nlshc, vcov.args = list(), unbiased = TRUE, ...){
   if (missing(data) | is.null(data)){
     stop('\nData argument is required for nls model')
@@ -306,20 +306,20 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
   names.est = "Overall"
   names(output$estimates) = names.est
 
-  # summary table (t statistics)
-  if (summary){
-    summary.tab <- lmtest::coeftest(model.full, vcov. = vcovmat)
-    summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
-                            summary.tab[,'t value'], summary.tab[,'Pr(>|t|)'], row.names = rownames(summary.tab))
-    colnames(summary.df) = colnames(summary.tab)
+  # coefficients table (t statistics)
+  if (coefficients){
+    coefficients.tab <- lmtest::coeftest(model.full, vcov. = vcovmat)
+    coefficients.df = data.frame(coefficients.tab[,'Estimate'], coefficients.tab[,'Std. Error'],
+                            coefficients.tab[,'t value'], coefficients.tab[,'Pr(>|t|)'], row.names = rownames(coefficients.tab))
+    colnames(coefficients.df) = colnames(coefficients.tab)
     if (unbiased){
-      summary.df[,'RESI'] = t2S(summary.df[,'t value'], nrow(data), res.df)
+      coefficients.df[,'RESI'] = t2S(coefficients.df[,'t value'], nrow(data), res.df)
     } else{
-      summary.df[,'RESI'] = t2S_alt(summary.df[,'t value'], res.df)
+      coefficients.df[,'RESI'] = t2S_alt(coefficients.df[,'t value'], res.df)
     }
-    output$coefficients = summary.df
-    output$estimates = c(output$estimates, summary.df$RESI)
-    names.est = c(names.est, rownames(summary.df))
+    output$coefficients = coefficients.df
+    output$estimates = c(output$estimates, coefficients.df$RESI)
+    names.est = c(names.est, rownames(coefficients.df))
     names(output$estimates) = names.est
   }
 
@@ -337,7 +337,7 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data, summary = TRUE,
 #' @describeIn resi_pe RESI point estimation for survreg
 #' @export
 resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                        summary = TRUE, vcovfunc = vcov, Anova.args = list(), unbiased = TRUE, ...){
+                        coefficients = TRUE, vcovfunc = vcov, Anova.args = list(), unbiased = TRUE, ...){
 
   if (missing(data)){
     stop('\nData argument is required for survreg model')
@@ -360,7 +360,7 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
     }
   }
 
-  output = resi_pe.default(model.full, model.reduced, data, summary, vcovfunc = vcov, unbiased = unbiased)
+  output = resi_pe.default(model.full, model.reduced, data, coefficients, vcovfunc = vcov, unbiased = unbiased)
 
   # Anova table (Chi sq statistics)
   if (anova){
@@ -389,7 +389,7 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
     anova.tab <- do.call(fun, c(list(mod = model.full, vcov. = V, test = "Chisq",
                                      error.df = df.residual(model.full)), Anova.args))
     anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], nrow(data))
-    output$anova = anova.tab
+    output$anova = anova.tab[which(rownames(anova.tab) != "Residuals"),]
     names.est = names(output$estimates)
     output$estimates = c(output$estimates, anova.tab$RESI)
     names.est = c(names.est, rownames(anova.tab))
@@ -410,7 +410,7 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
 #' @describeIn resi_pe RESI point estimation for coxph models
 #' @export
 resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                          summary = TRUE, vcovfunc = vcov, Anova.args = list(), unbiased = TRUE, ...){
+                          coefficients = TRUE, vcovfunc = vcov, Anova.args = list(), unbiased = TRUE, ...){
   if (missing(data)){
     stop('\nData argument is required for coxph model')
   }
@@ -443,19 +443,19 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   names.est = "Overall"
   names(output$estimates) = names.est
 
-  if (summary){
-    summary.tab <- lmtest::coeftest(model.full, vcov. = vcov)
-    summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
-                            summary.tab[,'z value'], summary.tab[,'Pr(>|z|)'], row.names = rownames(summary.tab))
-    colnames(summary.df) = colnames(summary.tab)
+  if (coefficients){
+    coefficients.tab <- lmtest::coeftest(model.full, vcov. = vcov)
+    coefficients.df = data.frame(coefficients.tab[,'Estimate'], coefficients.tab[,'Std. Error'],
+                            coefficients.tab[,'z value'], coefficients.tab[,'Pr(>|z|)'], row.names = rownames(coefficients.tab))
+    colnames(coefficients.df) = colnames(coefficients.tab)
     if (unbiased){
-      summary.df[,'RESI'] = z2S(summary.df[,'z value'], model.full$n)
+      coefficients.df[,'RESI'] = z2S(coefficients.df[,'z value'], model.full$n)
     } else{
-      summary.df[,'RESI'] = suppressWarnings(z2S_alt(summary.df[,'z value'], model.full$n))
+      coefficients.df[,'RESI'] = suppressWarnings(z2S_alt(coefficients.df[,'z value'], model.full$n))
     }
-    output$coefficients = summary.df
-    output$estimates = c(output$estimates, summary.df$RESI)
-    names.est = c(names.est, rownames(summary.df))
+    output$coefficients = coefficients.df
+    output$estimates = c(output$estimates, coefficients.df$RESI)
+    names.est = c(names.est, rownames(coefficients.df))
     names(output$estimates) = names.est
   }
 
@@ -463,7 +463,7 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   if (anova){
     suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full, test.statistic = 'Wald'), Anova.args)))
     anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], model.full$n)
-    output$anova = anova.tab
+    output$anova = anova.tab[which(rownames(anova.tab) != "Residuals"),]
     output$estimates = c(output$estimates, anova.tab$RESI)
     names.est = c(names.est, rownames(anova.tab))
     names(output$estimates) = names.est
@@ -482,7 +482,7 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
 #' @describeIn resi_pe RESI point estimation for hurdle models
 #' @export
-resi_pe.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRUE,
+resi_pe.hurdle <- function(model.full, model.reduced = NULL, data, coefficients = TRUE,
                            vcovfunc = sandwich::sandwich, vcov.args = list(), unbiased = TRUE, ...){
   if (missing(data)){
     data = model.full$model
@@ -527,21 +527,21 @@ resi_pe.hurdle <- function(model.full, model.reduced = NULL, data, summary = TRU
   names.est = "Overall"
   names(output$estimates) = names.est
 
-  # summary table (z statistics)
-  if (summary){
-    summary.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc2, df = 0)
-    summary.df = data.frame(summary.tab[,'Estimate'], summary.tab[,'Std. Error'],
-                            summary.tab[,'z value'], summary.tab[,'Pr(>|z|)'], row.names = rownames(summary.tab))
-    colnames(summary.df) = colnames(summary.tab)
+  # coefficients table (z statistics)
+  if (coefficients){
+    coefficients.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc2, df = 0)
+    coefficients.df = data.frame(coefficients.tab[,'Estimate'], coefficients.tab[,'Std. Error'],
+                            coefficients.tab[,'z value'], coefficients.tab[,'Pr(>|z|)'], row.names = rownames(coefficients.tab))
+    colnames(coefficients.df) = colnames(coefficients.tab)
     if (unbiased){
-      summary.df[,'RESI'] = z2S(summary.df[,'z value'], nrow(data))
+      coefficients.df[,'RESI'] = z2S(coefficients.df[,'z value'], nrow(data))
     }
     else{
-      summary.df[,'RESI'] = suppressWarnings(z2S_alt(summary.df[,'z value'], nrow(data)))
+      coefficients.df[,'RESI'] = suppressWarnings(z2S_alt(coefficients.df[,'z value'], nrow(data)))
     }
-    output$coefficients = summary.df
-    output$estimates = c(output$estimates, summary.df$RESI)
-    names.est = c(names.est, rownames(summary.df))
+    output$coefficients = coefficients.df
+    output$estimates = c(output$estimates, coefficients.df$RESI)
+    names.est = c(names.est, rownames(coefficients.df))
     names(output$estimates) = names.est
   }
 
@@ -563,7 +563,7 @@ resi_pe.zeroinfl <- resi_pe.hurdle
 #' @export
 resi_pe.geeglm <- function(model.full, ...){
   x = as.matrix(summary(model.full)$coefficients)
-  #sample size (is this supposed to be number of groups?)
+  #sample size
   N = length(summary(model.full)$clusz)
   output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
                  coefficients =  as.data.frame(cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], 1, N))))
