@@ -6,6 +6,7 @@
 #' Function for the correlation structure for the errors within a subject
 #' @param rho.e the correlation between two errors
 #' @param time the values of time variables for a subject
+#' @export
 ARMtx <- function(time, rho.e){
   mtx <- matrix(NA, length(time), length(time))
   for (j in 1:length(time)){
