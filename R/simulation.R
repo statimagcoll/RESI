@@ -24,11 +24,11 @@ ARMtx <- function(time, rho.e){
 #' @param rho.G = correlation coef between random intercepts and slopes
 #' @param sigma0: SD of random intercepts
 #' @param sigma.t: SD of random slopes
-#' @param sigma.e: SD of errors
+#' @param sigma.e: the covariance matrix of errors within each subject
 #' @param rho.e: correlation coef of the errors within a subject
 #' @param fixed.design: whether the trt assignment is fixed by design (TRUE) or random. use togther with pi
 #' @export
-sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rho.e, fixed.design = TRUE){
+sim_data_cont = function(N, S, pi, ni_range, sigma.e, fixed.design = TRUE){
 
 # 1. GENERATING VARIABLE VALUES
   # number of measurements
@@ -52,21 +52,23 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
   trt = rep(trt, times = ni)
 
   # Cov of random effects
-  G_mat = matrix(c(sigma0^2, rho.G*sigma.t*sigma0,
-                   rho.G*sigma.t*sigma0, sigma.t^2), 2, 2)
-
-  # generate random effects
-  gamma = mvtnorm::rmvnorm(N, c(0, 0), sigma = G_mat)
-  gamma_0 = rep(gamma[, 1], times = ni)
-  gamma_t = rep(gamma[, 2], times = ni)
+  # G_mat = matrix(c(sigma0^2, rho.G*sigma.t*sigma0,
+  #                  rho.G*sigma.t*sigma0, sigma.t^2), 2, 2)
+  #
+  # # generate random effects
+  # gamma = mvtnorm::rmvnorm(N, c(0, 0), sigma = G_mat)
+  # gamma_0 = rep(gamma[, 1], times = ni)
+  # gamma_t = rep(gamma[, 2], times = ni)
 
   # measurement errors
   t = 0:(max(ni_range)-1)
-  if (length(ni_range) == 1 | ni_range[1] == ni_range[2]) { # if balanced design
-    e =  sigma.e * mvtnorm::rmvnorm(N, rep(0, length(t)), sigma = ARMtx(t, rho.e)) %>% t() %>% c()
-  } else { # if unbalanced
-    e =  sigma.e * c(unlist(sapply(time_list, function(x) mvtnorm::rmvnorm(1, rep(0, length(x)), sigma = ARMtx(x, rho.e))) ))
-  }
+  # if (length(ni_range) == 1 | ni_range[1] == ni_range[2]) { # if balanced design
+  #   e =  sigma.e * mvtnorm::rmvnorm(N, rep(0, length(t)), sigma = ARMtx(t, rho.e)) %>% t() %>% c()
+  # } else { # if unbalanced
+  #   e =  sigma.e * c(unlist(sapply(time_list, function(x) mvtnorm::rmvnorm(1, rep(0, length(x)), sigma = ARMtx(x, rho.e))) ))
+  # }
+  e = mvtnorm::rmvnorm(N, rep(0, length(t)), sigma = sigma.e)
+
 
 # 2. CONVERTING RESI TO BETA
   ## The covariance matrix of Yi
@@ -75,7 +77,8 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
   time_points = (0:(ni_range[2]-1))
   Z = cbind(1, time_points)
   # Cov(Y_i) = Z^T G Z + R_i
-  Sigma_y = Z %*% G_mat %*% t(Z) + ARMtx(time = time_points, rho.e = rho.e)
+  # Sigma_y = Z %*% G_mat %*% t(Z) + ARMtx(time = time_points, rho.e = rho.e)
+  Sigma_y = sigma.e
 
   # The true cov of \hat{beta} given X
   # Using numeric methods to find the variance of each parameter estimator
@@ -134,7 +137,7 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
     sum = sum + t(X) %*% X
   }
 
-  COV_beta_ind = solve(sum) *  (sigma.e^2 + sigma0^2) * rep  # = the variance of \hat{\beta|ind}
+  COV_beta_ind = solve(sum) *  unique(diag(sigma.e)) * rep  # = the variance of \hat{\beta|ind}
 
   tot_obs = sum(ni)
   var_int_ind = COV_beta_ind[1, 1]
@@ -158,14 +161,19 @@ sim_data_cont = function(N, S, pi, ni_range, rho.G, sigma0, sigma.t, sigma.e, rh
   ## design matrix for fixed effects
   X = cbind(1, time, trt)
 
-  y = X %*% beta + gamma_0 + gamma_t * time + e
+  # y = X %*% beta + gamma_0 + gamma_t * time + e
+  y = X %*% beta  + e
 
 # 4. RETURNING SIMULATED DATA
+  # data_sim = data.frame(id = id, num_obs = rep(ni, times = ni), time = time, trt = trt,
+  #                       gamma_0 = gamma_0, gamma_t = gamma_t, error = e, y = y)
   data_sim = data.frame(id = id, num_obs = rep(ni, times = ni), time = time, trt = trt,
-                        gamma_0 = gamma_0, gamma_t = gamma_t, error = e, y = y)
+                        error = e, y = y)
 
-  return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta, true_sd = sd, cov_y = Sigma_y,
-              pm_resi = pm_resi, ESS = ESS, info = "Function updated on 8/29/2022 3:16pm"))
+  # return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta, true_sd = sd, cov_y = Sigma_y,
+  #             pm_resi = pm_resi, ESS = ESS, info = "Function updated on 8/29/2022 3:16pm"))
+  return(list(data = data_sim, N = N, ni = ni, true_beta = beta, true_sd = sd, cov_y = Sigma_y,
+              pm_resi = pm_resi, ESS = ESS, info = "Function updated on 9/6/2022 12:59pm"))
 }
 
 
