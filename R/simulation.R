@@ -67,7 +67,7 @@ sim_data_cont = function(N, S, pi, ni_range, sigma.e, fixed.design = TRUE){
   # } else { # if unbalanced
   #   e =  sigma.e * c(unlist(sapply(time_list, function(x) mvtnorm::rmvnorm(1, rep(0, length(x)), sigma = ARMtx(x, rho.e))) ))
   # }
-  e = mvtnorm::rmvnorm(N, rep(0, length(t)), sigma = sigma.e)
+  e = mvtnorm::rmvnorm(N, rep(0, length(t)), sigma = sigma.e) %>% t %>% c # convert it to vector (by rows)
 
 
 # 2. CONVERTING RESI TO BETA
