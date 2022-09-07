@@ -121,13 +121,13 @@ ess.geeglm <- function(obj, xTab, robust.var = TRUE){
   # model form
   form =  formula(obj)
   # model weights
-  mod.w = obj$weights
-  mod.w = mod.w * N # re-scale it to make the sum = sample size * number of obs for each subj
-  data$mod.w = mod.w
+  # mod.w = obj$weights
+  # mod.w = mod.w * N # re-scale it to make the sum = sample size * number of obs for each subj
+  # data$mod.w = mod.w
 
   # The Covariance Matrix from the independence model
-  mod_ind = glm(form, data = data, weights = mod.w)
-  mod_ind$residuals = mod_ind$residuals / sqrt(mod_ind$weights)
+  mod_ind = glm(form, data = data)
+  # mod_ind$residuals = mod_ind$residuals / sqrt(mod_ind$weights)
 
   if (robust.var) {
     cov_ind = sandwich::vcovHC(mod_ind)
