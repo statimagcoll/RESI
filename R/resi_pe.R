@@ -171,6 +171,7 @@ resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   else{
     output$naive.var = FALSE
   }
+  class(output) = "resi"
   return(output)
 }
 
