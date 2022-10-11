@@ -27,9 +27,10 @@ ARMtx <- function(time, rho.e){
 #' @param sigma.t: SD of random slopes
 #' @param sigma.e: the covariance matrix of errors within each subject
 #' @param rho.e: correlation coef of the errors within a subject
-#' @param fixed.design: whether the trt assignment is fixed by design (TRUE) or random. use togther with pi
+#' @param fixed.trt: whether the trt assignment is fixed by design (TRUE) or random. use togther with pi
+#' @param fixed.time whether the time points are fixed (TRUE, defuault) or random. If random, each time point (except baseline) has 60% chance to be observed
 #' @export
-sim_data_cont = function(N, S, pi, ni_range, sigma.e, fixed.design = TRUE){
+sim_data_cont = function(N, S, pi, ni_range, sigma.e, fixed.trt = TRUE, fixed.time = TRUE){
 
 # 1. GENERATING VARIABLE VALUES
   # number of measurements
@@ -46,7 +47,7 @@ sim_data_cont = function(N, S, pi, ni_range, sigma.e, fixed.design = TRUE){
 
   # generate the trt group
   # the trt group for each subject
-  if (fixed.design) {
+  if (fixed.trt) {
     trt = sample(rep(0:1, times = c(ceiling(N*pi), N - ceiling(N*pi)) ), replace = FALSE)
   } else {trt = rbinom(N, 1, pi)}
   # duplicate it for longitudinal data
@@ -129,7 +130,7 @@ sim_data_cont = function(N, S, pi, ni_range, sigma.e, fixed.design = TRUE){
   for (i in 1:rep){
     # generate the trt group
     # the trt group for each subject
-    if (fixed.design) {
+    if (fixed.trt) {
       trt_temp = sample(rep(0:1, times = c(ceiling(N*pi), N - ceiling(N*pi)) ), replace = FALSE)
     } else {trt_temp = rbinom(N, 1, pi)}
     # duplicate it for longitudinal data
@@ -165,11 +166,19 @@ sim_data_cont = function(N, S, pi, ni_range, sigma.e, fixed.design = TRUE){
   # y = X %*% beta + gamma_0 + gamma_t * time + e
   y = X %*% beta  + e
 
+
 # 4. RETURNING SIMULATED DATA
   # data_sim = data.frame(id = id, num_obs = rep(ni, times = ni), time = time, trt = trt,
   #                       gamma_0 = gamma_0, gamma_t = gamma_t, error = e, y = y)
   data_sim = data.frame(id = id, num_obs = rep(ni, times = ni), time = time, trt = trt,
                         error = e, y = y)
+
+# NEW: 5. making observed time points random
+  if (fixed.time == FALSE){
+    data_sim$observed = rbinom(nrow(data_sim), 1, prob = 0.75)
+    data_sim$observed[data_sim$time == 0] = 1
+    data_sim = subset(data_sim, observed == 1)
+  }
 
   # return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta, true_sd = sd, cov_y = Sigma_y,
   #             pm_resi = pm_resi, ESS = ESS, info = "Function updated on 8/29/2022 3:16pm"))
