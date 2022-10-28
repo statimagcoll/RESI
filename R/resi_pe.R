@@ -562,12 +562,27 @@ resi_pe.zeroinfl <- resi_pe.hurdle
 
 #' @describeIn resi_pe RESI point estimation for geeglm object
 #' @export
-resi_pe.geeglm <- function(model.full, ...){
+resi_pe.geeglm <- function(model.full, anova = TRUE, ...){
   x = as.matrix(summary(model.full)$coefficients)
   #sample size
   N = length(summary(model.full)$clusz)
+  coefficients.df = as.data.frame(cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], 1, N)))
   output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
-                 coefficients =  as.data.frame(cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], 1, N))))
+                 estimates = coefficients.df$RESI, coefficients = coefficients.df)
+  names(output$estimates) = rownames(coefficients.df)
+  # Anova table (Chi sq statistics)
+  if (anova){
+    suppressMessages(anova.tab <- anova(model.full))
+    ## is N right for n argument?
+    anova.tab[,'RESI'] = chisq2S(anova.tab[,'X2'], anova.tab[,'Df'], N)
+    names.est = names(output$estimates)
+    output$estimates = c(output$estimates, anova.tab$RESI)
+    names.est = c(names.est, rownames(anova.tab))
+    names(output$estimates) = names.est
+    output$anova = anova.tab
+    class(output$anova) = c("anova_resi", class(output$anova))
+  }
+  ## need to consider changing because of anova
   output$naive.var = FALSE
   return(output)
 }
@@ -587,7 +602,8 @@ resi_pe.gee <- function(model.full, ...){
 #' @describeIn resi_pe RESI point estimation for lme object
 #' @importFrom clubSandwich vcovCR
 #' @export
-resi_pe.lme <- function(model.full, vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...){
+resi_pe.lme <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::vcovCR,
+                        Anova.args = list(), vcov.args = list(), ...){
   x = as.matrix(summary(model.full)$tTable)
   #sample size
   N = summary(model.full)$dims$ngrps[1]
@@ -605,9 +621,24 @@ resi_pe.lme <- function(model.full, vcovfunc = clubSandwich::vcovCR, vcov.args =
 
   robust.var = diag(vcovfunc2(model.full))
   robust.se = sqrt(robust.var)
+  coefficients.df = as.data.frame(cbind(x, 'Robust.SE' = robust.se,
+                                        'Robust Wald' = (x[, 'Value']^2/robust.var),
+                                        RESI = RESI::chisq2S(x[, 'Value']^2/robust.var, 1, N)))
   output = list(model.full = list(call = model.full$call, formula = formula(model.full)),
-       coefficients =  as.data.frame(cbind(x, 'Robust.SE' = robust.se,
-       'Robust Wald' = (x[, 'Value']^2/robust.var), RESI = RESI::chisq2S(x[, 'Value']^2/robust.var, 1, N))))
+       estimates = coefficients.df$RESI, coefficients = coefficients.df)
+  names(output$estimates) = rownames(coefficients.df)
+
+  # Anova table (Chi sq statistics)
+  if (anova){
+    suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full, vcov. = vcovfunc2), Anova.args)))
+    anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], N)
+    names.est = names(output$estimates)
+    output$estimates = c(output$estimates, anova.tab$RESI)
+    names.est = c(names.est, rownames(anova.tab))
+    names(output$estimates) = names.est
+    output$anova = anova.tab
+    class(output$anova) = c("anova_resi", class(output$anova))
+  }
   if(identical(vcovfunc, stats::vcov)){
     output$naive.var = TRUE
   }
@@ -619,14 +650,17 @@ resi_pe.lme <- function(model.full, vcovfunc = clubSandwich::vcovCR, vcov.args =
 
 #' @describeIn resi_pe RESI point estimation for lmerMod object
 #' @export
-resi_pe.lmerMod <- function(model.full, vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...){
+resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::vcovCR,
+                            Anova.args = list(), vcov.args = list(), ...){
   x = as.matrix(summary(model.full)$coefficients)
   #sample size
   N = summary(model.full)$ngrps
 
   # robust se
   if (identical(vcovfunc, stats::vcov)) {
-    output = list(coefficients = cbind(x, 'Wald' = x[, 't value']^2, RESI = RESI::chisq2S(x[, 't value']^2, 1, N)), naive.var = TRUE)
+    coefficients.tab = cbind(x, 'Wald' = x[, 't value']^2, RESI = RESI::chisq2S(x[, 't value']^2, 1, N))
+    output = list(estimates = coefficients.tab[,"RESI"], coefficients = coefficients.tab, naive.var = TRUE)
+    vcovfunc2 = vcovfunc
     } else {
       if (length(vcov.args) == 0){
         if (identical(vcovfunc, clubSandwich::vcovCR)){
@@ -642,8 +676,23 @@ resi_pe.lmerMod <- function(model.full, vcovfunc = clubSandwich::vcovCR, vcov.ar
         do.call(vcovfunc, vcov.args)}
       robust_var = diag(vcovfunc2(model.full))
       robust_se = sqrt(robust_var)
-      output = list(coefficients = cbind(x, 'Robust.SE' = robust_se, 'Robust Wald' = (x[, 'Estimate']^2/robust_var), RESI = RESI::chisq2S(x[, 'Estimate']^2/robust_var, 1, N)), naive.var = FALSE)
-      }
-
+      coefficients.tab = cbind(x, 'Robust.SE' = robust_se,
+                               'Robust Wald' = (x[, 'Estimate']^2/robust_var),
+                               RESI = RESI::chisq2S(x[, 'Estimate']^2/robust_var, 1, N))
+      output = list(estimates = coefficients.tab[,"RESI"], coefficients = coefficients.tab,
+                    naive.var = FALSE)
+    }
+  names(output$estimates) = rownames(coefficients.tab)
+  # Anova table (Chi sq statistics)
+  if (anova){
+    suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full, vcov. = vcovfunc2), Anova.args)))
+    anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], N)
+    names.est = names(output$estimates)
+    output$estimates = c(output$estimates, anova.tab$RESI)
+    names.est = c(names.est, rownames(anova.tab))
+    names(output$estimates) = names.est
+    output$anova = anova.tab
+    class(output$anova) = c("anova_resi", class(output$anova))
+    }
   return(output)
 }
