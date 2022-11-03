@@ -9,12 +9,11 @@ sim_data_cont(
   S,
   pi,
   ni_range,
-  rho.G,
-  sigma0,
-  sigma.t,
-  sigma.e,
-  rho.e,
-  fixed.design = TRUE
+  true_sigma.e,
+  work_sigma.e,
+  COV_beta,
+  fixed.trt = TRUE,
+  fixed.time = TRUE
 )
 }
 \arguments{
@@ -26,17 +25,21 @@ sim_data_cont(
 
 \item{ni_range}{= range of num of measurements}
 
+\item{fixed.time}{whether the time points are fixed (TRUE, defuault) or random. If random, each time point (except baseline) has 60% chance to be observed}
+
 \item{rho.G}{= correlation coef between random intercepts and slopes}
 
 \item{sigma0:}{SD of random intercepts}
 
 \item{sigma.t:}{SD of random slopes}
 
-\item{sigma.e:}{SD of errors}
+\item{true_sigma.e:}{the true covariance matrix of errors within each subject}
+
+\item{work.sigma.e}{the working covariance matrix specified}
 
 \item{rho.e:}{correlation coef of the errors within a subject}
 
-\item{fixed.design:}{whether the trt assignment is fixed by design (TRUE) or random. use togther with pi}
+\item{fixed.trt:}{whether the trt assignment is fixed by design (TRUE) or random. use togther with pi}
 }
 \description{
 Function for simulating longitudinal continuous outcomes

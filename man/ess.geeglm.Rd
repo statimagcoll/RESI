@@ -9,6 +9,8 @@
 \arguments{
 \item{obj}{a fitted `geeglm` object}
 
+\item{xTab}{a matrix containing model output and added RESI point estimate(s)}
+
 \item{constr}{matrix, linear constraint}
 }
 \description{
