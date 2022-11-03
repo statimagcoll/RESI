@@ -8,6 +8,7 @@
 #' @return Returns a scalar or vector argument of the squared robust effect size index estimate.
 chisq2Ssq = function(chisq, df, rdf){
   S = (chisq - df)/rdf
+  ifelse(S<0, 0, S)
 }
 
 
@@ -69,3 +70,43 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   invisible(x)
 }
 
+
+#' @export
+R1_str = function(rho.e, num_visit){
+time = 0:(num_visit - 1)
+mtx <- matrix(NA, length(time), length(time))
+for (j in 1:length(time)){
+  for (k in 1:length(time)){
+    mtx[j, k] <- rho.e^(abs(time[j] - time[k]))
+  }
+}
+return(mtx)
+}
+
+#' @export
+comp_str = function(diag = 1, off_diag = 0.5, num_visit){
+  mtx = matrix(NA, ncol = num_visit, nrow = num_visit)
+  diag(mtx) = diag
+  mtx[upper.tri(mtx)|lower.tri(mtx)] = off_diag
+  return(mtx)
+}
+
+#' @export
+AR1_to_comp = function(AR1){
+  m = nrow(AR1)
+  FUN = function(rho) sum(AR1[upper.tri(AR1)]) - m*(m-1)/2 * rho
+  rho = uniroot(FUN, c(0, 10))$root
+  comp = comp_str(1, rho, num_visit = m)
+  return(comp)
+}
+
+#' @export
+comp_to_AR1 = function(comp){
+  m = nrow(comp)
+  comp_rho = unique(comp[lower.tri(comp)])
+  eq = paste0((m-1):1, "*rho", "^", 1:(m-1))
+  FUN = function(rho) m*(m-1)/2 * comp_rho -  eval(parse(text = paste0(eq, collapse = " + ")))
+  ar1_rho = uniroot(FUN, c(0, 10))$root
+  ar1 = AR1_str(rho.e = ar1_rho, num_visit = m)
+  return(ar1)
+}
