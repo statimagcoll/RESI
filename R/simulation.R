@@ -25,12 +25,13 @@ ARMtx <- function(time, rho.e){
 #' @param rho.G = correlation coef between random intercepts and slopes
 #' @param sigma0: SD of random intercepts
 #' @param sigma.t: SD of random slopes
-#' @param sigma.e: the covariance matrix of errors within each subject
+#' @param true_sigma.e: the true covariance matrix of errors within each subject
+#' @param work.sigma.e the working covariance matrix specified
 #' @param rho.e: correlation coef of the errors within a subject
 #' @param fixed.trt: whether the trt assignment is fixed by design (TRUE) or random. use togther with pi
 #' @param fixed.time whether the time points are fixed (TRUE, defuault) or random. If random, each time point (except baseline) has 60% chance to be observed
 #' @export
-sim_data_cont = function(N, S, pi, ni_range, sigma.e, fixed.trt = TRUE, fixed.time = TRUE){
+sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_beta, fixed.trt = TRUE, fixed.time = TRUE){
 
 # 1. GENERATING VARIABLE VALUES
   # number of measurements
@@ -69,31 +70,15 @@ sim_data_cont = function(N, S, pi, ni_range, sigma.e, fixed.trt = TRUE, fixed.ti
   # } else { # if unbalanced
   #   e =  sigma.e * c(unlist(sapply(time_list, function(x) mvtnorm::rmvnorm(1, rep(0, length(x)), sigma = ARMtx(x, rho.e))) ))
   # }
-  e = mvtnorm::rmvnorm(N, rep(0, length(t)), sigma = sigma.e) %>% t %>% c # convert it to vector (by rows)
+  e = mvtnorm::rmvnorm(N, rep(0, length(t)), sigma = true_sigma.e) %>% t %>% c # convert it to vector (by rows)
 
 
-# 2. CONVERTING RESI TO BETA
-  ## The covariance matrix of Yi
-  Sigma_y = matrix(NA, nrow = ni_range[2], ncol = ni_range[2])
+# 2. CONVERTING RESI to BETA
+
+  # The covariance matrix of Yi
+  Sigma_y = true_sigma.e
+  # Sigma_y = matrix(NA, nrow = ni_range[2], ncol = ni_range[2])
   # Design matrix for random effects
-  time_points = (0:(ni_range[2]-1))
-  Z = cbind(1, time_points)
-  # Cov(Y_i) = Z^T G Z + R_i
-  # Sigma_y = Z %*% G_mat %*% t(Z) + ARMtx(time = time_points, rho.e = rho.e)
-  Sigma_y = sigma.e
-
-  # The true cov of \hat{beta} given X
-  # Using numeric methods to find the variance of each parameter estimator
-  # (assuming the model is correctly specified)
-  # The covariance matrix of \hat{beta}
-  sum = 0
-  rep = 1e5
-  for (i in 1:rep){
-    # X_i^T Sigma^{-1} T
-    X = cbind(1, time = time_points, trt = rbinom(1, 1, pi))
-    sum = sum + t(X) %*% solve(Sigma_y) %*% X
-  }
-  COV_beta = solve(sum) * rep # = N * (the asymptotic cov of beta hat)
 
   var_int = COV_beta[1, 1] / N
   var_time = COV_beta[2, 2] / N
@@ -139,7 +124,7 @@ sim_data_cont = function(N, S, pi, ni_range, sigma.e, fixed.trt = TRUE, fixed.ti
     sum = sum + t(X) %*% X
   }
 
-  COV_beta_ind = solve(sum) *  unique(diag(sigma.e)) * rep  # = the variance of \hat{\beta|ind}
+  COV_beta_ind = solve(sum) *  unique(diag(true_sigma.e)) * rep  # = the variance of \hat{\beta|ind}
 
   tot_obs = sum(ni)
   var_int_ind = COV_beta_ind[1, 1]
@@ -183,7 +168,7 @@ sim_data_cont = function(N, S, pi, ni_range, sigma.e, fixed.trt = TRUE, fixed.ti
   # return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta, true_sd = sd, cov_y = Sigma_y,
   #             pm_resi = pm_resi, ESS = ESS, info = "Function updated on 8/29/2022 3:16pm"))
   return(list(data = data_sim, N = N, ni = ni, true_beta = beta, true_sd = sd, cov_y = Sigma_y,
-              pm_resi = pm_resi, ESS = ESS, info = "Function updated on 9/6/2022 12:59pm"))
+              pm_resi = pm_resi, ESS = ESS, info = "Function updated on 11/2/2022 10:19pm"))
 }
 
 
