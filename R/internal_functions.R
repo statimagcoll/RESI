@@ -72,15 +72,15 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
 
 
 #' @export
-R1_str = function(rho.e, num_visit){
-time = 0:(num_visit - 1)
-mtx <- matrix(NA, length(time), length(time))
-for (j in 1:length(time)){
-  for (k in 1:length(time)){
-    mtx[j, k] <- rho.e^(abs(time[j] - time[k]))
+AR1_str = function(rho.e, num_visit){
+  time = 0:(num_visit - 1)
+  mtx <- matrix(NA, length(time), length(time))
+  for (j in 1:length(time)){
+    for (k in 1:length(time)){
+      mtx[j, k] <- rho.e^(abs(time[j] - time[k]))
+    }
   }
-}
-return(mtx)
+  return(mtx)
 }
 
 #' @export
