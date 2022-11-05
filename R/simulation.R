@@ -80,9 +80,9 @@ sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_bet
   # Sigma_y = matrix(NA, nrow = ni_range[2], ncol = ni_range[2])
   # Design matrix for random effects
 
-  var_int = COV_beta[1, 1] / N
-  var_time = COV_beta[2, 2] / N
-  var_trt = COV_beta[3, 3] / N
+  var_int = COV_beta[1, 1]
+  var_time = COV_beta[2, 2]
+  var_trt = COV_beta[3, 3]
 
   # true SD's
   sd_int = sqrt(var_int)
@@ -101,9 +101,9 @@ sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_bet
   # The covariance matrix of \hat{\beta} under independence assumption
 
   tot_obs = sum(ni)
-  var_int_ind = COV_beta_ind[1, 1] / N
-  var_time_ind = COV_beta_ind[2, 2] / N
-  var_trt_ind = COV_beta_ind[3, 3] / N
+  var_int_ind = COV_beta_ind[1, 1]
+  var_time_ind = COV_beta_ind[2, 2]
+  var_trt_ind = COV_beta_ind[3, 3]
 
   # The true ESS = tot_obs * w
   ESS_int = sum(ni) * var_int_ind / var_int
