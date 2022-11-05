@@ -142,7 +142,7 @@ sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_bet
   # return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta, true_sd = sd, cov_y = Sigma_y,
   #             pm_resi = pm_resi, ESS = ESS, info = "Function updated on 8/29/2022 3:16pm"))
   return(list(data = data_sim, N = N, ni = ni, true_beta = beta, true_sd = sd, cov_y = Sigma_y,
-              pm_resi = pm_resi, ESS = ESS, info = "Function updated on 11/2/2022 10:19pm"))
+              pm_resi = pm_resi, ESS = ESS, info = "Function updated on 11/5/2022 5:01pm"))
 }
 
 
