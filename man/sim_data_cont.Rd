@@ -12,6 +12,7 @@ sim_data_cont(
   true_sigma.e,
   work_sigma.e,
   COV_beta,
+  COV_beta_ind,
   fixed.trt = TRUE,
   fixed.time = TRUE
 )
