@@ -172,10 +172,11 @@ resi.geeglm <- function(object, robust.var = TRUE,
   # bootstrap
   output.boot = list(RESI = as.matrix(output[, 'RESI']),
                      pm_RESI = as.matrix(output[, 'pm-RESI']))
+  corstr_spec = object$corstr
   for (i in 1:nboot){
-    boot.data1 = boot.samp(data, id.var = id_var)
+    boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
-    boot.mod1 = update(object, data = boot.data1)
+    boot.mod = update(object, data = boot.data, corstr = corstr_spec)
     rv.boot = calc_resi(boot.mod, robust.var = robust.var)
     output.boot$RESI= cbind(output.boot$RESI, rv.boot[, 'RESI'])
     output.boot$pm_RESI = cbind(output.boot$pm_RESI, rv.boot[, 'pm-RESI'])
