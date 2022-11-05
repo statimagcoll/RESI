@@ -31,7 +31,7 @@ ARMtx <- function(time, rho.e){
 #' @param fixed.trt: whether the trt assignment is fixed by design (TRUE) or random. use togther with pi
 #' @param fixed.time whether the time points are fixed (TRUE, defuault) or random. If random, each time point (except baseline) has 60% chance to be observed
 #' @export
-sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_beta, fixed.trt = TRUE, fixed.time = TRUE){
+sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_beta, COV_beta_ind, fixed.trt = TRUE, fixed.time = TRUE){
 
 # 1. GENERATING VARIABLE VALUES
   # number of measurements
@@ -80,9 +80,9 @@ sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_bet
   # Sigma_y = matrix(NA, nrow = ni_range[2], ncol = ni_range[2])
   # Design matrix for random effects
 
-  var_int = COV_beta[1, 1] / N
-  var_time = COV_beta[2, 2] / N
-  var_trt = COV_beta[3, 3] / N
+  var_int = COV_beta[1, 1]
+  var_time = COV_beta[2, 2]
+  var_trt = COV_beta[3, 3]
 
   # true SD's
   sd_int = sqrt(var_int)
@@ -98,33 +98,7 @@ sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_bet
 
 # 2.2 Deriving the true values of pm-RESI
   # The covariance of \hat{\beta} given X
-  # assuming the model is correctly specified.
-  # The covariance matrix of \sqrt{N}*(\hat{\beta} - \beta_0) under independence assumption
-
-  # rep = 1e3
-  # if (fixed.design) {
-  #   trt_temp = sample(rep(0:1, times = c(ceiling(rep*pi), rep - ceiling(rep*pi)) ), replace = FALSE)
-  # } else {trt_temp = rbinom(rep, 1, pi)}
-  # # duplicate it for longitudinal data
-  # trt_temp = rep(trt_temp, each = unique(ni))
-  # X = cbind(1, time = time_points, trt = trt_temp)
-  # sum = t(X) %*% solve(diag(rep(2, rep*unique(ni)))) %*% X
-
-  sum = 0
-  rep = 1e5
-  for (i in 1:rep){
-    # generate the trt group
-    # the trt group for each subject
-    if (fixed.trt) {
-      trt_temp = sample(rep(0:1, times = c(ceiling(N*pi), N - ceiling(N*pi)) ), replace = FALSE)
-    } else {trt_temp = rbinom(N, 1, pi)}
-    # duplicate it for longitudinal data
-    trt_temp = rep(trt_temp, times = ni)
-    X = cbind(1, time = time, trt = trt_temp)
-    sum = sum + t(X) %*% X
-  }
-
-  COV_beta_ind = solve(sum) *  unique(diag(true_sigma.e)) * rep  # = the variance of \hat{\beta|ind}
+  # The covariance matrix of \hat{\beta} under independence assumption
 
   tot_obs = sum(ni)
   var_int_ind = COV_beta_ind[1, 1]
