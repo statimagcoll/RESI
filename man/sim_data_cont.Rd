@@ -26,6 +26,10 @@ sim_data_cont(
 
 \item{ni_range}{= range of num of measurements}
 
+\item{COV_beta}{the asymptotic covariance for $\sqrt{N} \times (\hat{\beta} - beta0)$}
+
+\item{COV_beta_ind}{the asymptotic covariance for $\sqrt{N} \times (\hat{\beta} - beta0)$ under independence assumption}
+
 \item{fixed.time}{whether the time points are fixed (TRUE, defuault) or random. If random, each time point (except baseline) has 60% chance to be observed}
 
 \item{rho.G}{= correlation coef between random intercepts and slopes}

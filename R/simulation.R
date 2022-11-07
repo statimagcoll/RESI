@@ -27,6 +27,8 @@ ARMtx <- function(time, rho.e){
 #' @param sigma.t: SD of random slopes
 #' @param true_sigma.e: the true covariance matrix of errors within each subject
 #' @param work.sigma.e the working covariance matrix specified
+#' @param COV_beta the asymptotic covariance for $\sqrt{N} \times (\hat{\beta} - beta0)$
+#' @param COV_beta_ind the asymptotic covariance for $\sqrt{N} \times (\hat{\beta} - beta0)$ under independence assumption
 #' @param rho.e: correlation coef of the errors within a subject
 #' @param fixed.trt: whether the trt assignment is fixed by design (TRUE) or random. use togther with pi
 #' @param fixed.time whether the time points are fixed (TRUE, defuault) or random. If random, each time point (except baseline) has 60% chance to be observed
@@ -80,9 +82,9 @@ sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_bet
   # Sigma_y = matrix(NA, nrow = ni_range[2], ncol = ni_range[2])
   # Design matrix for random effects
 
-  var_int = COV_beta[1, 1]
-  var_time = COV_beta[2, 2]
-  var_trt = COV_beta[3, 3]
+  var_int = COV_beta[1, 1] / N
+  var_time = COV_beta[2, 2] / N
+  var_trt = COV_beta[3, 3] / N
 
   # true SD's
   sd_int = sqrt(var_int)
@@ -101,9 +103,9 @@ sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_bet
   # The covariance matrix of \hat{\beta} under independence assumption
 
   tot_obs = sum(ni)
-  var_int_ind = COV_beta_ind[1, 1]
-  var_time_ind = COV_beta_ind[2, 2]
-  var_trt_ind = COV_beta_ind[3, 3]
+  var_int_ind = COV_beta_ind[1, 1] / N
+  var_time_ind = COV_beta_ind[2, 2] / N
+  var_trt_ind = COV_beta_ind[3, 3] / N
 
   # The true ESS = tot_obs * w
   ESS_int = sum(ni) * var_int_ind / var_int
