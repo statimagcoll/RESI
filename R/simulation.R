@@ -44,9 +44,13 @@ sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_bet
   id = rep(1:N, times = ni)
 
   # genearte the observation times (assuming everyone has the baseline measurement.)
-  time_list = sapply(ni, function(x) c(0, sort(sample(1:(max(ni_range)-1), x-1, replace=FALSE))))
-  time = c(unlist(time_list))
-  # c(unlist(sapply(ni-1, seq, from = 0)))  # minus one since we start at time = 0
+  if (fixed.time){
+    time_list = sapply(ni, function(x) c(0, sort(sample(1:(max(ni_range)-1), x-1, replace=FALSE))))
+    time = c(unlist(time_list))
+  } else {
+    time_list = sapply(ni, function(x) runif(x,min = 0, max = 5) %>% sort())
+    time = c(unlist(time_list))
+  }
 
   # generate the trt group
   # the trt group for each subject
@@ -134,12 +138,12 @@ sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_bet
   data_sim = data.frame(id = id, num_obs = rep(ni, times = ni), time = time, trt = trt,
                         error = e, y = y)
 
-# NEW: 5. making observed time points random
-  if (fixed.time == FALSE){
-    data_sim$observed = rbinom(nrow(data_sim), 1, prob = 0.75)
-    data_sim$observed[data_sim$time == 0] = 1
-    data_sim = subset(data_sim, observed == 1)
-  }
+# # NEW: 5. making observed time points random
+#   if (fixed.time == FALSE){
+#     data_sim$observed = rbinom(nrow(data_sim), 1, prob = 0.75)
+#     data_sim$observed[data_sim$time == 0] = 1
+#     data_sim = subset(data_sim, observed == 1)
+#   }
 
   # return(list(data = data_sim, G = G_mat, N = N, ni = ni, true_beta = beta, true_sd = sd, cov_y = Sigma_y,
   #             pm_resi = pm_resi, ESS = ESS, info = "Function updated on 8/29/2022 3:16pm"))
