@@ -48,7 +48,7 @@ sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_bet
     time_list = sapply(ni, function(x) c(0, sort(sample(1:(max(ni_range)-1), x-1, replace=FALSE))))
     time = c(unlist(time_list))
   } else {
-    time_list = sapply(ni, function(x) runif(x,min = 0, max = 5) %>% sort())
+    time_list = sapply(ni, function(x) runif(x,min = 0, max = 4) %>% sort())
     time = c(unlist(time_list))
   }
 
