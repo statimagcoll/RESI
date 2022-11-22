@@ -4,6 +4,7 @@ library(sandwich)
 library(survival)
 library(nlme)
 library(lme4)
+library(tibble)
 
 data = RESI::insurance
 mod = glm(charges ~ region * age + bmi + sex, data = data)
@@ -48,10 +49,11 @@ mod.hurdle.r = pscl::hurdle(art ~ kid5 + phd | kid5 + phd, data = data.hurdle)
 mod.zinf = pscl::zeroinfl(art ~ fem + mar + kid5 + phd + ment | fem + mar + kid5 + phd + ment, data = data.hurdle)
 mod.zinf.r = pscl::zeroinfl(art ~ kid5 + phd | kid5 + phd, data = data.hurdle)
 
-# gee
+# gee and lme
 data.gee = RESI::depression
 mod.gee = gee::gee(depression ~ diagnose + drug*time, data = data.gee, id = id, family = binomial, corstr = "independence")
 mod.geeglm = geepack::geeglm(depression ~ diagnose + drug*time, data = data.gee, id = id, family = binomial, corstr = "independence")
+mod.geeglm.r = geepack::geeglm(depression ~ diagnose, data = data.gee, id = id, family = binomial, corstr = "independence")
 mod.lme = nlme::lme(distance ~ age + Sex, data = nlme::Orthodont, random = ~ 1)
 mod.lmerMod = lme4::lmer(Reaction ~ Days + (Days | Subject), sleepstudy)
 data.lmer = nlme::Orthodont
@@ -59,6 +61,31 @@ data.lmer$nsex <- as.numeric(data.lmer$Sex=="Male")
 data.lmer$nsexage <- with(data.lmer, nsex*age)
 mod.lmerMod2 = lmer(distance ~ age + (age|Subject) + (0+nsex|Subject) +
                       (0 + nsexage|Subject), data=data.lmer)
+
+# tibbles
+tib.dat <- tibble::as_tibble(data)
+mod.glm.tib <- glm(charges ~ region * age + bmi + sex, data = tib.dat)
+mod.lm.tib <- lm(charges ~ region * age + bmi + sex, data = tib.dat)
+tib.nls <- tibble::as_tibble(data.nls)
+mod.nls.tib <- nls(Y~a * X/(b + X), data = tib.nls, start = list(a = 1, b = 2))
+tib.surv <- tibble::as_tibble(data.surv)
+mod.surv.tib <- survreg(Surv(time, status) ~ age + sex + ph.karno, data=tib.surv,
+                   dist='weibull', robust = TRUE)
+mod.coxph.tib <-  coxph(Surv(time, status) ~ age + sex + wt.loss, data=as_tibble(lung), robust = TRUE)
+tib.hurdle <- as_tibble(data.hurdle)
+mod.hurdle.tib <- pscl::hurdle(art ~ fem + mar + kid5 + phd + ment | fem + mar +
+                                 kid5 + phd + ment, data = tib.hurdle)
+mod.zinf.tib <- pscl::zeroinfl(art ~ fem + mar + kid5 + phd + ment | fem + mar +
+                                kid5 + phd + ment, data = tib.hurdle)
+tib.gee <- tibble::as_tibble(data.gee)
+mod.gee.tib <- gee::gee(depression ~ diagnose + drug*time, data = tib.gee,
+                       id = id, family = binomial, corstr = "independence")
+mod.geeglm.tib <- geepack::geeglm(depression ~ diagnose + drug*time,
+                                 data = tib.gee, id = id, family = binomial,
+                                 corstr = "independence")
+#mod.lme.tib <- nlme::lme(distance ~ age + Sex, data = as_tibble(nlme::Orthodont), random = ~ 1)
+mod.lmerMod.tib <- lme4::lmer(Reaction ~ Days + (Days | Subject), as_tibble(sleepstudy))
+
 
 ## tests
 test_that("Specifying non-allowed vcov produces warning",{
@@ -174,6 +201,24 @@ test_that("specifying additional Anova args works",{
 
 test_that("vcovfunc = vcov changes naive.var to TRUE",{
   expect_true(resi(mod, vcovfunc = vcov)$naive.var == TRUE)
+})
+
+test_that("tibbles work", {
+  expect_equal(unname(resi(mod.glm.tib, nboot = 1)$estimates), c(0.35982590, -0.06733537, -0.02670248, -0.03341748, -0.00246893, 0.14980504, 0.15238719,
+                                                         0.05839381, 0.01667149, 0.03610640, -0.01497171, 0.03655364, 0.29533571, 0.14991488,
+                                                         0.05159896, 0.01617303), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.lm.tib, nboot = 1)$estimates), c(0.359825898, -0.067297337, -0.026687397, -0.033398602, -0.002467535, 0.149720414, 0.152301107,
+                                                            0.058360820, 0.016662071, 0.036086004, -0.014963251, 0.036616942, 0.296220354, 0.150361134,
+                                                            0.051742893, 0.016116372))
+  expect_equal(unname(resi(mod.surv.tib, nboot = 1, data = data.surv)$estimates), c(0.19357703, 0.51465342, -0.08062289, 0.20010885, 0.10512266, -0.27578597, 0.04597918,
+                                                                                0.18883217, 0.08163828), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.coxph.tib, nboot = 1, data = data.surv)$estimates), c(0.224354226, 0.136138740, -0.213293162, 0.008641209, 0.117732151, 0.202042262, 0.000000000))
+  expect_equal(unname(resi(mod.hurdle.tib, nboot = 1)$estimates[c(1, 2, 5, 8, 10)]), c(0.28063439, 0.12770489, -0.06898884, 0.02686305, 0.06039791), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.zinf.tib, nboot = 1)$estimates[c(1, 2, 5, 8, 10)]), c(0.23725614, 0.11892936, -0.07014934, -0.03481673, -0.03461235), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.gee.tib, nboot = 10, data = data.gee)$coefficients[,'RESI']), c(0.0000, 0.4850899, 0.0000, 0.5591547, 0.2889370), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.geeglm.tib, nboot = 10, data = data.gee)$coefficients[,'RESI']), c(0.0000, 0.4850899, 0.000, 0.5591547, 0.2889370), tolerance = 1e-07)
+  # expect_equal(unname(resi(mod.lme, nboot = 10)$coefficients[,'RESI']), c(3.659090, 1.739166, 0.512371), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.lmerMod.tib, nboot = 10)$coefficients[,'RESI']),c(8.434942, 1.533073), tolerance = 1e-07)
 })
 
 # important because some resi_pe methods use waldtest and some use wald.test
