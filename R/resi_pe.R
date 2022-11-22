@@ -207,11 +207,11 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   }
 
   # overall
-  wald.test = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc2, test = 'Chisq')
-  stats = wald.test$Chisq[2]
+  wald.test = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc2, test = 'F')
+  stats = wald.test$F[2]
   overall.df = wald.test$Df[2]
   res.df = wald.test$Res.Df[2]
-  overall.resi.hat = chisq2S(stats, overall.df, nrow(data))
+  overall.resi.hat = f2S(stats, overall.df, res.df)
   wald.test[2, 'RESI'] = overall.resi.hat
   output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
                  model.reduced = list(call = model.reduced$call, formula = formula(model.reduced)),
@@ -573,7 +573,6 @@ resi_pe.geeglm <- function(model.full, anova = TRUE, ...){
   # Anova table (Chi sq statistics)
   if (anova){
     suppressMessages(anova.tab <- anova(model.full))
-    ## is N right for n argument?
     anova.tab[,'RESI'] = chisq2S(anova.tab[,'X2'], anova.tab[,'Df'], N)
     names.est = names(output$estimates)
     output$estimates = c(output$estimates, anova.tab$RESI)
@@ -679,6 +678,7 @@ resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::v
       coefficients.tab = cbind(x, 'Robust.SE' = robust_se,
                                'Robust Wald' = (x[, 'Estimate']^2/robust_var),
                                RESI = RESI::chisq2S(x[, 'Estimate']^2/robust_var, 1, N))
+      # model full is not the same process as others, so print method is missing the call
       output = list(estimates = coefficients.tab[,"RESI"], coefficients = coefficients.tab,
                     naive.var = FALSE)
     }
