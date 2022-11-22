@@ -482,7 +482,7 @@ resi.geeglm <- function(model.full, alpha = 0.05, nboot = 1000, ...){
   output <- list(alpha = alpha, nboot = nboot)
   # RESI point estimates
   output = c(output, resi_pe(model.full))
-  data = model.full$data
+  data = as.data.frame(model.full$data)
   # id variable name
   id_var = as.character(model.full$call$id)
   # bootstrap
@@ -539,7 +539,7 @@ resi.gee <- function(model.full, data, alpha = 0.05, nboot = 1000, ...){
 #' @export
 resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSandwich::vcovCR,
                      vcov.args = list(), ...){
-  warning("\nInterval performance not yet evaluated for lme")
+  warning("\nConfidence Interval procedure not developed for lme, returning point estimates only")
   output <- list(alpha = alpha, nboot = nboot)
   # RESI point estimates
   output = c(output, resi_pe(model.full = model.full, vcovfunc = vcovfunc, vcov.args = vcov.args))
@@ -587,6 +587,6 @@ resi.lmerMod <- function(model.full, alpha = 0.05, nboot = 1000,
   output.boot = output.boot[, -1]
   RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
   output = list(coefficients = cbind(output$coefficients, t(RESI.ci)), naive.var = output$naive.var)
-
+  class(output) = 'resi'
   return(output)
 }
