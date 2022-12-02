@@ -45,4 +45,12 @@ S2d = function(S, pi=0.5){
   S / sqrt(1/pi + 1/(1-pi) )
 }
 
+#' @export
+t2S <- function(t, n, rdf){
+  (t*sqrt(2))/(sqrt(n*rdf))*exp(lgamma(rdf/2) - lgamma((rdf-1)/2))
+}
 
+#' @export
+z2S <- function(z, n){
+  z/sqrt(n)
+}
