@@ -561,13 +561,69 @@ resi_pe.zeroinfl <- resi_pe.hurdle
 
 #' @describeIn resi_pe RESI point estimation for geeglm object
 #' @export
-resi_pe.geeglm <- function(model.full, ...){
-  x = as.matrix(summary(model.full)$coefficients)
-  #sample size
-  N = length(summary(model.full)$clusz)
-  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
-                 coefficients =  as.data.frame(cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], 1, N))))
-  output$naive.var = FALSE
+resi_pe.geeglm <- function(object, anova = TRUE, ...){
+
+  data = object$data
+  # sample size
+  N = length(summary(object)$clusz)
+  # total num of observations
+  tot_obs = nrow(data)
+
+  # longitudinal RESI
+  if (anova) {
+    mod_tab = anova(object)
+    mod_tab$RESI = RESI::chisq2S(mod_tab[,'X2'], mod_tab$Df, N)
+  } else {
+    mod_tab = as.data.frame(summary(object)$coefficients)
+    mod_tab = cbind(mod_tab, RESI = RESI::chisq2S(mod_tab[,'Wald'], 1, N))
+  }
+
+  # model form
+  form = formula(object)
+  # independence model
+  mod_ind = update(object, id = 1:nrow(data), corstr = "independence")
+
+  mod_ind = glm(formula(object), data = data)
+
+  # the var-cov matrix from the independence model
+  cov_ind = vcov(mod_ind)
+
+  # The pm-RESI estimates
+  # mod_tab_ind = anova(mod_ind)
+  coef_mod = coef(mod_ind)
+  n.vars = length(coef_mod ) # num of coefficients in the model
+  var_names = names(coef_mod) # coefficient names ...
+  term_names = labels(terms(mod_ind)) # terms ...
+  n.terms = length(term_names) # num of terms ...
+  if (anova){
+    Cmat = matrix(NA, ncol = n.vars, nrow = n.terms) # contrast matrix
+    colnames(Cmat) = var_names
+    rownames(Cmat) = term_names
+    for (term in 1:n.terms){
+      Cmat[term, ] = grepl(term_names[term], var_names, fixed = TRUE)
+    }
+  } else {
+    Cmat = diag(n.vars) == 1
+    colnames(Cmat) = rownames(Cmat) = var_names
+  }
+
+  # the pm-RESI for each variable..
+  Wald_ind = NULL
+  for (term in rownames(Cmat)){
+    index = Cmat[term, ]
+    sub_coef = coef(object)[index] # the coefficient(s) from the input object
+    sub_vcov = vcov(mod_ind)[index, index] # the vcov from the independence model
+    # Wald test statistics using vcov from the independence model
+    Wald_ind = sub_coef %*% solve(sub_vcov) %*%  sub_coef
+    df = sum(index) # df
+    mod_tab[term, "pm-RESI"] = chisq2S(Wald_ind, df = df, rdf = N)
+  }
+
+
+  output <- list(model.full = list(call = object$call, formula = formula(object)),
+                 resi = mod_tab)
+
+  output$robust.var = "The GEE models always use robust (sandwich) variance estiamtor."
   return(output)
 }
 
