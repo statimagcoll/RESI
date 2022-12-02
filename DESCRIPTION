@@ -17,7 +17,7 @@ Collate:
   'nccd.R'
   'ncf.R'
   'ess.R'
-  'calc_resi.R'
+  'resi_pe.R'
   'resi.R'
   'simulation.R'
 Imports:
