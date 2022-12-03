@@ -612,12 +612,18 @@ resi_pe.geeglm <- function(object, anova = TRUE, ...){
   for (term in rownames(Cmat)){
     index = Cmat[term, ]
     sub_coef = coef(object)[index] # the coefficient(s) from the input object
-    sub_vcov = vcov(mod_ind)[index, index] # the vcov from the independence model
+    sub_vcov_cor = vcov(object)[index, index] # the vcov from the gee model
+    sub_vcov_ind = vcov(mod_ind)[index, index] # the vcov from the independence model
+    # ESS
+    w = sub_coef %*% solve(sub_vcov_cor) %*% sub_coef / sub_coef %*% solve(sub_vcov_ind) %*% sub_coef
+    ess = w * tot_obs
+    mod_tab[term, "ess"] = ess
+    mod_tab[term, "pm-RESI"] = sqrt(N / ess * mod_tab[term, "RESI"])
     # Wald test statistics using vcov from the independence model
-    Wald_ind = sub_coef %*% solve(sub_vcov) %*%  sub_coef
-    df = sum(index) # df
-    S_ind =  chisq2S(Wald_ind, df = df, rdf = tot_obs)
-    mod_tab[term, "pm-RESI"] = sqrt(N/tot_obs * S_ind^2)
+    # Wald_ind = sub_coef %*% solve(sub_vcov) %*%  sub_coef
+    # df = sum(index) # df
+    # S_ind =  chisq2S(Wald_ind, df = df, rdf = tot_obs)
+    # mod_tab[term, "pm-RESI"] = sqrt(N/tot_obs * S_ind^2)
   }
 
 
