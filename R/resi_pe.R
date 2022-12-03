@@ -583,8 +583,6 @@ resi_pe.geeglm <- function(object, anova = TRUE, ...){
   # independence model
   mod_ind = update(object, id = 1:nrow(data), corstr = "independence")
 
-  mod_ind = glm(formula(object), data = data)
-
   # the var-cov matrix from the independence model
   cov_ind = vcov(mod_ind)
 
