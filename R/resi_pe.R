@@ -595,8 +595,9 @@ resi_pe.geeglm <- function(object, anova = TRUE, ...){
   var_names = names(coef_mod) # coefficient names ...
   term_names = labels(terms(mod_ind)) # terms ...
   n.terms = length(term_names) # num of terms ...
+  # Cmat: the matrix identifying the "relative" coefficients
   if (anova){
-    Cmat = matrix(NA, ncol = n.vars, nrow = n.terms) # contrast matrix
+    Cmat = matrix(NA, ncol = n.vars, nrow = n.terms)
     colnames(Cmat) = var_names
     rownames(Cmat) = term_names
     for (term in 1:n.terms){
@@ -616,8 +617,8 @@ resi_pe.geeglm <- function(object, anova = TRUE, ...){
     # Wald test statistics using vcov from the independence model
     Wald_ind = sub_coef %*% solve(sub_vcov) %*%  sub_coef
     df = sum(index) # df
-    S2_ind =  chisq2S(Wald_ind, df = df, rdf = N)
-    mod_tab[term, "pm-RESI"] = sqrt(N/tot_obs * S2_ind)
+    S_ind =  chisq2S(Wald_ind, df = df, rdf = tot_obs)
+    mod_tab[term, "pm-RESI"] = sqrt(N/tot_obs * S_ind^2)
   }
 
 
