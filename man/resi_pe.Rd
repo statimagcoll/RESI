@@ -113,7 +113,7 @@ resi_pe(model.full, ...)
   ...
 )
 
-\method{resi_pe}{geeglm}(model.full, ...)
+\method{resi_pe}{geeglm}(object, anova = TRUE, ...)
 
 \method{resi_pe}{gee}(model.full, ...)
 

@@ -6,7 +6,7 @@
 This function will estimate RESI and its CI for each factor in a fitted GEE model object.
 The CIs are calculated via non-parametric bootstraps.}
 \usage{
-\method{resi}{geeglm}(object, robust.var = TRUE, alpha = 0.05, nboot = 1000)
+\method{resi}{geeglm}(object, alpha = 0.05, nboot = 1000)
 }
 \arguments{
 \item{object}{the model object}
