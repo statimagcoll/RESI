@@ -163,31 +163,36 @@ resi.lm <- function(object, model.reduced = NULL,
 #' @param nboot numeric, the number of bootstraps used to construct CIs. By default, 1000.
 #' @export
 #' @return An ANOVA-type model summary output with RESI estimates and CIs added.
-resi.geeglm <- function(object, robust.var = TRUE,
-                        alpha = 0.05, nboot = 1000){
-  output = calc_resi(object) # RESI point estimates
+resi.geeglm <- function(object,
+                        alpha = 0.05, nboot = 1000, anova = TRUE){
+  output = resi_pe(object, anova = anova) # RESI point estimates
   data = object$data
   # id variable name
   id_var = as.character(object$call$id)
   # bootstrap
-  output.boot = list(RESI = as.matrix(output[, 'RESI']),
-                     pm_RESI = as.matrix(output[, 'pm-RESI']))
+  output.boot = list(RESI = as.matrix(output$resi[, 'RESI']),
+                     pm_RESI = as.matrix(output$resi[, 'pm-RESI']))
   corstr_spec = object$corstr
   for (i in 1:nboot){
+    skip_to_next <- FALSE
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
     boot.mod = update(object, data = boot.data, corstr = corstr_spec)
-    rv.boot = calc_resi(boot.mod, robust.var = robust.var)
-    output.boot$RESI= cbind(output.boot$RESI, rv.boot[, 'RESI'])
-    output.boot$pm_RESI = cbind(output.boot$pm_RESI, rv.boot[, 'pm-RESI'])
+    rv.boot = tryCatch(resi_pe(boot.mod, robust.var = robust.var, anova = anova), error = function(e) {skip_to_next <<- TRUE})
+    if (skip_to_next) next
+    output.boot$RESI= cbind(output.boot$RESI, rv.boot$resi[, 'RESI'])
+    output.boot$pm_RESI = cbind(output.boot$pm_RESI, rv.boot$resi[, 'pm-RESI'])
   }
   output.boot$RESI = output.boot$RESI[, -1]
   output.boot$pm_RESI = output.boot$pm_RESI[, -1]
-  RESI.ci = apply(output.boot$RESI, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+  RESI.ci = apply(output.boot$RESI, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+  RESI_se = apply(output.boot$RESI, 1, sd, na.rm = TRUE)
   rownames(RESI.ci) = paste("RESI", rownames(RESI.ci))
-  pm_RESI.ci = apply(output.boot$pm_RESI, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+  pm_RESI.ci = apply(output.boot$pm_RESI, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+  pm_RESI_se = apply(output.boot$pm_RESI, 1, sd, na.rm = TRUE)
   rownames(pm_RESI.ci) = paste("pm-RESI", rownames(pm_RESI.ci))
-  output = cbind(output, t(RESI.ci), t(pm_RESI.ci))
+  output = cbind(output$resi, t(RESI.ci), t(pm_RESI.ci), RESI_se, pm_RESI_se)
+  cat("Note: the CI is actually based on", ncol(output.boot$RESI), "bootstraps. \n")
   return(output)
 }
 
