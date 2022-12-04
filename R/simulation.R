@@ -85,10 +85,10 @@ sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_bet
   Sigma_y = true_sigma.e
   # Sigma_y = matrix(NA, nrow = ni_range[2], ncol = ni_range[2])
   # Design matrix for random effects
-
-  var_int = COV_beta[1, 1] / N
-  var_time = COV_beta[2, 2] / N
-  var_trt = COV_beta[3, 3] / N
+  # Note: this is the variance for \sqrt(N)(\hat{\beta}_long - \beta_0)
+  var_int = COV_beta[1, 1]
+  var_time = COV_beta[2, 2]
+  var_trt = COV_beta[3, 3]
 
   # true SD's
   sd_int = sqrt(var_int)
@@ -97,9 +97,9 @@ sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_bet
   sd = c(sd_int, sd_time, sd_trt)
 
   # the beta's for a given RESI
-  beta_int = sqrt(N * S[1]^2 * var_int)
-  beta_time = sqrt(N * S[2]^2 * var_time)
-  beta_trt = sqrt(N * S[3]^2 * var_trt)
+  beta_int = sqrt(S[1]^2 * var_int)
+  beta_time = sqrt(S[2]^2 * var_time)
+  beta_trt = sqrt(S[3]^2 * var_trt)
   beta = c(beta_int, beta_time, beta_trt) # YEAH!!!!
 
 # 2.2 Deriving the true values of pm-RESI
@@ -107,14 +107,14 @@ sim_data_cont = function(N, S, pi, ni_range, true_sigma.e, work_sigma.e, COV_bet
   # The covariance matrix of \hat{\beta} under independence assumption
 
   tot_obs = sum(ni)
-  var_int_ind = COV_beta_ind[1, 1] / N
-  var_time_ind = COV_beta_ind[2, 2] / N
-  var_trt_ind = COV_beta_ind[3, 3] / N
+  var_int_ind = COV_beta_ind[1, 1]
+  var_time_ind = COV_beta_ind[2, 2]
+  var_trt_ind = COV_beta_ind[3, 3]
 
   # The true ESS = tot_obs * w
-  ESS_int = sum(ni) * var_int_ind / var_int
-  ESS_time = sum(ni) * var_time_ind / var_time
-  ESS_trt = sum(ni) * var_trt_ind / var_trt
+  ESS_int = tot_obs * var_int_ind / var_int
+  ESS_time = tot_obs * var_time_ind / var_time
+  ESS_trt = tot_obs * var_trt_ind / var_trt
   ESS = c(ESS_int, ESS_time, ESS_trt)
 
   # The true pm-RESI
