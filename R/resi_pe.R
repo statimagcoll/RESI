@@ -593,7 +593,7 @@ resi_pe.geeglm <- function(object, anova = TRUE, ...){
 
   # The var-cov matrix estimate from the analysis model (the one considering correlation )
   # Note: this is the estimate for Cov(\hat{\beta}_long)
-  cov_long = vcov(mod_long)
+  cov_long = vcov(object)
   # convert it to the estimate for \Sigma_long = Cov(\sqrt{N}(\hat{\beta}_long - \beta_0))
   cov_long = cov_long * N
 
