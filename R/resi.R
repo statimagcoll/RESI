@@ -40,8 +40,7 @@ resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     data = model.full$model
     tryCatch(update(model.full, data = data), error = function(e){
       message("Updating model fit failed. Try rerunning with providing data argument")})
-  }
-  else{
+  } else{
     data = as.data.frame(data)
   }
 
