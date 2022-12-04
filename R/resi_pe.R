@@ -583,8 +583,19 @@ resi_pe.geeglm <- function(object, anova = TRUE, ...){
   # independence model
   mod_ind = update(object, id = 1:nrow(data))
 
-  # the var-cov matrix from the independence model
+  # the var-cov matrix estimate from the independence model
+  # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
   cov_ind = vcov(mod_ind)
+  # Convert it to the estimate for \Sigma_ind = Cov(\sqrt{N}(\hat{\beta}_ind - \beta_0))
+  cov_ind = cov_ind * N
+  # # Convert it to the estimate for \Sigma_cs = \Sigma_ind * m
+  # cov_ind = cov_ind * tot_obs/N
+
+  # The var-cov matrix estimate from the analysis model (the one considering correlation )
+  # Note: this is the estimate for Cov(\hat{\beta}_long)
+  cov_long = vcov(mod_long)
+  # convert it to the estimate for \Sigma_long = Cov(\sqrt{N}(\hat{\beta}_long - \beta_0))
+  cov_long = cov_long * N
 
   # The pm-RESI estimates
   # mod_tab_ind = anova(mod_ind)
@@ -612,13 +623,13 @@ resi_pe.geeglm <- function(object, anova = TRUE, ...){
   for (term in rownames(Cmat)){
     index = Cmat[term, ]
     sub_coef = coef(object)[index] # the coefficient(s) from the input object
-    sub_vcov_cor = vcov(object)[index, index] # the vcov from the gee model
-    sub_vcov_ind = vcov(mod_ind)[index, index] # the vcov from the independence model
+    sub_vcov_cor = cov_long[index, index] # the vcov from the gee model
+    sub_vcov_ind = cov_ind[index, index] # the vcov from the independence model
     # ESS
     w = sub_coef %*% solve(sub_vcov_cor) %*% sub_coef / sub_coef %*% solve(sub_vcov_ind) %*% sub_coef
     ess = w * tot_obs
     mod_tab[term, "ess"] = ess
-    mod_tab[term, "pm-RESI"] = sqrt(N / ess * mod_tab[term, "RESI"])
+    mod_tab[term, "pm-RESI"] = sqrt(N / ess * mod_tab[term, "RESI"]^2)
     # Wald test statistics using vcov from the independence model
     # Wald_ind = sub_coef %*% solve(sub_vcov) %*%  sub_coef
     # df = sum(index) # df
