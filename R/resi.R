@@ -30,69 +30,85 @@ resi <- function(x, ...){
 #' @param boot.method which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.
 #' @param alpha significance level of the constructed CIs. By default, 0.05 will be used.
 #' @export
-resi.lm <- function(object, model.reduced = NULL,
-                      robust.var = TRUE,
-                      boot.method = "nonparam",
-                      nboot = 1000, alpha = 0.05, ...){
+resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+                    coefficients = TRUE, nboot = 1000, boot.method = 'nonparam',
+                    vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
+                    Anova.args = list(), vcov.args = list(), unbiased = TRUE, ...){
+  boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
-  if (robust.var) {
-    vcovfunc = sandwich::vcovHC
-  } else {
-    vcovfunc = vcov
+  if (missing(data)){
+    data = model.full$model
+    tryCatch(update(model.full, data = data), error = function(e){
+      message("Updating model fit failed. Try rerunning with providing data argument")})
+  }
+  else{
+    data = as.data.frame(data)
   }
 
-  if (! tolower(boot.method) %in% c("nonparam", "bayes")) stop("\n The bootstrap method should be either 'nonparam' for non-parametric bootstrap, or 'bayes' for Bayesian bootstrap")
+  # point estimation
+  output <- list(alpha = alpha, nboot = nboot, boot.method = tolower(boot.method))
+  output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
+                             data = data, anova = anova, coefficients = coefficients,
+                             vcovfunc = vcovfunc, Anova.args = Anova.args,
+                             vcov.args = vcov.args, unbiased = unbiased, ...))
 
-  output = calc_resi(object, object.reduced = model.reduced, vcov. = vcovfunc, ...)$resi.tab
-  data = object$model
-  # bootstrap
-  output.boot = as.matrix(output[, 'RESI'])
-  ## non-param
+  # bootstrapping
+  boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
+  colnames(boot.results) = names(output$estimates)
+  # non-parametric bootstrap
   if (tolower(boot.method) == "nonparam"){
     for (i in 1:nboot){
       boot.data = boot.samp(data)
-      # re-fit the model
-      boot.mod = update(object, data = boot.data)
+      boot.model.full <- update(model.full, data = boot.data)
       if (is.null(model.reduced)){
-        boot.mod.reduced = NULL
-      } else {
-        boot.mod.reduced = update(model.reduced, data = boot.data)
+        boot.model.reduced = NULL
       }
-      output.boot = cbind(output.boot, calc_resi(object = boot.mod, object.reduced = boot.mod.reduced, vcov. = vcovfunc, ...)$resi.tab[, 'RESI'])
-    }
-  }
-  # bayesian boot
+      else{
+        boot.model.reduced = update(model.reduced, data = boot.data)
+      }
+      boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
+                                                  data = boot.data, anova = anova, coefficients = coefficients,
+                                                  vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args,
+                                                  unbiased = unbiased, ...)$estimates)
+    }}
+
+  # bayesian bootstrap
   if (tolower(boot.method)  == "bayes"){
+    `(weights)` = NULL
     for (i in 1:nboot){
       boot.data = bayes.samp(data)
-      # re-fit the model
-      boot.mod = update(object, data = boot.data, weights = g)
+      boot.model.full <- suppressWarnings(update(model.full, data = boot.data, weights = boot.data[,'g']))
       if (is.null(model.reduced)){
-        boot.mod.reduced = NULL
-      } else {
-        boot.mod.reduced = update(model.reduced, data = boot.data, weights = g )
+        boot.model.reduced = suppressWarnings(update(model.full, formula = as.formula(paste(format(formula(model.full)[[2]]), "~ 1")), data = boot.model.full$model, weights = `(weights)`))
       }
-      output.boot = cbind(output.boot, calc_resi(object = boot.mod, object.reduced = model.reduced, vcov. = vcovfunc, ...)$resi.tab[, 'RESI'])
-    }
-  } # end of `if (boot.method == "bayes")`
+      else{
+        boot.model.reduced = suppressWarnings(update(model.reduced, data = boot.data, weights = boot.data[,'g']))
+      }
+      boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = boot.model.reduced,
+                                                  data = boot.data, anova = anova, coefficients = coefficients,
+                                                  vcovfunc = vcovfunc, Anova.args = Anova.args, vcov.args = vcov.args,
+                                                  unbiased = unbiased, ...)$estimates)
+    }}
 
-  output.boot = output.boot[, -1]
-  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
-  output.tab = cbind(output, t(RESI.ci))
-  if (robust.var) {
-    colnames(output.tab)[which(colnames(output.tab) == 'Wald')] = 'Robust Wald'
-    if (is.null(model.reduced)) colnames(output.tab)[which(colnames(output.tab) == 's.e.')] = 'Robust s.e.'
+  alpha.order = sort(c(alpha/2, 1-alpha/2))
+  output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
+
+  if (coefficients){
+    CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    CIs = t(CIs)
+    output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
   }
-  output = list(resi = output.tab,
-                alpha = alpha,
-                boot.value = output.boot, # bootstrapped values of RESI
-                boot.method = tolower(boot.method),
-                nboot = nboot,
-                input.object = object,
-                input.object.reduced = model.reduced,
-                robust.var = robust.var
-  )
 
+  if (anova){
+    CIs = apply(boot.results[,(ncol(boot.results)-length(which(rownames(output$anova) != "Residuals"))+1):ncol(boot.results)], 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    CIs = t(CIs)
+    output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+    class(output$anova) = c("anova_resi", class(output$anova))
+  }
+
+  if(store.boot){
+    output$boot.results = boot.results
+  }
   class(output) = "resi"
   return(output)
 }
