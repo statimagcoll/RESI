@@ -31,13 +31,19 @@ summary.resi <- function(object, alpha = NULL, ...){
         stop('\nresi function was not run with store.boot = TRUE option')}
     }
     if(is.null(object$boot.results)){
-      output$coefficients = object$coefficients[c(1:(which(colnames(object$coefficients) == 'RESI')), which(colnames(object$coefficients)%in% c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))))]
+      output$coefficients = object$coefficients[c(1:(which(colnames(object$coefficients)
+                                                           == 'RESI')),
+                                                  which(colnames(object$coefficients)%in%
+                                                          c(paste(alpha/2*100, '%', sep=''),
+                                                            paste((1-alpha/2)*100, '%', sep=''))))]
     }
     else{
       output$coefficients = object$coefficients[,1:(which(colnames(object$coefficients) == 'RESI'))]
-      CIs = apply(object$boot.results[,2:(1+nrow(object$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+      CIs = apply(object$boot.results[,2:(1+nrow(object$coefficients))], 2,
+                  quantile, probs = sort(c(alpha/2, 1-alpha/2)), na.rm = TRUE)
       CIs = t(CIs)
-      output$coefficients[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-rev(alpha)/2)*100, '%', sep=''))] = CIs
+      output$coefficients[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''),
+                                         paste((1-rev(alpha)/2)*100, '%', sep=''))] = CIs
     }
   }
   class(output) = c('summary.resi')
