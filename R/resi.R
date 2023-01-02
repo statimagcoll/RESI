@@ -137,7 +137,6 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                          coefficients = TRUE, nboot = 1000,
                          vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
                          Anova.args = list(), vcov.args = list(), unbiased = TRUE, ...){
-
   dots = list(...)
   if ("boot.method" %in% names(dots)){
     message("Only nonparametric bootstrap supported for model type")
@@ -380,7 +379,7 @@ resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
                anova = anova, coefficients = coefficients, nboot = nboot, vcovfunc = vcovfunc,
                store.boot = store.boot, Anova.args = Anova.args,
-               unbiased = unbiased, ...)
+               unbiased = unbiased, alpha = alpha, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for coxph models
@@ -407,7 +406,7 @@ resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
                anova = anova, coefficients = coefficients, nboot = nboot, vcovfunc = vcovfunc,
                store.boot = store.boot, Anova.args = Anova.args,
-               unbiased = unbiased, ...)
+               unbiased = unbiased, alpha = alpha, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for hurdle models
