@@ -49,7 +49,7 @@ Suggests:
     splines,
     survival,
     testthat (>= 3.0.0)
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.1
 Depends: 
     R (>= 2.10)
 Config/testthat/edition: 3

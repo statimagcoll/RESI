@@ -13,6 +13,7 @@
 \alias{resi.geeglm}
 \alias{resi.gee}
 \alias{resi.lme}
+\alias{resi.lmerMod}
 \title{Robust Effect Size Index (RESI) point and interval estimation for models}
 \usage{
 resi(model.full, ...)
@@ -151,6 +152,15 @@ resi(model.full, ...)
   vcov.args = list(),
   ...
 )
+
+\method{resi}{lmerMod}(
+  model.full,
+  alpha = 0.05,
+  nboot = 1000,
+  vcovfunc = clubSandwich::vcovCR,
+  vcov.args = list(),
+  ...
+)
 }
 \arguments{
 \item{model.full}{\code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.}
@@ -228,29 +238,31 @@ and then try rerunning \code{resi}.
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{default}: RESI point and interval estimation for models
+\item \code{resi(default)}: RESI point and interval estimation for models
 
-\item \code{glm}: RESI point and interval estimation for models
+\item \code{resi(glm)}: RESI point and interval estimation for models
 
-\item \code{lm}: RESI point and interval estimation for lm models
+\item \code{resi(lm)}: RESI point and interval estimation for lm models
 
-\item \code{nls}: RESI point and interval estimation for nls models
+\item \code{resi(nls)}: RESI point and interval estimation for nls models
 
-\item \code{survreg}: RESI point and interval estimation for survreg models
+\item \code{resi(survreg)}: RESI point and interval estimation for survreg models
 
-\item \code{coxph}: RESI point and interval estimation for coxph models
+\item \code{resi(coxph)}: RESI point and interval estimation for coxph models
 
-\item \code{hurdle}: RESI point and interval estimation for hurdle models
+\item \code{resi(hurdle)}: RESI point and interval estimation for hurdle models
 
-\item \code{zeroinfl}: RESI point and interval estimation for zeroinfl models
+\item \code{resi(zeroinfl)}: RESI point and interval estimation for zeroinfl models
 
-\item \code{geeglm}: RESI point and interval estimation for GEE models
+\item \code{resi(geeglm)}: RESI point and interval estimation for GEE models
 
-\item \code{gee}: RESI point and interval estimation for GEE models
+\item \code{resi(gee)}: RESI point and interval estimation for GEE models
 
-\item \code{lme}: RESI point and interval estimation for LME (nlme) models
+\item \code{resi(lme)}: RESI point and interval estimation for LME (nlme) models
+
+\item \code{resi(lmerMod)}: RESI point and interval estimation for lmerMod models
+
 }}
-
 \examples{
 ## for timing purposes, a small number of bootstrap replicates is used in the
 ## examples. Run them with a higher or default `nboot` argument for better performance

@@ -9,7 +9,7 @@ f2S(f, df, rdf)
 \arguments{
 \item{f}{The F statistic for the parameter of interest.}
 
-\item{df}{Number of degrees of freedom of the chi-square statistic.}
+\item{df}{Number of degrees of freedom of the F statistic.}
 
 \item{rdf}{Model residual degrees of freedom or number of independent samples.}
 }
@@ -34,4 +34,9 @@ Vector arguments are accepted. If different length arguments are passed they are
 The formula for converting an F statistic to S is:
 
 \eqn{ S = \sqrt(max(0, (f * df * (rdf - 2)/rdf - 1)/rdf))}
+
+The estimator is derived by setting the statistic equal to the expected value of
+the test statistic and solving for S. A modification of dividing by the residual degrees
+of freedom rather than the total sample size is made based on the results of
+simulations that showed this adjustment results in smaller finite-sample bias.
 }
