@@ -8,6 +8,12 @@
 #' @details The formula for converting an F statistic to S is:
 #'
 #' \eqn{ S = \sqrt(max(0, (f * df * (rdf - 2)/rdf - 1)/rdf))}
+#'
+#' The estimator is derived by setting the statistic equal to the expected value of
+#' the test statistic and solving for S. A modification of dividing by the residual degrees
+#' of freedom rather than the total sample size is made based on the results of
+#' simulations that showed this adjustment results in smaller finite-sample bias.
+#'
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
 #' # to obtain example F values, first fit a glm
 #' mod = glm(charges ~ region * age + bmi + sex, data = RESI::insurance)
