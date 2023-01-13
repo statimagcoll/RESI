@@ -211,7 +211,7 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   stats = wald.test$F[2]
   overall.df = wald.test$Df[2]
   res.df = wald.test$Res.Df[2]
-  overall.resi.hat = f2S(stats, overall.df, res.df)
+  overall.resi.hat = f2S(stats, overall.df, res.df, nrow(data))
   wald.test[2, 'RESI'] = overall.resi.hat
   output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
                  model.reduced = list(call = model.reduced$call, formula = formula(model.reduced)),
@@ -241,7 +241,7 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   if (anova){
     suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full,
                                               vcov. = vcovfunc2), Anova.args)))
-    anova.tab[,'RESI'] = f2S(anova.tab[,'F'], anova.tab[,'Df'], res.df)
+    anova.tab[,'RESI'] = f2S(anova.tab[,'F'], anova.tab[,'Df'], res.df, nrow(data))
     output$anova = anova.tab[which(rownames(anova.tab) != "Residuals"),]
     output$estimates = c(output$estimates, anova.tab$RESI)
     names.est = c(names.est, rownames(anova.tab))
@@ -311,7 +311,7 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data, coefficients = T
   if (coefficients){
     coefficients.tab <- lmtest::coeftest(model.full, vcov. = vcovmat)
     coefficients.df = data.frame(coefficients.tab[,'Estimate'], coefficients.tab[,'Std. Error'],
-                            coefficients.tab[,'t value'], coefficients.tab[,'Pr(>|t|)'], row.names = rownames(coefficients.tab))
+                                 coefficients.tab[,'t value'], coefficients.tab[,'Pr(>|t|)'], row.names = rownames(coefficients.tab))
     colnames(coefficients.df) = colnames(coefficients.tab)
     if (unbiased){
       coefficients.df[,'RESI'] = t2S(coefficients.df[,'t value'], nrow(data), res.df)
@@ -685,7 +685,8 @@ resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::v
   names(output$estimates) = rownames(coefficients.tab)
   # Anova table (Chi sq statistics)
   if (anova){
-    suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full, vcov. = vcovfunc2), Anova.args)))
+    suppressMessages(anova.tab <- do.call(car::Anova,
+                                          c(list(mod = model.full, vcov. = vcovfunc2), Anova.args)))
     anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], N)
     names.est = names(output$estimates)
     output$estimates = c(output$estimates, anova.tab$RESI)
