@@ -313,15 +313,36 @@ resi.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE
   # bootstrapping
   boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
   colnames(boot.results) = names(output$estimates)
+  fail = 0
   # non-parametric bootstrap
   if (tolower(boot.method) == "nonparam"){
     for (i in 1:nboot){
+
       boot.data = boot.samp(data)
-      boot.model.full <- update(model.full, data = boot.data)
-      boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
-                                                  data = boot.data, coefficients = coefficients,
-                                                  vcovfunc = vcovfunc, vcov.args = vcov.args,
-                                                  unbiased = unbiased, ...)$estimates)
+      t <- try(update(model.full, data = boot.data), silent = T)
+      if (inherits(t, "try-error")){
+        fail = fail + 1
+        boot.results[i,] = NA
+      }
+      else{
+        boot.model.full <- update(model.full, data = boot.data)
+
+        # for catching overall error
+        t1 <- try(resi_pe(model.full = boot.model.full, model.reduced = NULL,
+                          data = boot.data, coefficients = coefficients,
+                          vcovfunc = vcovfunc, vcov.args = vcov.args,
+                          unbiased = unbiased, ...)$estimates, silent = T)
+        if (inherits(t1, "try-error")){
+          fail = fail + 1
+        }
+        else{
+          boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
+                                                      data = boot.data, coefficients = coefficients,
+                                                      vcovfunc = vcovfunc, vcov.args = vcov.args,
+                                                      unbiased = unbiased, ...)$estimates)
+        }
+
+      }
 
     }}
 
@@ -330,13 +351,29 @@ resi.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE
     g = NULL
     for (i in 1:nboot){
       boot.data = bayes.samp(data)
-      boot.model.full <- update(model.full, data = boot.data, weights = g)
-      boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
-                                                  data = boot.data, coefficients = coefficients,
-                                                  vcovfunc = vcovfunc, vcov.args = vcov.args,
-                                                  unbiased = unbiased, ...)$estimates)
 
-    }}
+      t <- try(update(model.full, data = boot.data, weights = g), silent = T)
+      if (inherits(t, "try-error")){
+        fail = fail + 1
+        boot.results[i,] = NA
+      }
+      else{
+        boot.model.full <- update(model.full, data = boot.data, weights = g)
+
+        # for catching overall error
+        t1 <- try(resi_pe(model.full = boot.model.full, model.reduced = NULL,
+                          data = boot.data, coefficients = coefficients,
+                          vcovfunc = vcovfunc, vcov.args = vcov.args,
+                          unbiased = unbiased, ...)$estimates, silent = T)
+        if (inherits(t1, "try-error")){
+          fail = fail + 1
+        }
+        else{
+          boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
+                                                      data = boot.data, coefficients = coefficients,
+                                                      vcovfunc = vcovfunc, vcov.args = vcov.args,
+                                                      unbiased = unbiased, ...)$estimates)
+        }}}}
 
   alpha.order = sort(c(alpha/2, 1-alpha/2))
   output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
@@ -350,6 +387,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE
   if(store.boot){
     output$boot.results = boot.results
   }
+  output$nfail = fail
   class(output) = "resi"
   return(output)
 }
