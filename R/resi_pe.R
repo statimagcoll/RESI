@@ -562,26 +562,52 @@ resi_pe.zeroinfl <- resi_pe.hurdle
 
 #' @describeIn resi_pe RESI point estimation for geeglm object
 #' @export
-resi_pe.geeglm <- function(model.full, anova = TRUE, ...){
-  x = as.matrix(summary(model.full)$coefficients)
-  #sample size
+resi_pe.geeglm <- function(model.full, data, anova = TRUE,
+                           coefficients = TRUE, unbiased = TRUE, ...){
+  #browser()
+  data = model.full$data
+  # sample size
   N = length(summary(model.full)$clusz)
-  coefficients.df = as.data.frame(cbind(x, RESI = RESI::chisq2S(x[, 'Wald'], 1, N)))
+  # total num of observations
+  tot_obs = nrow(data)
+
   output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
-                 estimates = coefficients.df$RESI, coefficients = coefficients.df)
-  names(output$estimates) = rownames(coefficients.df)
-  # Anova table (Chi sq statistics)
-  if (anova){
-    suppressMessages(anova.tab <- anova(model.full))
+                 estimates = c())
+  names.est = c()
+
+  # longitudinal RESI
+  # coefficients (z statistics)
+  if (coefficients) {
+    coefficients.tab <- lmtest::coeftest(model.full)
+    coefficients.df = data.frame(coefficients.tab[,'Estimate'],
+                                 coefficients.tab[,'Std. Error'],
+                                 coefficients.tab[,'z value'],
+                                 coefficients.tab[,'Pr(>|z|)'],
+                                 row.names = rownames(coefficients.tab))
+    colnames(coefficients.df) = colnames(coefficients.tab)
+    if (unbiased){
+      coefficients.df[,'RESI'] = z2S(coefficients.df[,'z value'], N)
+    } else{
+      coefficients.df[,'RESI'] = suppressWarnings(z2S_alt(coefficients.df[,'z value'],
+                                                          N))
+    }
+    output$coefficients = coefficients.df
+    output$estimates = coefficients.df$RESI
+    names.est = rownames(coefficients.df)
+    names(output$estimates) = names.est
+  }
+
+  # anova
+  if (anova) {
+    anova.tab <- anova(model.full)
     anova.tab[,'RESI'] = chisq2S(anova.tab[,'X2'], anova.tab[,'Df'], N)
-    names.est = names(output$estimates)
+    output$anova = anova.tab
     output$estimates = c(output$estimates, anova.tab$RESI)
     names.est = c(names.est, rownames(anova.tab))
     names(output$estimates) = names.est
-    output$anova = anova.tab
     class(output$anova) = c("anova_resi", class(output$anova))
   }
-  ## need to consider changing because of anova
+
   output$naive.var = FALSE
   return(output)
 }

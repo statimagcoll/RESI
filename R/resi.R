@@ -514,29 +514,86 @@ resi.zeroinfl <- resi.hurdle
 
 #' @describeIn resi RESI point and interval estimation for GEE models
 #' @export
-resi.geeglm <- function(model.full, alpha = 0.05, nboot = 1000, ...){
-  warning("\nInterval performance not yet evaluated for geeglm")
-  output <- list(alpha = alpha, nboot = nboot)
-  # RESI point estimates
-  output = c(output, resi_pe(model.full))
-  data = as.data.frame(model.full$data)
+resi.geeglm <- function(model.full, data, anova = TRUE,
+                        coefficients = TRUE, nboot = 1000,
+                        alpha = 0.05, store.boot = FALSE,
+                        unbiased = TRUE, ...){
+  dots = list(...)
+  if ("boot.method" %in% names(dots)){
+    message("Only nonparametric bootstrap supported for model type")
+  }
+
+  if (missing(data)){
+    data = model.full$data
+    tryCatch(update(model.full, data = data), error = function(e){
+      message("Updating model fit failed. Try rerunning with providing data argument")})
+  }
+  else{
+    data = as.data.frame(data)
+  }
+
+  # point estimation
+  output <- list(alpha = alpha, nboot = nboot, boot.method = "nonparam")
+  output = c(output, resi_pe(model.full = model.full, data = data, anova = anova,
+                             coefficients = coefficients, unbiased = unbiased, ...))
+
   # id variable name
   id_var = as.character(model.full$call$id)
-  # bootstrap
-  output.boot = as.matrix(output$coefficients[, 'RESI'])
+  corstr_spec = model.full$corstr
+  # bootstrapping
+  boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
+  colnames(boot.results) = names(output$estimates)
+  fail = 0
   for (i in 1:nboot){
+    skip_to_next <- FALSE
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
-    boot.mod = update(model.full, data = boot.data)
-    output.boot = cbind(output.boot, resi_pe(boot.mod)$coefficients[, 'RESI'])
+    boot.model.full = update(model.full, data = boot.data, corstr = corstr_spec)
+    rv.boot = tryCatch(resi_pe(boot.model.full,  data = boot.data, anova = anova,
+                               coefficients = coefficients, unbiased = unbiased, ...),
+                       error = function(e){skip_to_next <<- TRUE})
+    if (skip_to_next) {
+      fail = fail + 1
+      next}
+    #output.boot$RESI= cbind(output.boot$RESI, rv.boot$resi[, 'RESI'])
+    boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full,
+                                                data = boot.data, anova = anova,
+                                                coefficients = coefficients,
+                                                unbiased = unbiased, ...)$estimates)
   }
-  output.boot = output.boot[, -1]
-  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
-  output$coefficients = cbind(output$coefficients, t(RESI.ci))
-  output$boot.method = "nonparam"
-  class(output)= 'resi'
+
+  alpha.order = sort(c(alpha/2, 1-alpha/2))
+
+  if (coefficients){
+    CIs = apply(boot.results[,1:nrow(output$coefficients)], 2,  quantile,
+                probs = alpha.order, na.rm = TRUE)
+    CIs = t(CIs)
+    output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+  }
+
+  if (anova){
+    CIs = apply(boot.results[,(ncol(boot.results)-
+                                 length(rownames(output$anova))+1):ncol(boot.results)],
+                2,  quantile, probs = alpha.order, na.rm = TRUE)
+    CIs = t(CIs)
+    output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+    class(output$anova) = c("anova_resi", class(output$anova))
+  }
+
+  if(store.boot){
+    output$boot.results = boot.results
+  }
+
+  output$nfail = fail
+
+  class(output) = "resi"
+  return(output)
+
+  # RESI_se = apply(output.boot$RESI, 1, sd, na.rm = TRUE)
+
   return(output)
 }
+
 
 #' @describeIn resi RESI point and interval estimation for GEE models
 #' @export
