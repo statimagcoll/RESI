@@ -564,7 +564,6 @@ resi_pe.zeroinfl <- resi_pe.hurdle
 #' @export
 resi_pe.geeglm <- function(model.full, data, anova = TRUE,
                            coefficients = TRUE, unbiased = TRUE, ...){
-  #browser()
   data = model.full$data
   # sample size
   N = length(summary(model.full)$clusz)
@@ -614,12 +613,34 @@ resi_pe.geeglm <- function(model.full, data, anova = TRUE,
 
 #' @describeIn resi_pe RESI point estimation for gee object
 #' @export
-resi_pe.gee <- function(model.full, ...){
-  x = as.matrix(summary(model.full)$coefficients)
-  #sample size
+resi_pe.gee <- function(model.full, unbiased = TRUE, ...){
+  # sample size
   N = length(unique(model.full$id))
+  # total num of observations
+
   output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
-                 coefficients =  as.data.frame(cbind(x, RESI = RESI::chisq2S(x[, 'Robust z']^2, 1, N))))
+                 estimates = c())
+  names.est = c()
+
+  # longitudinal RESI
+  # coefficients (z statistics)
+  coefficients.tab <- summary(model.full)$coefficients
+  coefficients.df = data.frame(coefficients.tab[,'Estimate'],
+                               coefficients.tab[,'Robust S.E.'],
+                               coefficients.tab[,'Robust z'],
+                               row.names = rownames(coefficients.tab))
+  colnames(coefficients.df) = c('Estimate', 'Std. Error', 'z value')
+  if (unbiased){
+    coefficients.df[,'RESI'] = z2S(coefficients.df[,'z value'], N)
+  } else{
+    coefficients.df[,'RESI'] = suppressWarnings(z2S_alt(coefficients.df[,'z value'],
+                                                        N))
+  }
+  output$coefficients = coefficients.df
+  output$estimates = coefficients.df$RESI
+  names.est = rownames(coefficients.df)
+  names(output$estimates) = names.est
+
   output$naive.var = FALSE
   return(output)
 }

@@ -597,31 +597,44 @@ resi.geeglm <- function(model.full, data, anova = TRUE,
 
 #' @describeIn resi RESI point and interval estimation for GEE models
 #' @export
-resi.gee <- function(model.full, data, alpha = 0.05, nboot = 1000, ...){
+resi.gee <- function(model.full, data, nboot = 1000, alpha = 0.05,
+                     store.boot = FALSE, unbiased = TRUE, ...){
   if (missing(data)){
     stop('\nData argument is required for GEE models from gee package')
   }
   else{
     data = as.data.frame(data)
   }
-  warning("\nInterval performance not yet evaluated for gee")
-  output <- list(alpha = alpha, nboot = nboot)
+
+  output <- list(alpha = alpha, nboot = nboot, boot.method = "nonparam")
   # RESI point estimates
-  output = c(output, resi_pe(model.full))
+  output = c(output, resi_pe(model.full, unbiased, ...))
   # id variable name
   id_var = as.character(model.full$call$id)
-  # bootstrap
-  output.boot = as.matrix(output$coefficients[, 'RESI'])
+
+  # bootstrapping
+  boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
+  colnames(boot.results) = names(output$estimates)
   for (i in 1:nboot){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
-    suppressMessages(capture.output(boot.mod <- update(model.full, data = boot.data), file =  nullfile()))
-    output.boot = cbind(output.boot, resi_pe(boot.mod)$coefficients[, 'RESI'])
+    suppressMessages(capture.output(boot.model.full <-
+                                      update(model.full, data = boot.data), file =  nullfile()))
+    boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full,
+                                                unbiased = unbiased, ...)$estimates)
   }
-  output.boot = output.boot[, -1]
-  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
-  output$coefficients = cbind(output$coefficients, t(RESI.ci))
-  output$boot.method = "nonparam"
+
+  alpha.order = sort(c(alpha/2, 1-alpha/2))
+
+  CIs = apply(boot.results[,1:nrow(output$coefficients)], 2,  quantile,
+                probs = alpha.order, na.rm = TRUE)
+  CIs = t(CIs)
+  output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+
+  if(store.boot){
+    output$boot.results = boot.results
+  }
+
   class(output)= 'resi'
   return(output)
 }
@@ -634,28 +647,28 @@ resi.gee <- function(model.full, data, alpha = 0.05, nboot = 1000, ...){
 resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSandwich::vcovCR,
                      vcov.args = list(), ...){
   warning("\nConfidence Interval procedure not developed for lme, returning point estimates only")
-  output <- list(alpha = alpha, nboot = nboot)
+  output <- list(alpha = alpha, nboot = 0)
   # RESI point estimates
   output = c(output, resi_pe(model.full = model.full, vcovfunc = vcovfunc, vcov.args = vcov.args))
   data = model.full$data
   # id variable name
   id_var = attr(nlme::getGroups(model.full), "label")
   # bootstrap
-  output.boot = as.matrix(output$coefficients[, 'RESI'])
-  fun <- utils::getFromNamespace("update.lme", "nlme")
-  tryCatch(fun(model.full, data = data), error = function(e){
-    message("Try running `library(nlme)`")})
-  for (i in 1:nboot){
-    boot.data = boot.samp(data, id.var = id_var)
-    # re-fit the model
-    boot.mod = fun(model.full, data = boot.data, fixed = as.formula(model.full$call$fixed),
-                      random = as.formula(model.full$call$random))
-    output.boot = cbind(output.boot, resi_pe(model.full = boot.mod, vcovfunc = vcovfunc,
-                                             vcov.args = vcov.args)$coefficients[, 'RESI'])
-  }
-  output.boot = output.boot[, -1]
-  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
-  output$coefficients = cbind(output$coefficients, t(RESI.ci))
+  #output.boot = as.matrix(output$coefficients[, 'RESI'])
+  #fun <- utils::getFromNamespace("update.lme", "nlme")
+  #tryCatch(fun(model.full, data = data), error = function(e){
+    #message("Try running `library(nlme)`")})
+  # for (i in 1:nboot){
+  #   boot.data = boot.samp(data, id.var = id_var)
+  #   # re-fit the model
+  #   boot.mod = fun(model.full, data = boot.data, fixed = as.formula(model.full$call$fixed),
+  #                     random = as.formula(model.full$call$random))
+  #   output.boot = cbind(output.boot, resi_pe(model.full = boot.mod, vcovfunc = vcovfunc,
+  #                                            vcov.args = vcov.args)$coefficients[, 'RESI'])
+  # }
+  # output.boot = output.boot[, -1]
+  # RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+  # output$coefficients = cbind(output$coefficients, t(RESI.ci))
   output$boot.method = "nonparam"
   class(output) = 'resi'
   return(output)
@@ -665,25 +678,26 @@ resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSand
 #' @export
 resi.lmerMod <- function(model.full, alpha = 0.05, nboot = 1000,
                          vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...){
-  warning("\nInterval performance not yet evaluated for lmerMod")
-  output <- list(alpha = alpha, nboot = nboot)
+  warning("\nConfidence Interval procedure not developed for lmerMod, returning point estimates only")
+  output <- list(alpha = alpha, nboot = 0)
   output = c(output, resi_pe(model.full, vcovfunc = vcovfunc, vcov.args = vcov.args)) # RESI point estimates
   data = model.full@frame
   # id variable name
   id_var = names(model.full@flist)
+
   # bootstrap (non-param for now)
-  output.boot = as.matrix(output$coefficients[, 'RESI'])
-  for (i in 1:nboot){
-    boot.data = boot.samp(data, id.var = id_var)
-    # re-fit the model
-    boot.mod = update(model.full, data = boot.data)
-    rv.boot = resi_pe(boot.mod, vcovfunc = vcovfunc, vcov.args = vcov.args)
-    output.boot = cbind(output.boot, rv.boot$coefficients[, 'RESI'])
-  }
-  output.boot = output.boot[, -1]
-  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
-  output = c(output, list(coefficients = cbind(output$coefficients, t(RESI.ci)),
-                          naive.var = output$naive.var))
+  # output.boot = as.matrix(output$coefficients[, 'RESI'])
+  # for (i in 1:nboot){
+  #   boot.data = boot.samp(data, id.var = id_var)
+  #   # re-fit the model
+  #   boot.mod = update(model.full, data = boot.data)
+  #   rv.boot = resi_pe(boot.mod, vcovfunc = vcovfunc, vcov.args = vcov.args)
+  #   output.boot = cbind(output.boot, rv.boot$coefficients[, 'RESI'])
+  # }
+  # output.boot = output.boot[, -1]
+  # RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+  # output = c(output, list(coefficients = cbind(output$coefficients, t(RESI.ci)),
+                          # naive.var = output$naive.var))
   output$boot.method = "nonparam"
   class(output) = 'resi'
   return(output)
