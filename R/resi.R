@@ -548,7 +548,8 @@ resi.geeglm <- function(model.full, data, anova = TRUE,
     skip_to_next <- FALSE
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
-    boot.model.full = update(model.full, data = boot.data, corstr = corstr_spec)
+    boot.model.full = update(model.full, data = boot.data, corstr = corstr_spec,
+                             id = bootid)
     rv.boot = tryCatch(resi_pe(boot.model.full,  data = boot.data, anova = anova,
                                coefficients = coefficients, unbiased = unbiased, ...),
                        error = function(e){skip_to_next <<- TRUE})
@@ -556,10 +557,10 @@ resi.geeglm <- function(model.full, data, anova = TRUE,
       fail = fail + 1
       next}
     #output.boot$RESI= cbind(output.boot$RESI, rv.boot$resi[, 'RESI'])
-    boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full,
+    boot.results[i,] = resi_pe(model.full = boot.model.full,
                                                 data = boot.data, anova = anova,
                                                 coefficients = coefficients,
-                                                unbiased = unbiased, ...)$estimates)
+                                                unbiased = unbiased, ...)$estimates
   }
 
   alpha.order = sort(c(alpha/2, 1-alpha/2))
@@ -619,7 +620,8 @@ resi.gee <- function(model.full, data, nboot = 1000, alpha = 0.05,
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
     suppressMessages(capture.output(boot.model.full <-
-                                      update(model.full, data = boot.data), file =  nullfile()))
+                                      update(model.full, data = boot.data, id = bootid),
+                                    file =  nullfile()))
     boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full,
                                                 unbiased = unbiased, ...)$estimates)
   }
