@@ -741,6 +741,7 @@ resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::v
     names(output$estimates) = names.est
     output$anova = anova.tab
     class(output$anova) = c("anova_resi", class(output$anova))
-    }
+  }
+  output$model.full = list(call = model.full@call, formula = formula(model.full))
   return(output)
 }
