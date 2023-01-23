@@ -12,7 +12,7 @@ Encoding: UTF-8
 LazyData: true
 Collate: 
   'internal_functions.R'
-  'simulaiton.R'
+  'simulation.R'
   'summary.resi.R'
   'resi.R'
   'resi_pe.R'
