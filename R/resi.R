@@ -686,13 +686,14 @@ resi.lmerMod <- function(model.full, alpha = 0.05, nboot = 1000,
   data = model.full@frame
   # id variable name
   id_var = names(model.full@flist)
-
+  form_full = formula(model.full) %>% format
+  form_full_boot = gsub(id_var, "bootid", form_full) %>% as.formula
   # bootstrap (non-param for now)
   output.boot = as.matrix(output$coefficients[, 'RESI'])
   for (i in 1:nboot){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
-    boot.mod = update(model.full, data = boot.data, )
+    boot.mod = update(model.full, formula = form_full_boot, data = boot.data)
     rv.boot = resi_pe(boot.mod, vcovfunc = vcovfunc, vcov.args = vcov.args)
     output.boot = cbind(output.boot, rv.boot$coefficients[, 'RESI'])
   }
