@@ -113,9 +113,16 @@ resi_pe(model.full, ...)
   ...
 )
 
-\method{resi_pe}{geeglm}(model.full, anova = TRUE, ...)
+\method{resi_pe}{geeglm}(
+  model.full,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  unbiased = TRUE,
+  ...
+)
 
-\method{resi_pe}{gee}(model.full, ...)
+\method{resi_pe}{gee}(model.full, unbiased = TRUE, ...)
 
 \method{resi_pe}{lme}(
   model.full,
@@ -194,31 +201,31 @@ used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{resi_pe(default)}: RESI point estimation
+\item \code{default}: RESI point estimation
 
-\item \code{resi_pe(glm)}: RESI point estimation for generalized linear models
+\item \code{glm}: RESI point estimation for generalized linear models
 
-\item \code{resi_pe(lm)}: RESI point estimation for linear models
+\item \code{lm}: RESI point estimation for linear models
 
-\item \code{resi_pe(nls)}: RESI point estimation for nonlinear least squares models
+\item \code{nls}: RESI point estimation for nonlinear least squares models
 
-\item \code{resi_pe(survreg)}: RESI point estimation for survreg
+\item \code{survreg}: RESI point estimation for survreg
 
-\item \code{resi_pe(coxph)}: RESI point estimation for coxph models
+\item \code{coxph}: RESI point estimation for coxph models
 
-\item \code{resi_pe(hurdle)}: RESI point estimation for hurdle models
+\item \code{hurdle}: RESI point estimation for hurdle models
 
-\item \code{resi_pe(zeroinfl)}: RESI point estimation for zeroinfl models
+\item \code{zeroinfl}: RESI point estimation for zeroinfl models
 
-\item \code{resi_pe(geeglm)}: RESI point estimation for geeglm object
+\item \code{geeglm}: RESI point estimation for geeglm object
 
-\item \code{resi_pe(gee)}: RESI point estimation for gee object
+\item \code{gee}: RESI point estimation for gee object
 
-\item \code{resi_pe(lme)}: RESI point estimation for lme object
+\item \code{lme}: RESI point estimation for lme object
 
-\item \code{resi_pe(lmerMod)}: RESI point estimation for lmerMod object
-
+\item \code{lmerMod}: RESI point estimation for lmerMod object
 }}
+
 \examples{
 # This function produces point estimates for the RESI. The resi function will
 # provide the same point estimates but adds confidence intervals. See resi for

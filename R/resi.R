@@ -680,7 +680,7 @@ resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSand
 #' @export
 resi.lmerMod <- function(model.full, alpha = 0.05, nboot = 1000,
                          vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...){
-  warning("\nConfidence Interval procedure not developed for lmerMod, returning point estimates only")
+  # warning("\nConfidence Interval procedure not developed for lmerMod, returning point estimates only")
   output <- list(alpha = alpha, nboot = 0)
   output = c(output, resi_pe(model.full, vcovfunc = vcovfunc, vcov.args = vcov.args)) # RESI point estimates
   data = model.full@frame
@@ -688,18 +688,18 @@ resi.lmerMod <- function(model.full, alpha = 0.05, nboot = 1000,
   id_var = names(model.full@flist)
 
   # bootstrap (non-param for now)
-  # output.boot = as.matrix(output$coefficients[, 'RESI'])
-  # for (i in 1:nboot){
-  #   boot.data = boot.samp(data, id.var = id_var)
-  #   # re-fit the model
-  #   boot.mod = update(model.full, data = boot.data)
-  #   rv.boot = resi_pe(boot.mod, vcovfunc = vcovfunc, vcov.args = vcov.args)
-  #   output.boot = cbind(output.boot, rv.boot$coefficients[, 'RESI'])
-  # }
-  # output.boot = output.boot[, -1]
-  # RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
-  # output = c(output, list(coefficients = cbind(output$coefficients, t(RESI.ci)),
-                          # naive.var = output$naive.var))
+  output.boot = as.matrix(output$coefficients[, 'RESI'])
+  for (i in 1:nboot){
+    boot.data = boot.samp(data, id.var = id_var)
+    # re-fit the model
+    boot.mod = update(model.full, data = boot.data, )
+    rv.boot = resi_pe(boot.mod, vcovfunc = vcovfunc, vcov.args = vcov.args)
+    output.boot = cbind(output.boot, rv.boot$coefficients[, 'RESI'])
+  }
+  output.boot = output.boot[, -1]
+  RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
+  output = c(output, list(coefficients = cbind(output$coefficients, t(RESI.ci)),
+  naive.var = output$naive.var))
   output$boot.method = "nonparam"
   class(output) = 'resi'
   return(output)
