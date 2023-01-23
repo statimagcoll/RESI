@@ -581,7 +581,7 @@ resi_pe.geeglm <- function(object, anova = TRUE, ...){
   # model form
   form = formula(object)
   # independence model
-  mod_ind = update(object, id = 1:nrow(data))
+  mod_ind = update(object, id = c(1:nrow(data)))
 
   # the var-cov matrix estimate from the independence model
   # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
@@ -625,16 +625,17 @@ resi_pe.geeglm <- function(object, anova = TRUE, ...){
     sub_coef = coef(object)[index] # the coefficient(s) from the input object
     sub_vcov_cor = cov_long[index, index] # the vcov from the gee model
     sub_vcov_ind = cov_ind[index, index] # the vcov from the independence model
-    # ESS
-    w = sub_coef %*% solve(sub_vcov_cor) %*% sub_coef / sub_coef %*% solve(sub_vcov_ind) %*% sub_coef
-    ess = w * tot_obs
-    mod_tab[term, "ess"] = ess
-    mod_tab[term, "pm-RESI"] = sqrt(N / ess * mod_tab[term, "RESI"]^2)
+    # # ESS
+    # w = sub_coef %*% solve(sub_vcov_cor) %*% sub_coef / sub_coef %*% solve(sub_vcov_ind) %*% sub_coef
+    # ess = w * tot_obs
+    # mod_tab[term, "ess"] = ess
+    # mod_tab[term, "pm-RESI"] = sqrt(N / ess * mod_tab[term, "RESI"]^2)
+
     # Wald test statistics using vcov from the independence model
-    # Wald_ind = sub_coef %*% solve(sub_vcov) %*%  sub_coef
-    # df = sum(index) # df
-    # S_ind =  chisq2S(Wald_ind, df = df, rdf = tot_obs)
-    # mod_tab[term, "pm-RESI"] = sqrt(N/tot_obs * S_ind^2)
+    Wald_ind = N * sub_coef %*% solve(sub_vcov_ind) %*%  sub_coef
+    df = sum(index) # df
+    S_ind =  chisq2S(Wald_ind, df = df, rdf = N)
+    mod_tab[term, "pm-RESI"] = sqrt(N/tot_obs * S_ind^2)
   }
 
 

@@ -126,7 +126,12 @@ ess.geeglm <- function(obj, xTab, robust.var = TRUE){
   # data$mod.w = mod.w
 
   # The Covariance Matrix from the independence model
+  # ## adding a fake id variable
+  # fake_id = paste0("fake", 1:nrow(data))
+  # data$fake_id = fake_id
+  ## GEE model using independence structure and fake id
   mod_ind = glm(form, data = data)
+  # mod_ind = geepack::geeglm(form, data = data, id = fake_id, corstr = "independence")
   # mod_ind$residuals = mod_ind$residuals / sqrt(mod_ind$weights)
 
   if (robust.var) {

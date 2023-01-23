@@ -110,3 +110,30 @@ comp_to_AR1 = function(comp){
   ar1 = AR1_str(rho.e = ar1_rho, num_visit = m)
   return(ar1)
 }
+
+
+#' copied from package "car"
+#
+# has.intercept <- function(model, ...) any(names(coefficients(model))=="(Intercept)")
+#
+# term.names<- function (model, ...) {
+#   term.names <- labels(terms(model))
+#   if (has.intercept(model)) c("(Intercept)", term.names)
+#   else term.names
+# }
+#
+# relatives <- function(term, names, factors){
+#   is.relative <- function(term1, term2) {
+#     all(!(factors[,term1]&(!factors[,term2])))
+#   }
+#   if(length(names) == 1) return(NULL)
+#   which.term <- which(term==names)
+#   (1:length(names))[-which.term][sapply(names[-which.term],
+#                                         function(term2) is.relative(term, term2))]
+# }
+#
+#
+# fac = attr(terms(mod_ind), "factors")
+# names = term.names(mod_ind)
+#
+# relatives("ns(time, df = 2)1", term.names(mod_ind), factors = fac)
