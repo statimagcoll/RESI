@@ -11,7 +11,7 @@ chisq2Ssq = function(chisq, df, n){
 }
 
 #' Non-parametric bootstrap sampling
-#'
+#' @export
 #' @param data data frame; The data frame that need bootstrapping
 #' @param id.var character; for clustered/longitudinal data, the name of id variable used as sampling unit.
 #' @return Returns a data frame containing bootstrapped data.
