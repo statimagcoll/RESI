@@ -678,10 +678,10 @@ resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSand
 
 #' @describeIn resi RESI point and interval estimation for lmerMod models
 #' @export
-resi.lmerMod <- function(model.full, alpha = 0.05, nboot = 1000,
-                         vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...){
+resi.lmerMod<- function(model.full, alpha = 0.05, nboot = 1000,
+                        vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...){
   # warning("\nConfidence Interval procedure not developed for lmerMod, returning point estimates only")
-  output <- list(alpha = alpha, nboot = 0)
+  output <- list(alpha = alpha, nboot = nboot)
   output = c(output, resi_pe(model.full, vcovfunc = vcovfunc, vcov.args = vcov.args)) # RESI point estimates
   data = model.full@frame
   # id variable name
@@ -693,7 +693,8 @@ resi.lmerMod <- function(model.full, alpha = 0.05, nboot = 1000,
   for (i in 1:nboot){
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
-    boot.mod = update(model.full, formula = form_full_boot, data = boot.data) # using `bootid` as the new ID
+    boot.mod = lme4::lmer(form_full_boot, data = boot.data) # using `bootid` as the new ID
+    # update(model.full, formula = form_full_boot, data = boot.data)
     rv.boot = resi_pe(boot.mod, vcovfunc = vcovfunc, vcov.args = vcov.args)
     output.boot = cbind(output.boot, rv.boot$coefficients[, 'RESI'])
   }
