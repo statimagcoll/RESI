@@ -699,8 +699,7 @@ resi.lmerMod <- function(model.full, alpha = 0.05, nboot = 1000,
   }
   output.boot = output.boot[, -1]
   RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
-  output = c(output, list(coefficients = cbind(output$coefficients, t(RESI.ci)),
-  naive.var = output$naive.var))
+  output$coefficients = cbind(output$coefficients, t(RESI.ci))
   output$boot.method = "nonparam"
   class(output) = 'resi'
   return(output)
