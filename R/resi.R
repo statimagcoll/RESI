@@ -113,62 +113,6 @@ resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 }
 
 
-# resi.lm <- function(object, model.full = NULL, model.reduced = NULL,
-#                     robust.var = TRUE,
-#                     boot.method = "nonparam",
-#                     nboot = 1000, alpha = 0.05){
-#   if (is.null(model.reduced)){
-#     output = calc_resi.glm(object)$resi.tab
-#     data = object$model
-#     # bootstrap
-#     ## non-param
-#     if (tolower(boot.method) == "nonparam"){
-#       output.boot = as.matrix(output[, 'RESI'])
-#       for (i in 1:nboot){
-#         boot.data = boot.samp(data)
-#         # re-fit the model
-#         boot.mod = update(object, data = boot.data)
-#         output.boot = cbind(output.boot, calc_resi.glm(boot.mod)$resi.tab[, 'RESI'])
-#       }
-#     }
-#     # bayesian boot
-#     if (tolower(boot.method)  == "bayes"){
-#       output.boot = as.matrix(output[, 'RESI'])
-#       for (i in 1:nboot){
-#         boot.data = bayes.samp(data)
-#         # re-fit the model
-#         boot.mod = update(object, data = boot.data, weight = g)
-#         output.boot = cbind(output.boot, calc_resi.glm(boot.mod)$resi.tab[, 'RESI'])
-#       }
-#     }
-#
-#     output.boot = output.boot[, -1]
-#     RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
-#     output.tab = cbind(output, t(RESI.ci))
-#     output = list(resi = output.tab,
-#                   alpha = alpha,
-#                   boot.value = output.boot, # bootstrapped values of RESI
-#                   boot.method = tolower(boot.method),
-#                   nboot = nboot,
-#                   input.object = object,
-#                   robust.var = robust.var
-#     )
-#
-#   } else{ # else: if there is a reduced model
-#
-#     output = boot.ci(model.full = model.full, model.reduced = model.reduced,
-#                      robust.var = robust.var,
-#                      boot.type = boot.type, multi = multi,
-#                      r = nboot,
-#                      alpha = alpha)$ANOES
-#   }
-#   class(output) = "resi"
-#   return(output)
-# }
-
-
-
-
 
 #' Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for GEE models
 #' This function will estimate RESI and its CI for each factor in a fitted GEE model object.
@@ -210,28 +154,6 @@ resi.geeglm <- function(object,
   cat("Note: the CI is actually based on", ncol(output.boot$RESI), "bootstraps. \n")
   return(output)
 }
-
-# resi.gee <- function(object, data = NULL, alpha = 0.05, nboot = 1000){
-#   output = calc_resi(object) # RESI point estimates
-#
-#   # NOTE: I couldn't find the data output from `gee` object.
-#
-#   # id variable name
-#   id_var = as.character(object$call$id)
-#   # bootstrap
-#   output.boot = as.matrix(output[, 'RESI'])
-#   for (i in 1:nboot){
-#     boot.data = boot.samp(data, id.var = id_var)
-#     # re-fit the model
-#     boot.mod = update(object, data = boot.data)
-#     output.boot = cbind(output.boot, calc_resi(boot.mod)[, 'RESI'])
-#   }
-#   output.boot = output.boot[, -1]
-#   RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2))
-#   output = cbind(output, t(RESI.ci))
-#   return(output)
-# }
-
 
 
 #' Analysis of Effect Sizes (ANOES) based on the Robust Effect Size index (RESI) for LME models
