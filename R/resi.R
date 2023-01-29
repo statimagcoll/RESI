@@ -534,7 +534,7 @@ resi.geeglm <- function(model.full, data, anova = TRUE,
 
   # point estimation
   output <- list(alpha = alpha, nboot = nboot, boot.method = "nonparam")
-  output = c(output, resi_pe(model.full = model.full, data = data, anova = anova,
+  output = c(output, resi_pe(object = model.full, data = data, anova = anova,
                              coefficients = coefficients, unbiased = unbiased, ...))
 
   # id variable name
@@ -550,17 +550,18 @@ resi.geeglm <- function(model.full, data, anova = TRUE,
     # re-fit the model
     boot.model.full = update(model.full, data = boot.data, corstr = corstr_spec,
                              id = bootid)
-    rv.boot = tryCatch(resi_pe(boot.model.full,  data = boot.data, anova = anova,
+    rv.boot = tryCatch(resi_pe(boot.model.full, data = boot.data, anova = anova,
                                coefficients = coefficients, unbiased = unbiased, ...),
                        error = function(e){skip_to_next <<- TRUE})
     if (skip_to_next) {
       fail = fail + 1
-      next}
-    #output.boot$RESI= cbind(output.boot$RESI, rv.boot$resi[, 'RESI'])
-    boot.results[i,] = resi_pe(model.full = boot.model.full,
-                                                data = boot.data, anova = anova,
-                                                coefficients = coefficients,
-                                                unbiased = unbiased, ...)$estimates
+      next
+      }
+    # output.boot$RESI= cbind(output.boot$RESI, rv.boot$resi[, 'RESI'])
+    boot.results[i,] = resi_pe(object = boot.model.full,
+                              data = boot.data, anova = anova,
+                              coefficients = coefficients,
+                              unbiased = unbiased)$resi
   }
 
   alpha.order = sort(c(alpha/2, 1-alpha/2))
