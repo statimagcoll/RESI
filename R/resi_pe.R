@@ -346,6 +346,7 @@ resi_pe.geeglm <- function(object, anova = TRUE, ...){
                  resi = mod_tab)
 
   output$robust.var = "The GEE models always use robust (sandwich) variance estiamtor."
+  output$info = "Function modified Jan 29 10:32pm"
   return(output)
 }
 
