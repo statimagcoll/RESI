@@ -337,7 +337,7 @@ resi_pe.geeglm <- function(object, anova = TRUE, ...){
     # Wald test statistics using vcov from the independence model
     Wald_ind = N * sub_coef %*% solve(sub_vcov_ind) %*%  sub_coef
     df = sum(index) # df
-    S_ind =  chisq2S(Wald_ind, df = df, rdf = N)
+    S_ind =  chisq2S(Wald_ind, df = df, n = N)
     mod_tab[term, "pm-RESI"] = sqrt(N/tot_obs * S_ind^2)
   }
 
