@@ -146,12 +146,13 @@ resi.geeglm <- function(object,
   output.boot$pm_RESI = output.boot$pm_RESI[, -1]
   RESI.ci = apply(output.boot$RESI, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
   RESI_se = apply(output.boot$RESI, 1, sd, na.rm = TRUE)
-  # rownames(RESI.ci) = paste("RESI", rownames(RESI.ci))
+  rownames(RESI.ci) = paste("RESI", rownames(RESI.ci))
   pm_RESI.ci = apply(output.boot$pm_RESI, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
   pm_RESI_se = apply(output.boot$pm_RESI, 1, sd, na.rm = TRUE)
-  # rownames(pm_RESI.ci) = paste("pm-RESI", rownames(pm_RESI.ci))
+  rownames(pm_RESI.ci) = paste("pm-RESI", rownames(pm_RESI.ci))
   output = cbind(output$resi, t(RESI.ci), t(pm_RESI.ci), RESI_se, pm_RESI_se)
   cat("Note: the CI is actually based on", ncol(output.boot$RESI), "bootstraps. \n")
+  cat("Function modified Jan 29 10:52pm. \n")
   return(output)
 }
 
