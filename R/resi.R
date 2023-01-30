@@ -152,7 +152,7 @@ resi.geeglm <- function(object,
   rownames(pm_RESI.ci) = paste("pm-RESI", rownames(pm_RESI.ci))
   output = cbind(output$resi, t(RESI.ci), t(pm_RESI.ci), RESI_se, pm_RESI_se)
   cat("Note: the CI is actually based on", ncol(output.boot$RESI), "bootstraps. \n")
-  cat("Function modified Jan 29 10:52pm. \n")
+  cat("Function modified Jan 29 11:10pm. \n")
   return(output)
 }
 
