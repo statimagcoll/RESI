@@ -271,6 +271,8 @@ resi_pe.geeglm <- function(object, anova = TRUE, ...){
   N = length(summary(object)$clusz)
   # total num of observations
   tot_obs = nrow(data)
+  # working corstr of the object
+  corstr_spec = object$corstr
 
   # longitudinal RESI
   if (anova) {
@@ -284,7 +286,7 @@ resi_pe.geeglm <- function(object, anova = TRUE, ...){
   # model form
   form = formula(object)
   # independence model
-  mod_ind = update(object, id = c(1:nrow(data)))
+  mod_ind = update(object, id = c(1:nrow(data)), corstr = corstr_spec, data = data)
 
   # the var-cov matrix estimate from the independence model
   # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
