@@ -5,11 +5,6 @@
 \alias{resi_pe.default}
 \alias{resi_pe.glm}
 \alias{resi_pe.lm}
-\alias{resi_pe.nls}
-\alias{resi_pe.survreg}
-\alias{resi_pe.coxph}
-\alias{resi_pe.hurdle}
-\alias{resi_pe.zeroinfl}
 \alias{resi_pe.geeglm}
 \alias{resi_pe.gee}
 \alias{resi_pe.lme}
@@ -51,63 +46,6 @@ resi_pe(model.full, ...)
   coefficients = TRUE,
   vcovfunc = sandwich::vcovHC,
   Anova.args = list(),
-  vcov.args = list(),
-  unbiased = TRUE,
-  ...
-)
-
-\method{resi_pe}{nls}(
-  model.full,
-  model.reduced = NULL,
-  data,
-  coefficients = TRUE,
-  vcovfunc = regtools::nlshc,
-  vcov.args = list(),
-  unbiased = TRUE,
-  ...
-)
-
-\method{resi_pe}{survreg}(
-  model.full,
-  model.reduced = NULL,
-  data,
-  anova = TRUE,
-  coefficients = TRUE,
-  vcovfunc = vcov,
-  Anova.args = list(),
-  unbiased = TRUE,
-  ...
-)
-
-\method{resi_pe}{coxph}(
-  model.full,
-  model.reduced = NULL,
-  data,
-  anova = TRUE,
-  coefficients = TRUE,
-  vcovfunc = vcov,
-  Anova.args = list(),
-  unbiased = TRUE,
-  ...
-)
-
-\method{resi_pe}{hurdle}(
-  model.full,
-  model.reduced = NULL,
-  data,
-  coefficients = TRUE,
-  vcovfunc = sandwich::sandwich,
-  vcov.args = list(),
-  unbiased = TRUE,
-  ...
-)
-
-\method{resi_pe}{zeroinfl}(
-  model.full,
-  model.reduced = NULL,
-  data,
-  coefficients = TRUE,
-  vcovfunc = sandwich::sandwich,
   vcov.args = list(),
   unbiased = TRUE,
   ...
@@ -186,17 +124,7 @@ used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
 
 \item \code{lm}: RESI point estimation for linear models
 
-\item \code{nls}: RESI point estimation for nonlinear least squares models
-
-\item \code{survreg}: RESI point estimation for survreg
-
-\item \code{coxph}: RESI point estimation for coxph models
-
-\item \code{hurdle}: RESI point estimation for hurdle models
-
-\item \code{zeroinfl}: RESI point estimation for zeroinfl models
-
-\item \code{geeglm}: RESI point estimation for geeglm object
+\item \code{geeglm}: RESI point estimation for hurdle models
 
 \item \code{gee}: RESI point estimation for gee object
 
