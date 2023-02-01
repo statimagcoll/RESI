@@ -26,6 +26,8 @@ boot.samp <- function(data, id.var = NULL) {
   } else {
     boot.ind = sample(unique(data[, id.var]), replace = TRUE)
     boot.data = data[unlist(lapply(boot.ind, function(x) which(x == data[, id.var]))), ]
+    boot.data$bootid = rep(1:length(unique(data[, id.var])),
+                           unlist(lapply(boot.ind, function(x) length(which(x==data[,id.var])))))
   }
   return(boot.data)
 }
