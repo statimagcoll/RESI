@@ -14,7 +14,7 @@
 \item{...}{ignored}
 }
 \value{
-Returns a `summary.resi` object containing the computed coefficients table
+Returns a `summary_resi` object containing the computed coefficients table
 }
 \description{
 After running the \code{\link{resi}} function on a fitted model, this function can be used to print the coefficients table component. If the resi function was run with the `store.boot = TRUE` option to store the full matrix of bootstrapped estimates, the user can specify a different alpha level for this function's confidence intervals.
