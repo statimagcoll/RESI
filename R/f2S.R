@@ -8,7 +8,7 @@
 #' @param n Number of independent samples.
 #' @details The formula for converting an F statistic to S is:
 #'
-#' \eqn{ S = \sqrt(max(0, (f * df * (rdf - 2)/rdf - 1)/n))}
+#' \eqn{ S = \sqrt(max(0, (f * df * (rdf - 2)/rdf - df)/n))}
 #'
 #' The estimator is derived by setting the statistic equal to the expected value of
 #' the test statistic and solving for S.
