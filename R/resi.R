@@ -196,7 +196,6 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     CIs = apply(boot.results[,(ncol(boot.results)-length(which(rownames(output$anova) != "Residuals"))+1):ncol(boot.results)], 2,  quantile, probs = alpha.order, na.rm = TRUE)
     CIs = t(CIs)
     output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
-    class(output$anova) = c("anova_resi", class(output$anova))
   }
 
   if(store.boot){
@@ -285,7 +284,6 @@ resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     CIs = apply(boot.results[,(ncol(boot.results)-length(which(rownames(output$anova) != "Residuals"))+1):ncol(boot.results)], 2,  quantile, probs = alpha.order, na.rm = TRUE)
     CIs = t(CIs)
     output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
-    class(output$anova) = c("anova_resi", class(output$anova))
   }
 
   if(store.boot){
@@ -551,7 +549,6 @@ resi.geeglm <- function(model.full, data, anova = TRUE,
   colnames(boot.results) = names(output$estimates)
   fail = 0
   for (i in 1:nboot){
-    print(i)
     skip_to_next <- FALSE
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
@@ -594,7 +591,6 @@ resi.geeglm <- function(model.full, data, anova = TRUE,
                  2,  quantile, probs = alpha.order, na.rm = TRUE)
     cCIs = t(cCIs)
     output$anova[1:nrow(cCIs), paste("CS ", alpha.order*100, '%', sep='')] = cCIs
-    class(output$anova) = c("anova_resi", class(output$anova))
   }
 
   if(store.boot){

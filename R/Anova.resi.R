@@ -46,7 +46,6 @@ Anova.resi <- function(object, alpha = NULL, ...){
                             paste((1-rev(alpha)/2)*100, '%', sep=''))] = CIs
     }
   }
-  class(output) = c('anova_resi',class(output))
   output
 }
 
@@ -98,6 +97,5 @@ anova.resi <- function(object, alpha = NULL, ...){
                             paste((1-rev(alpha)/2)*100, '%', sep=''))] = CIs
     }
   }
-  class(output) = c('anova.resi',class(output))
   output
 }
