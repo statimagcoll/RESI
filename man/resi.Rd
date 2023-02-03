@@ -140,9 +140,27 @@ resi(model.full, ...)
   ...
 )
 
-\method{resi}{geeglm}(model.full, alpha = 0.05, nboot = 1000, ...)
+\method{resi}{geeglm}(
+  model.full,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  nboot = 1000,
+  alpha = 0.05,
+  store.boot = FALSE,
+  unbiased = TRUE,
+  ...
+)
 
-\method{resi}{gee}(model.full, data, alpha = 0.05, nboot = 1000, ...)
+\method{resi}{gee}(
+  model.full,
+  data,
+  nboot = 1000,
+  alpha = 0.05,
+  store.boot = FALSE,
+  unbiased = TRUE,
+  ...
+)
 
 \method{resi}{lme}(
   model.full,
@@ -222,6 +240,11 @@ is always greater than or equal to 0. The type of statistic
 used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
 \code{\link{t2S}}, \code{\link{z2S}}, \code{\link{t2S_alt}}, and
 \code{\link{z2S_alt}} for more details on the formulas.
+
+For GEE (\code{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
+per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
+specified clustering into account, while the cross-sectional RESI is estimated
+using a model where each measurement is its own cluster.
 
 For most \code{lm} and \code{nls} model types, there is a Bayesian bootstrap
 option available as an alternative to the default, standard non-parametric

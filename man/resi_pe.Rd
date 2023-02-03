@@ -113,9 +113,16 @@ resi_pe(model.full, ...)
   ...
 )
 
-\method{resi_pe}{geeglm}(model.full, anova = TRUE, ...)
+\method{resi_pe}{geeglm}(
+  model.full,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  unbiased = TRUE,
+  ...
+)
 
-\method{resi_pe}{gee}(model.full, ...)
+\method{resi_pe}{gee}(model.full, unbiased = TRUE, ...)
 
 \method{resi_pe}{lme}(
   model.full,
@@ -191,6 +198,11 @@ is always greater than or equal to 0. The type of statistic
 used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
 \code{\link{t2S}}, \code{\link{z2S}}, \code{\link{t2S_alt}}, and
 \code{\link{z2S_alt}} for more details on the formulas.
+
+For GEE (\code{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
+per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
+specified clustering into account, while the cross-sectional RESI is estimated
+using a model where each measurement is its own cluster.
 }
 \section{Methods (by class)}{
 \itemize{
