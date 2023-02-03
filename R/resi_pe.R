@@ -47,6 +47,11 @@
 #' \code{\link{t2S}}, \code{\link{z2S}}, \code{\link{t2S_alt}}, and
 #' \code{\link{z2S_alt}} for more details on the formulas.
 #'
+#' For GEE (\code{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
+#' per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
+#' specified clustering into account, while the cross-sectional RESI is estimated
+#' using a model where each measurement is its own cluster.
+#'
 #' @return Returns a list containing RESI point estimates
 #' @examples
 #' # This function produces point estimates for the RESI. The resi function will
@@ -574,9 +579,42 @@ resi_pe.geeglm <- function(model.full, data, anova = TRUE,
                  estimates = c())
   names.est = c()
 
+  # model form
+  form = formula(model.full)
+  # independence model
+  data$new_id = 1:nrow(data)
+  corstr_spec = model.full$corstr
+  mod_ind = update(model.full, id = new_id, data = data, corstr = corstr_spec)
+
+  # the var-cov matrix estimate from the independence model
+  # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
+  cov_ind = vcov(mod_ind)
+  # Convert it to the estimate for \Sigma_ind = Cov(\sqrt{N}(\hat{\beta}_ind - \beta_0))
+  cov_ind = cov_ind * N
+  # # Convert it to the estimate for \Sigma_cs = \Sigma_ind * m
+  # cov_ind = cov_ind * tot_obs/N
+
+  # The var-cov matrix estimate from the analysis model (the one considering correlation )
+  # Note: this is the estimate for Cov(\hat{\beta}_long)
+  cov_long = vcov(model.full)
+  # convert it to the estimate for \Sigma_long = Cov(\sqrt{N}(\hat{\beta}_long - \beta_0))
+  cov_long = cov_long * N
+
+  # The pm-RESI estimates
+  # mod_tab_ind = anova(mod_ind)
+  coef_mod = coef(mod_ind)
+  n.vars = length(coef_mod ) # num of coefficients in the model
+  var_names = names(coef_mod) # coefficient names ...
+  term_names = labels(terms(mod_ind)) # terms ...
+  n.terms = length(term_names) # num of terms ...
+
   # longitudinal RESI
   # coefficients (z statistics)
   if (coefficients) {
+    # for pm-RESI
+    Cmat = diag(n.vars) == 1
+    colnames(Cmat) = rownames(Cmat) = var_names
+
     coefficients.tab <- lmtest::coeftest(model.full)
     coefficients.df = data.frame(coefficients.tab[,'Estimate'],
                                  coefficients.tab[,'Std. Error'],
@@ -585,24 +623,79 @@ resi_pe.geeglm <- function(model.full, data, anova = TRUE,
                                  row.names = rownames(coefficients.tab))
     colnames(coefficients.df) = colnames(coefficients.tab)
     if (unbiased){
-      coefficients.df[,'RESI'] = z2S(coefficients.df[,'z value'], N)
+      coefficients.df[,'L-RESI'] = z2S(coefficients.df[,'z value'], N)
     } else{
-      coefficients.df[,'RESI'] = suppressWarnings(z2S_alt(coefficients.df[,'z value'],
-                                                          N))
+      coefficients.df[,'L-RESI'] = suppressWarnings(z2S_alt(coefficients.df[,'z value'],
+                                                            N))
     }
+
+    # pm-RESI
+    Wald_ind = NULL
+    for (term in rownames(Cmat)){
+      index = Cmat[term, ]
+      sub_coef = coef(model.full)[index] # the coefficient(s) from the input object
+      sub_vcov_cor = cov_long[index, index] # the vcov from the gee model
+      sub_vcov_ind = cov_ind[index, index] # the vcov from the independence model
+      # Wald test statistics using vcov from the independence model
+      Wald_ind = N * sub_coef %*% solve(sub_vcov_ind) %*%  sub_coef
+      df_a = sum(index) # df
+      S_ind =  chisq2S(Wald_ind, df = df_a, n = N)
+      coefficients.df[term, "CS-RESI"] = sqrt(N/tot_obs * S_ind^2)
+    }
+
     output$coefficients = coefficients.df
-    output$estimates = coefficients.df$RESI
-    names.est = rownames(coefficients.df)
+    output$estimates = c(coefficients.df$`L-RESI`, coefficients.df[,"CS-RESI"])
+    names.est = rep(rownames(coefficients.df), 2)
     names(output$estimates) = names.est
   }
 
   # anova
   if (anova) {
     anova.tab <- anova(model.full)
-    anova.tab[,'RESI'] = chisq2S(anova.tab[,'X2'], anova.tab[,'Df'], N)
+    anova.tab[,'L-RESI'] = chisq2S(anova.tab[,'X2'], anova.tab[,'Df'], N)
+
+    # for pm-RESI
+    Cmat = matrix(NA, ncol = n.vars, nrow = n.terms)
+    colnames(Cmat) = var_names
+    rownames(Cmat) = term_names
+    for (term in 1:n.terms){
+      # handle interaction terms with factors
+      if (grepl(":", term_names[term])){
+        # get first term of interaction
+        tname1 = sub(":.*", "", term_names[term])
+        tname2 = sub(".*:", "", term_names[term])
+        if (tname1 %in% names(mod_ind$xlevels)){
+          vnames = paste(tname1,
+                         mod_ind$xlevels[[tname1]][2:length(mod_ind$xlevels[[tname1]])],
+                         ":", tname2, sep="")
+          tcol = c()
+          for (vi in 1:length(vnames)){
+            tcol = c(tcol, which(grepl(vnames[vi], var_names, fixed = TRUE)))
+          }
+          Cmat[term, ] = 1:ncol(Cmat) %in% tcol
+        }} else{
+          Cmat[term, ] = grepl(term_names[term], var_names, fixed = TRUE)
+        }
+    }
+    # make sure interaction terms are not double counted
+    Cmat[which(!(grepl(":", rownames(Cmat)))),which(grepl(":", colnames(Cmat)))] = FALSE
+
+    Wald_ind = NULL
+    for (term in rownames(Cmat)){
+      index = Cmat[term,]
+      sub_coef = coef(model.full)[index] # the coefficient(s) from the input object
+      sub_vcov_cor = cov_long[index, index] # the vcov from the gee model
+      sub_vcov_ind = cov_ind[index, index] # the vcov from the independence model
+      # Wald test statistics using vcov from the independence model
+      Wald_ind = N * sub_coef %*% solve(sub_vcov_ind) %*%  sub_coef
+      df_a = sum(index) # df
+      S_ind =  chisq2S(Wald_ind, df = df_a, n = N)
+      anova.tab[term, "CS-RESI"] = sqrt(N/tot_obs * S_ind^2)
+    }
+
     output$anova = anova.tab
-    output$estimates = c(output$estimates, anova.tab$RESI)
-    names.est = c(names.est, rownames(anova.tab))
+    output$estimates = c(output$estimates, anova.tab$`L-RESI`, anova.tab[,"CS-RESI"])
+    names.est = c(names.est, rep(rownames(anova.tab), 2))
     names(output$estimates) = names.est
     class(output$anova) = c("anova_resi", class(output$anova))
   }

@@ -47,6 +47,11 @@
 #' \code{\link{t2S}}, \code{\link{z2S}}, \code{\link{t2S_alt}}, and
 #' \code{\link{z2S_alt}} for more details on the formulas.
 #'
+#' For GEE (\code{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
+#' per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
+#' specified clustering into account, while the cross-sectional RESI is estimated
+#' using a model where each measurement is its own cluster.
+#'
 #' For most \code{lm} and \code{nls} model types, there is a Bayesian bootstrap
 #' option available as an alternative to the default, standard non-parametric
 #' bootstrap. The interpretation of a Bayesian bootstrapped interval is similar to
@@ -514,6 +519,7 @@ resi.zeroinfl <- resi.hurdle
 
 #' @describeIn resi RESI point and interval estimation for GEE models
 #' @export
+
 resi.geeglm <- function(model.full, data, anova = TRUE,
                         coefficients = TRUE, nboot = 1000,
                         alpha = 0.05, store.boot = FALSE,
@@ -545,11 +551,11 @@ resi.geeglm <- function(model.full, data, anova = TRUE,
   colnames(boot.results) = names(output$estimates)
   fail = 0
   for (i in 1:nboot){
+    print(i)
     skip_to_next <- FALSE
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
-    boot.model.full = update(model.full, data = boot.data, corstr = corstr_spec,
-                             id = bootid)
+    boot.model.full = update(model.full, data = boot.data, corstr = corstr_spec)
     rv.boot = tryCatch(resi_pe(boot.model.full,  data = boot.data, anova = anova,
                                coefficients = coefficients, unbiased = unbiased, ...),
                        error = function(e){skip_to_next <<- TRUE})
@@ -557,27 +563,37 @@ resi.geeglm <- function(model.full, data, anova = TRUE,
       fail = fail + 1
       next}
     #output.boot$RESI= cbind(output.boot$RESI, rv.boot$resi[, 'RESI'])
-    boot.results[i,] = resi_pe(model.full = boot.model.full,
+    boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full,
                                                 data = boot.data, anova = anova,
                                                 coefficients = coefficients,
-                                                unbiased = unbiased, ...)$estimates
+                                                unbiased = unbiased, ...)$estimates)
   }
 
   alpha.order = sort(c(alpha/2, 1-alpha/2))
 
   if (coefficients){
-    CIs = apply(boot.results[,1:nrow(output$coefficients)], 2,  quantile,
-                probs = alpha.order, na.rm = TRUE)
-    CIs = t(CIs)
-    output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+    lCIs = apply(boot.results[,1:nrow(output$coefficients)], 2,  quantile,
+                 probs = alpha.order, na.rm = TRUE)
+    lCIs = t(lCIs)
+    output$coefficients[1:nrow(lCIs), paste("L ",alpha.order*100, '%', sep='')] = lCIs
+    cCIs = apply(boot.results[,(nrow(output$coefficients)+1):(2*nrow(output$coefficients))],
+                 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    cCIs = t(cCIs)
+    output$coefficients[1:nrow(cCIs), paste("CS ",alpha.order*100, '%', sep='')] = cCIs
   }
 
   if (anova){
-    CIs = apply(boot.results[,(ncol(boot.results)-
-                                 length(rownames(output$anova))+1):ncol(boot.results)],
-                2,  quantile, probs = alpha.order, na.rm = TRUE)
-    CIs = t(CIs)
-    output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+    lCIs = apply(boot.results[,(ncol(boot.results)-
+                                  2*length(rownames(output$anova))+1):
+                                (ncol(boot.results)-length(rownames(output$anova)))],
+                 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    lCIs = t(lCIs)
+    output$anova[1:nrow(lCIs), paste("L ", alpha.order*100, '%', sep='')] = lCIs
+    cCIs = apply(boot.results[,(ncol(boot.results)-length(rownames(output$anova))+1):
+                                ncol(boot.results)],
+                 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    cCIs = t(cCIs)
+    output$anova[1:nrow(cCIs), paste("CS ", alpha.order*100, '%', sep='')] = cCIs
     class(output$anova) = c("anova_resi", class(output$anova))
   }
 
