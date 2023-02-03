@@ -33,7 +33,7 @@ plot.resi <- function(x, ycex.axis = 1, alpha = NULL, ...){
 }
 
 #' @export
-plot.summary.resi <- plot.resi
+plot.summary_resi <- plot.resi
 
 #' @export
 plot.anova_resi <- function(x, alpha = NULL, ycex.axis = 1,...){

@@ -4,7 +4,7 @@
 #' @param object an object resulting from resi function
 #' @param alpha an optional new specification for the confidence level. Can be vector-valued
 #' @param ... ignored
-#' @return Returns a `summary.resi` object containing the computed coefficients table
+#' @return Returns a `summary_resi` object containing the computed coefficients table
 #' @examples
 #' # fit a model
 #' mod = lm(charges ~ bmi + sex, data = RESI::insurance)
@@ -46,7 +46,7 @@ summary.resi <- function(object, alpha = NULL, ...){
                                          paste((1-rev(alpha)/2)*100, '%', sep=''))] = CIs
     }
   }
-  class(output) = c('summary.resi')
+  class(output) = c('summary_resi')
   output
 }
 

@@ -1,6 +1,6 @@
 #' @export
 print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
-  cat("\nAnalysis of Effect sizes (ANOES) based on RESI:")
+  cat("\nAnalysis of effect sizes based on RESI:")
   cat("\nConfidence level = ", x$alpha)
   if (is.null(x$model.reduced$formula)){
     cat("\nCall:  ", paste(deparse(x$model.full$call), sep = "\n", collapse = "\n"),  "\n",sep = "")
@@ -56,8 +56,8 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
 }
 
 #' @export
-print.summary.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
-  cat("\nAnalysis of Effect sizes (ANOES) based on RESI:")
+print.summary_resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
+  cat("\nAnalysis of effect sizes based on RESI:")
   cat("\nConfidence level = ", x$alpha)
   cat("\nCall:  ", paste(deparse(x$model.full$call), sep = "\n", collapse = "\n"),  "\n",sep = "")
   cat("\nCoefficient Table \n")
