@@ -46,7 +46,7 @@ Anova.resi <- function(object, alpha = NULL, ...){
                             paste((1-rev(alpha)/2)*100, '%', sep=''))] = CIs
     }
   }
-  output
+  return(output)
 }
 
 #' Anova method for resi objects
@@ -97,5 +97,5 @@ anova.resi <- function(object, alpha = NULL, ...){
                             paste((1-rev(alpha)/2)*100, '%', sep=''))] = CIs
     }
   }
-  output
+  return(output)
 }
