@@ -621,7 +621,7 @@ resi.gee <- function(model.full, data, nboot = 1000, alpha = 0.05,
 
   output <- list(alpha = alpha, nboot = nboot, boot.method = "nonparam")
   # RESI point estimates
-  output = c(output, resi_pe(model.full, unbiased, ...))
+  output = c(output, resi_pe(model.full, data, unbiased, ...))
   # id variable name
   id_var = as.character(model.full$call$id)
 
@@ -635,15 +635,21 @@ resi.gee <- function(model.full, data, nboot = 1000, alpha = 0.05,
                                       update(model.full, data = boot.data, id = bootid),
                                     file =  nullfile()))
     boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full,
+                                                data = boot.data,
                                                 unbiased = unbiased, ...)$estimates)
   }
 
   alpha.order = sort(c(alpha/2, 1-alpha/2))
 
-  CIs = apply(boot.results[,1:nrow(output$coefficients)], 2,  quantile,
+  lCIs = apply(boot.results[,1:nrow(output$coefficients)], 2,  quantile,
                 probs = alpha.order, na.rm = TRUE)
-  CIs = t(CIs)
-  output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+  lCIs = t(lCIs)
+  output$coefficients[1:nrow(lCIs), paste("L ", alpha.order*100, '%', sep='')] = lCIs
+  cCIs = apply(boot.results[,(nrow(output$coefficients) + 1):
+                              (2 * nrow(output$coefficients))], 2,  quantile,
+               probs = alpha.order, na.rm = TRUE)
+  cCIs = t(cCIs)
+  output$coefficients[1:nrow(cCIs), paste("CS ", alpha.order*100, '%', sep='')] = cCIs
 
   if(store.boot){
     output$boot.results = boot.results

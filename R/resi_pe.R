@@ -569,7 +569,7 @@ resi_pe.zeroinfl <- resi_pe.hurdle
 #' @export
 resi_pe.geeglm <- function(model.full, data, anova = TRUE,
                            coefficients = TRUE, unbiased = TRUE, ...){
-  data = model.full$data
+  data = model.full$model
   # sample size
   N = length(summary(model.full)$clusz)
   # total num of observations
@@ -582,17 +582,17 @@ resi_pe.geeglm <- function(model.full, data, anova = TRUE,
   # model form
   form = formula(model.full)
   # independence model
-  data$new_id = 1:nrow(data)
-  corstr_spec = model.full$corstr
-  mod_ind = update(model.full, id = new_id, data = data, corstr = corstr_spec)
+  data$w_resi = model.full$prior.weights
+  mod_indg = glm(formula = form, family = model.full$family, data = data,
+                 weights = w_resi, contrasts = model.full$contrasts)
 
   # the var-cov matrix estimate from the independence model
   # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
-  cov_ind = vcov(mod_ind)
-  # Convert it to the estimate for \Sigma_ind = Cov(\sqrt{N}(\hat{\beta}_ind - \beta_0))
-  cov_ind = cov_ind * N
-  # # Convert it to the estimate for \Sigma_cs = \Sigma_ind * m
-  # cov_ind = cov_ind * tot_obs/N
+  cov_ind = sandwich::vcovHC(mod_indg, type = "HC0")
+  cov_ind = cov_ind * tot_obs/N
+  # make copy of model.full, replace vbeta with independence
+  mod_ind = model.full
+  mod_ind$geese$vbeta = cov_ind
 
   # The var-cov matrix estimate from the analysis model (the one considering correlation )
   # Note: this is the estimate for Cov(\hat{\beta}_long)
@@ -611,10 +611,7 @@ resi_pe.geeglm <- function(model.full, data, anova = TRUE,
   # longitudinal RESI
   # coefficients (z statistics)
   if (coefficients) {
-    # for pm-RESI
-    Cmat = diag(n.vars) == 1
-    colnames(Cmat) = rownames(Cmat) = var_names
-
+    # longitudinal resi
     coefficients.tab <- lmtest::coeftest(model.full)
     coefficients.df = data.frame(coefficients.tab[,'Estimate'],
                                  coefficients.tab[,'Std. Error'],
@@ -629,18 +626,15 @@ resi_pe.geeglm <- function(model.full, data, anova = TRUE,
                                                             N))
     }
 
-    # pm-RESI
-    Wald_ind = NULL
-    for (term in rownames(Cmat)){
-      index = Cmat[term, ]
-      sub_coef = coef(model.full)[index] # the coefficient(s) from the input object
-      sub_vcov_cor = cov_long[index, index] # the vcov from the gee model
-      sub_vcov_ind = cov_ind[index, index] # the vcov from the independence model
-      # Wald test statistics using vcov from the independence model
-      Wald_ind = N * sub_coef %*% solve(sub_vcov_ind) %*%  sub_coef
-      df_a = sum(index) # df
-      S_ind =  chisq2S(Wald_ind, df = df_a, n = N)
-      coefficients.df[term, "CS-RESI"] = sqrt(N/tot_obs * S_ind^2)
+    # CS RESI
+    # M: use new mod with substituted variance
+    coefficients.tabcs <- lmtest::coeftest(mod_ind)
+    z_cs = coefficients.tabcs[,'z value']
+    if (unbiased){
+      coefficients.df[,'CS-RESI'] = z2S(z_cs, N)
+    } else{
+      coefficients.df[,'CS-RESI'] = suppressWarnings(z2S_alt(z_cs,
+                                                             N))
     }
 
     output$coefficients = coefficients.df
@@ -651,50 +645,19 @@ resi_pe.geeglm <- function(model.full, data, anova = TRUE,
 
   # anova
   if (anova) {
+    # longitudinal RESI
     anova.tab <- anova(model.full)
     anova.tab[,'L-RESI'] = chisq2S(anova.tab[,'X2'], anova.tab[,'Df'], N)
 
-    # for pm-RESI
-    Cmat = matrix(NA, ncol = n.vars, nrow = n.terms)
-    colnames(Cmat) = var_names
-    rownames(Cmat) = term_names
-    for (term in 1:n.terms){
-      # handle interaction terms with factors
-      if (grepl(":", term_names[term])){
-        # get first term of interaction
-        tname1 = sub(":.*", "", term_names[term])
-        tname2 = sub(".*:", "", term_names[term])
-        if (tname1 %in% names(mod_ind$xlevels)){
-          vnames = paste(tname1,
-                         mod_ind$xlevels[[tname1]][2:length(mod_ind$xlevels[[tname1]])],
-                         ":", tname2, sep="")
-          tcol = c()
-          for (vi in 1:length(vnames)){
-            tcol = c(tcol, which(grepl(vnames[vi], var_names, fixed = TRUE)))
-          }
-          Cmat[term, ] = 1:ncol(Cmat) %in% tcol
-        }} else{
-          Cmat[term, ] = grepl(term_names[term], var_names, fixed = TRUE)
-        }
-    }
-    # make sure interaction terms are not double counted
-    Cmat[which(!(grepl(":", rownames(Cmat)))),which(grepl(":", colnames(Cmat)))] = FALSE
-
-    Wald_ind = NULL
-    for (term in rownames(Cmat)){
-      index = Cmat[term,]
-      sub_coef = coef(model.full)[index] # the coefficient(s) from the input object
-      sub_vcov_cor = cov_long[index, index] # the vcov from the gee model
-      sub_vcov_ind = cov_ind[index, index] # the vcov from the independence model
-      # Wald test statistics using vcov from the independence model
-      Wald_ind = N * sub_coef %*% solve(sub_vcov_ind) %*%  sub_coef
-      df_a = sum(index) # df
-      S_ind =  chisq2S(Wald_ind, df = df_a, n = N)
-      anova.tab[term, "CS-RESI"] = sqrt(N/tot_obs * S_ind^2)
-    }
+    # CS RESI
+    # M: use anova() on new mod with substituted variance
+    anova.tabcs <- suppressMessages(car::Anova(mod_indg, vcov. = cov_ind,
+                                               test.statistic = "Wald"))
+    anova.tab[,'CS-RESI'] = chisq2S(anova.tabcs[,'Chisq'], anova.tabcs[,'Df'], N)
 
     output$anova = anova.tab
-    output$estimates = c(output$estimates, anova.tab$`L-RESI`, anova.tab[,"CS-RESI"])
+    output$estimates = c(output$estimates, anova.tab$`L-RESI`,
+                         anova.tab[,"CS-RESI"])
     names.est = c(names.est, rep(rownames(anova.tab), 2))
     names(output$estimates) = names.est
     class(output$anova) = c("anova_resi", class(output$anova))
@@ -706,14 +669,24 @@ resi_pe.geeglm <- function(model.full, data, anova = TRUE,
 
 #' @describeIn resi_pe RESI point estimation for gee object
 #' @export
-resi_pe.gee <- function(model.full, unbiased = TRUE, ...){
+resi_pe.gee <- function(model.full, data, unbiased = TRUE, ...){
   # sample size
   N = length(unique(model.full$id))
   # total num of observations
+  tot_obs = nrow(data)
+
+  # independence model
+  data$new_id = 1:nrow(data)
+  suppressMessages(capture.output(mod_ind <- update(model.full, id = new_id, data = data),
+                                            file =  nullfile()))
+  # adjust covariance
+  mod_ind$robust.variance = mod_ind$robust.variance * tot_obs/N
 
   output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
                  estimates = c())
   names.est = c()
+
+
 
   # longitudinal RESI
   # coefficients (z statistics)
@@ -724,14 +697,25 @@ resi_pe.gee <- function(model.full, unbiased = TRUE, ...){
                                row.names = rownames(coefficients.tab))
   colnames(coefficients.df) = c('Estimate', 'Std. Error', 'z value')
   if (unbiased){
-    coefficients.df[,'RESI'] = z2S(coefficients.df[,'z value'], N)
+    coefficients.df[,'L-RESI'] = z2S(coefficients.df[,'z value'], N)
   } else{
-    coefficients.df[,'RESI'] = suppressWarnings(z2S_alt(coefficients.df[,'z value'],
+    coefficients.df[,'L-RESI'] = suppressWarnings(z2S_alt(coefficients.df[,'z value'],
                                                         N))
   }
+
+  # CS RESI
+  # M: use new mod with substituted variance
+  coefficients.tabcs <- summary(mod_ind)$coefficients
+  z_cs = coefficients.tabcs[,'Robust z']
+  if (unbiased){
+    coefficients.df[,'CS-RESI'] = z2S(z_cs, N)
+  } else{
+    coefficients.df[,'CS-RESI'] = suppressWarnings(z2S_alt(z_cs,
+                                                           N))
+  }
   output$coefficients = coefficients.df
-  output$estimates = coefficients.df$RESI
-  names.est = rownames(coefficients.df)
+  output$estimates = c(coefficients.df$`L-RESI`, coefficients.df[,"CS-RESI"])
+  names.est = rep(rownames(coefficients.df),2)
   names(output$estimates) = names.est
 
   output$naive.var = FALSE
