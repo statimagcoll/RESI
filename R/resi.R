@@ -331,10 +331,10 @@ resi.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE
         boot.model.full <- update(model.full, data = boot.data)
 
         # for catching overall error
-        t1 <- try(resi_pe(model.full = boot.model.full, model.reduced = NULL,
+        t1 <- try(suppressWarnings(resi_pe(model.full = boot.model.full, model.reduced = NULL,
                           data = boot.data, coefficients = coefficients,
                           vcovfunc = vcovfunc, vcov.args = vcov.args,
-                          unbiased = unbiased, ...)$estimates, silent = T)
+                          unbiased = unbiased, ...)$estimates), silent = T)
         if (inherits(t1, "try-error")){
           fail = fail + 1
         }
