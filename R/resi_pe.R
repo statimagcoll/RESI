@@ -370,30 +370,10 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
 
   # Anova table (Chi sq statistics)
   if (anova){
-    # suppressMessages(anova.tab <- car::Anova(model.full, test.statistic = "Wald", error.df = df.residual(model.full), ...))
-    # above currently not working (problem with being able to specify error.df), having to use code from
-    # car:::Anova.II.Wald.survreg
-    V <- vcov(model.full, complete = FALSE)
-    b <- coef(model.full)
-    if (length(b) != nrow(V)) {
-      p <- which(grepl("^Log\\(scale", rownames(V)))
-      if (length(p) > 0)
-        V <- V[-p, -p]
-    }
-
-    if ("type" %in% names(Anova.args)){
-      if (Anova.args$type %in% c(3, "III")){
-        fun <- utils::getFromNamespace("Anova.III.default", "car")
-      }
-      else{
-        fun <- utils::getFromNamespace("Anova.III.default", "car")
-      }
-    } else{
-      fun <- utils::getFromNamespace("Anova.II.default", "car")
-    }
-
-    anova.tab <- do.call(fun, c(list(mod = model.full, vcov. = V, test = "Chisq",
-                                     error.df = df.residual(model.full)), Anova.args))
+    anova.tab <- suppressMessages(do.call(car::Anova, c(list(mod = model.full,
+                                            test.statistic = 'Wald',
+                                            error.df = df.residual(model.full)),
+                                       Anova.args)))
     anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], nrow(data))
     output$anova = anova.tab[which(rownames(anova.tab) != "Residuals"),]
     names.est = names(output$estimates)
