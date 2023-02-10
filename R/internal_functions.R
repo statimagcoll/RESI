@@ -48,3 +48,17 @@ bayes.samp <- function(data) {
   boot.data = cbind(data, g)
   return(boot.data)
 }
+
+#' Copied regtools::nlshc (to be removed later, current reverse dependency issue)
+#' @return Returns robust covariance for nls model
+#' @noRd
+vcovnls <- function (nlsout, type = "HC") {
+  b <- coef(nlsout)
+  m <- nlsout$m
+  resid <- m$resid()
+  hmat <- m$gradient()
+  xhm <- hmat
+  yresidhm <- resid + hmat %*% b
+  lmout <- lm(yresidhm ~ xhm - 1)
+  sandwich::vcovHC(lmout, type)
+}
