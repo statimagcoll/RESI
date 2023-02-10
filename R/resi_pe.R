@@ -17,7 +17,6 @@
 #' @importFrom aod wald.test
 #' @importFrom car Anova
 #' @importFrom lmtest waldtest
-#' @importFrom regtools nlshc
 #' @importFrom sandwich vcovHC
 #' @importFrom stats coef df.residual formula glm hatvalues pf predict quantile residuals update vcov
 #' @export
@@ -267,7 +266,7 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @describeIn resi_pe RESI point estimation for nonlinear least squares models
 #' @export
 resi_pe.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE,
-                        vcovfunc = regtools::nlshc, vcov.args = list(), unbiased = TRUE, ...){
+                        vcovfunc = vcovnls, vcov.args = list(), unbiased = TRUE, ...){
   if (missing(data) | is.null(data)){
     stop('\nData argument is required for nls model')
   }
@@ -279,7 +278,13 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data, coefficients = T
   }
 
   if (identical(vcovfunc, sandwich::vcovHC)){
-    vcovfunc = regtools::nlshc
+    # vcovfunc = regtools::nlshc
+    ## current issue with reverse dependencies coming through regtools
+    ## for now copy needed function and move regtools to suggests to
+    ## avoid package potentially getting archived until issue is fixed
+    ## copied code in internal_functions.R
+    vcovfunc = vcovnls
+
     warning("Sandwich vcov function not applicable for nls model type, vcovfunc set to regtools::nlshc")
   }
 
