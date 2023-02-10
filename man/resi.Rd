@@ -348,7 +348,7 @@ Vandekar S, Tao R, Blume J. A Robust Effect Size Index. \emph{Psychometrika}. 20
 Kang, K., Armstrong, K., Avery, S., McHugo, M., Heckers, S., & Vandekar, S. (2021). Accurate confidence interval estimation for non-centrality parameters and effect size indices. \emph{arXiv preprint arXiv:2111.05966}.
 }
 \seealso{
-\code{\link{resi_pe}}, \code{\link{vcovHC}}, \code{\link{nlshc}},
+\code{\link{resi_pe}}, \code{\link{vcovHC}},
 \code{\link{f2S}}, \code{\link{chisq2S}}, \code{\link{z2S}}, \code{\link{t2S}}
 }
 \concept{RESI functions}
