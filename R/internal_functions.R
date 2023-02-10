@@ -25,6 +25,8 @@ boot.samp <- function(data, id.var = NULL) {
   } else {
     boot.ind = sample(unique(data[, id.var]), replace = TRUE)
     boot.data = data[unlist(lapply(boot.ind, function(x) which(x == data[, id.var]))), ]
+    boot.data$bootid = rep(1:length(unique(data[, id.var])),
+                           unlist(lapply(boot.ind, function(x) length(which(x==data[,id.var])))))
   }
   return(boot.data)
 }
@@ -45,4 +47,18 @@ bayes.samp <- function(data) {
   } # end `repeat`
   boot.data = cbind(data, g)
   return(boot.data)
+}
+
+#' Copied regtools::nlshc (to be removed later, current reverse dependency issue)
+#' @return Returns robust covariance for nls model
+#' @noRd
+vcovnls <- function (nlsout, type = "HC") {
+  b <- coef(nlsout)
+  m <- nlsout$m
+  resid <- m$resid()
+  hmat <- m$gradient()
+  xhm <- hmat
+  yresidhm <- resid + hmat %*% b
+  lmout <- stats::lm(yresidhm ~ xhm - 1)
+  sandwich::vcovHC(lmout, type)
 }

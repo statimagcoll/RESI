@@ -4,19 +4,21 @@
 \alias{f2S}
 \title{Compute the robust effect size index estimate from F-statistic}
 \usage{
-f2S(f, df, rdf)
+f2S(f, df, rdf, n)
 }
 \arguments{
 \item{f}{The F statistic for the parameter of interest.}
 
-\item{df}{Number of degrees of freedom of the chi-square statistic.}
+\item{df}{Number of degrees of freedom of the F statistic.}
 
-\item{rdf}{Model residual degrees of freedom or number of independent samples.}
+\item{rdf}{Model residual degrees of freedom.}
+
+\item{n}{Number of independent samples.}
 }
 \value{
 Returns a scalar or vector argument of the the robust effect size index estimate.
-# to obtain example F values, first fit a glm
-mod = glm(charges ~ region * age + bmi + sex, data = RESI::insurance)
+# to obtain example F values, first fit a lm
+mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
 
 # run Anova, using a robust variance-covariance function
 # get the F values and Df values
@@ -24,7 +26,7 @@ fs = car::Anova(mod, vcov. = sandwich::vcovHC)$F
 dfs = car::Anova(mod, vcov. = sandwich::vcovHC)$Df
 
 # get RESI estimates
-f2S(fs, df = dfs, rdf = mod$df.residual)
+f2S(fs, df = dfs, rdf = mod$df.residual, n = nrow(RESI::insurance))
 }
 \description{
 This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
@@ -33,5 +35,8 @@ Vector arguments are accepted. If different length arguments are passed they are
 \details{
 The formula for converting an F statistic to S is:
 
-\eqn{ S = \sqrt(max(0, (f * df * (rdf - 2)/rdf - 1)/rdf))}
+\eqn{ S = \sqrt(max(0, (f * df * (rdf - 2)/rdf - df)/n))}
+
+The estimator is derived by setting the statistic equal to the expected value of
+the test statistic and solving for S.
 }

@@ -13,6 +13,7 @@
 \alias{resi.geeglm}
 \alias{resi.gee}
 \alias{resi.lme}
+\alias{resi.lmerMod}
 \title{Robust Effect Size Index (RESI) point and interval estimation for models}
 \usage{
 resi(model.full, ...)
@@ -73,7 +74,7 @@ resi(model.full, ...)
   coefficients = TRUE,
   nboot = 1000,
   boot.method = "nonparam",
-  vcovfunc = regtools::nlshc,
+  vcovfunc = vcovnls,
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
@@ -139,11 +140,38 @@ resi(model.full, ...)
   ...
 )
 
-\method{resi}{geeglm}(model.full, alpha = 0.05, nboot = 1000, ...)
+\method{resi}{geeglm}(
+  model.full,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  nboot = 1000,
+  alpha = 0.05,
+  store.boot = FALSE,
+  unbiased = TRUE,
+  ...
+)
 
-\method{resi}{gee}(model.full, data, alpha = 0.05, nboot = 1000, ...)
+\method{resi}{gee}(
+  model.full,
+  data,
+  nboot = 1000,
+  alpha = 0.05,
+  store.boot = FALSE,
+  unbiased = TRUE,
+  ...
+)
 
 \method{resi}{lme}(
+  model.full,
+  alpha = 0.05,
+  nboot = 1000,
+  vcovfunc = clubSandwich::vcovCR,
+  vcov.args = list(),
+  ...
+)
+
+\method{resi}{lmerMod}(
   model.full,
   alpha = 0.05,
   nboot = 1000,
@@ -213,6 +241,11 @@ used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
 \code{\link{t2S}}, \code{\link{z2S}}, \code{\link{t2S_alt}}, and
 \code{\link{z2S_alt}} for more details on the formulas.
 
+For GEE (\code{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
+per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
+specified clustering into account, while the cross-sectional RESI is estimated
+using a model where each measurement is its own cluster.
+
 For most \code{lm} and \code{nls} model types, there is a Bayesian bootstrap
 option available as an alternative to the default, standard non-parametric
 bootstrap. The interpretation of a Bayesian bootstrapped interval is similar to
@@ -228,29 +261,31 @@ and then try rerunning \code{resi}.
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{default}: RESI point and interval estimation for models
+\item \code{resi(default)}: RESI point and interval estimation for models
 
-\item \code{glm}: RESI point and interval estimation for models
+\item \code{resi(glm)}: RESI point and interval estimation for models
 
-\item \code{lm}: RESI point and interval estimation for lm models
+\item \code{resi(lm)}: RESI point and interval estimation for lm models
 
-\item \code{nls}: RESI point and interval estimation for nls models
+\item \code{resi(nls)}: RESI point and interval estimation for nls models
 
-\item \code{survreg}: RESI point and interval estimation for survreg models
+\item \code{resi(survreg)}: RESI point and interval estimation for survreg models
 
-\item \code{coxph}: RESI point and interval estimation for coxph models
+\item \code{resi(coxph)}: RESI point and interval estimation for coxph models
 
-\item \code{hurdle}: RESI point and interval estimation for hurdle models
+\item \code{resi(hurdle)}: RESI point and interval estimation for hurdle models
 
-\item \code{zeroinfl}: RESI point and interval estimation for zeroinfl models
+\item \code{resi(zeroinfl)}: RESI point and interval estimation for zeroinfl models
 
-\item \code{geeglm}: RESI point and interval estimation for GEE models
+\item \code{resi(geeglm)}: RESI point and interval estimation for GEE models
 
-\item \code{gee}: RESI point and interval estimation for GEE models
+\item \code{resi(gee)}: RESI point and interval estimation for GEE models
 
-\item \code{lme}: RESI point and interval estimation for LME (nlme) models
+\item \code{resi(lme)}: RESI point and interval estimation for LME (nlme) models
+
+\item \code{resi(lmerMod)}: RESI point and interval estimation for lmerMod models
+
 }}
-
 \examples{
 ## for timing purposes, a small number of bootstrap replicates is used in the
 ## examples. Run them with a higher or default `nboot` argument for better performance
@@ -313,7 +348,7 @@ Vandekar S, Tao R, Blume J. A Robust Effect Size Index. \emph{Psychometrika}. 20
 Kang, K., Armstrong, K., Avery, S., McHugo, M., Heckers, S., & Vandekar, S. (2021). Accurate confidence interval estimation for non-centrality parameters and effect size indices. \emph{arXiv preprint arXiv:2111.05966}.
 }
 \seealso{
-\code{\link{resi_pe}}, \code{\link{vcovHC}}, \code{\link{nlshc}},
+\code{\link{resi_pe}}, \code{\link{vcovHC}},
 \code{\link{f2S}}, \code{\link{chisq2S}}, \code{\link{z2S}}, \code{\link{t2S}}
 }
 \concept{RESI functions}

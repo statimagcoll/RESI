@@ -1,6 +1,6 @@
 #' @export
 print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
-  cat("\nAnalysis of Effect sizes (ANOES) based on RESI:")
+  cat("\nAnalysis of effect sizes based on RESI:")
   cat("\nConfidence level = ", x$alpha)
   if (is.null(x$model.reduced$formula)){
     cat("\nCall:  ", paste(deparse(x$model.full$call), sep = "\n", collapse = "\n"),  "\n",sep = "")
@@ -49,13 +49,15 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   if (x$boot.method == "nonparam") cat("\n2. Confidence intervals (CIs) constructed using", x$nboot,"non-parametric bootstraps. \n")
   if (x$boot.method == "bayes") cat("\n2. Credible intervals constructed using", x$nboot,"Bayesian bootstraps. \n")
   # if(nzchar(mess <- naprint(x$na.action))) cat("  (",mess, ")\n", sep = "")
+  # report number of failed bootstraps for nls model
+  if (!(is.null(x$nfail))) cat("3. The bootstrap was successful in", x$nboot - x$nfail, "out of", x$nboot, "attempts. \n" )
 
   invisible(x)
 }
 
 #' @export
-print.summary.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
-  cat("\nAnalysis of Effect sizes (ANOES) based on RESI:")
+print.summary_resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
+  cat("\nAnalysis of effect sizes based on RESI:")
   cat("\nConfidence level = ", x$alpha)
   cat("\nCall:  ", paste(deparse(x$model.full$call), sep = "\n", collapse = "\n"),  "\n",sep = "")
   cat("\nCoefficient Table \n")

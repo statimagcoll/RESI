@@ -61,7 +61,7 @@ resi_pe(model.full, ...)
   model.reduced = NULL,
   data,
   coefficients = TRUE,
-  vcovfunc = regtools::nlshc,
+  vcovfunc = vcovnls,
   vcov.args = list(),
   unbiased = TRUE,
   ...
@@ -113,13 +113,34 @@ resi_pe(model.full, ...)
   ...
 )
 
-\method{resi_pe}{geeglm}(model.full, ...)
+\method{resi_pe}{geeglm}(
+  model.full,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  unbiased = TRUE,
+  ...
+)
 
-\method{resi_pe}{gee}(model.full, ...)
+\method{resi_pe}{gee}(model.full, data, unbiased = TRUE, ...)
 
-\method{resi_pe}{lme}(model.full, vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...)
+\method{resi_pe}{lme}(
+  model.full,
+  anova = TRUE,
+  vcovfunc = clubSandwich::vcovCR,
+  Anova.args = list(),
+  vcov.args = list(),
+  ...
+)
 
-\method{resi_pe}{lmerMod}(model.full, vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...)
+\method{resi_pe}{lmerMod}(
+  model.full,
+  anova = TRUE,
+  vcovfunc = clubSandwich::vcovCR,
+  Anova.args = list(),
+  vcov.args = list(),
+  ...
+)
 }
 \arguments{
 \item{model.full}{\code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.}
@@ -177,34 +198,39 @@ is always greater than or equal to 0. The type of statistic
 used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
 \code{\link{t2S}}, \code{\link{z2S}}, \code{\link{t2S_alt}}, and
 \code{\link{z2S_alt}} for more details on the formulas.
+
+For GEE (\code{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
+per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
+specified clustering into account, while the cross-sectional RESI is estimated
+using a model where each measurement is its own cluster.
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{default}: RESI point estimation
+\item \code{resi_pe(default)}: RESI point estimation
 
-\item \code{glm}: RESI point estimation for generalized linear models
+\item \code{resi_pe(glm)}: RESI point estimation for generalized linear models
 
-\item \code{lm}: RESI point estimation for linear models
+\item \code{resi_pe(lm)}: RESI point estimation for linear models
 
-\item \code{nls}: RESI point estimation for nonlinear least squares models
+\item \code{resi_pe(nls)}: RESI point estimation for nonlinear least squares models
 
-\item \code{survreg}: RESI point estimation for survreg
+\item \code{resi_pe(survreg)}: RESI point estimation for survreg
 
-\item \code{coxph}: RESI point estimation for coxph models
+\item \code{resi_pe(coxph)}: RESI point estimation for coxph models
 
-\item \code{hurdle}: RESI point estimation for hurdle models
+\item \code{resi_pe(hurdle)}: RESI point estimation for hurdle models
 
-\item \code{zeroinfl}: RESI point estimation for zeroinfl models
+\item \code{resi_pe(zeroinfl)}: RESI point estimation for zeroinfl models
 
-\item \code{geeglm}: RESI point estimation for geeglm object
+\item \code{resi_pe(geeglm)}: RESI point estimation for geeglm object
 
-\item \code{gee}: RESI point estimation for gee object
+\item \code{resi_pe(gee)}: RESI point estimation for gee object
 
-\item \code{lme}: RESI point estimation for lme object
+\item \code{resi_pe(lme)}: RESI point estimation for lme object
 
-\item \code{lmerMod}: RESI point estimation for lmerMod object
+\item \code{resi_pe(lmerMod)}: RESI point estimation for lmerMod object
+
 }}
-
 \examples{
 # This function produces point estimates for the RESI. The resi function will
 # provide the same point estimates but adds confidence intervals. See resi for

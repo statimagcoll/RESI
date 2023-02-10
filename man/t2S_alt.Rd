@@ -4,12 +4,14 @@
 \alias{t2S_alt}
 \title{Compute the robust effect size index estimate from t statistic (alternative)}
 \usage{
-t2S_alt(t, rdf)
+t2S_alt(t, rdf, n)
 }
 \arguments{
 \item{t}{The t statistic for the parameter of interest.}
 
 \item{rdf}{Model residual degrees of freedom or number of independent samples.}
+
+\item{n}{Number of independent samples.}
 }
 \value{
 Returns a scalar or vector argument of the the robust effect size index estimate.
@@ -39,5 +41,5 @@ mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
 ts = lmtest::coeftest(mod, vcov. = sandwich::vcovHC)[,'t value']
 
 # get RESI estimates
-t2S_alt(ts, rdf = mod$df.residual)
+t2S_alt(ts, rdf = mod$df.residual, n = nrow(RESI::insurance))
 }
