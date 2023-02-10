@@ -5,6 +5,7 @@ library(survival)
 library(nlme)
 library(lme4)
 library(tibble)
+library(geepack)
 
 data = RESI::insurance
 mod = glm(charges ~ region * age + bmi + sex, data = data)
@@ -71,8 +72,8 @@ mod.nls.tib <- nls(Y~a * X/(b + X), data = tib.nls, start = list(a = 1, b = 2))
 tib.surv <- tibble::as_tibble(data.surv)
 mod.surv.tib <- survreg(Surv(time, status) ~ age + sex + ph.karno, data=tib.surv,
                    dist='weibull', robust = TRUE)
-mod.coxph.tib <-  coxph(Surv(time, status) ~ age + sex + wt.loss, data=as_tibble(lung), robust = TRUE)
-tib.hurdle <- as_tibble(data.hurdle)
+mod.coxph.tib <-  coxph(Surv(time, status) ~ age + sex + wt.loss, data=tibble::as_tibble(lung), robust = TRUE)
+tib.hurdle <- tibble::as_tibble(data.hurdle)
 mod.hurdle.tib <- pscl::hurdle(art ~ fem + mar + kid5 + phd + ment | fem + mar +
                                  kid5 + phd + ment, data = tib.hurdle)
 mod.zinf.tib <- pscl::zeroinfl(art ~ fem + mar + kid5 + phd + ment | fem + mar +
@@ -83,13 +84,13 @@ mod.gee.tib <- gee::gee(depression ~ diagnose + drug*time, data = tib.gee,
 mod.geeglm.tib <- geepack::geeglm(depression ~ diagnose + drug*time,
                                  data = tib.gee, id = id, family = binomial,
                                  corstr = "independence")
-#mod.lme.tib <- nlme::lme(distance ~ age + Sex, data = as_tibble(nlme::Orthodont), random = ~ 1)
-mod.lmerMod.tib <- lme4::lmer(Reaction ~ Days + (Days | Subject), as_tibble(sleepstudy))
+#mod.lme.tib <- nlme::lme(distance ~ age + Sex, data = tibble::as_tibble(nlme::Orthodont), random = ~ 1)
+mod.lmerMod.tib <- lme4::lmer(Reaction ~ Days + (Days | Subject), tibble::as_tibble(sleepstudy))
 
 
 ## tests
 test_that("Specifying non-allowed vcov produces warning",{
-  expect_warning(resi(mod.nls, data = data.nls, nboot = 1, vcovfunc = sandwich::vcovHC), "Sandwich vcov function not applicable for nls model type, vcovfunc set to regtools::nlshc")
+  expect_warning(resi(mod.nls, data = data.nls, nboot = 10, vcovfunc = sandwich::vcovHC), "Sandwich vcov function not applicable for nls model type, vcovfunc set to regtools::nlshc")
   expect_warning(resi(mod.surv, data = data.surv, nboot = 1, vcovfunc = sandwich::vcovHC), "vcovfunc argument ignored for survreg objects")
   expect_warning(resi(mod.coxph, data = data.surv, nboot = 1, vcovfunc = sandwich::vcovHC), "vcovfunc argument ignored for coxph objects")
 })
@@ -135,10 +136,12 @@ test_that("resi produces the correct estimates", {
   expect_equal(unname(resi(mod.coxph, nboot = 1, data = data.surv)$estimates), c(0.224354226, 0.136138740, -0.213293162, 0.008641209, 0.117732151, 0.202042262, 0.000000000))
   expect_equal(unname(resi(mod.hurdle, nboot = 1)$estimates[c(1, 2, 5, 8, 10)]), c(0.28063439, 0.12770489, -0.06898884, 0.02686305, 0.06039791), tolerance = 1e-07)
   expect_equal(unname(resi(mod.zinf, nboot = 1)$estimates[c(1, 2, 5, 8, 10)]), c(0.23725614, 0.11892936, -0.07014934, -0.03481673, -0.03461235), tolerance = 1e-07)
-  expect_equal(unname(resi(mod.gee, nboot = 10, data = data.gee)$coefficients[,'RESI']), c(0.0000, 0.4850899, 0.0000, 0.5591547, 0.2889370), tolerance = 1e-07)
-  expect_equal(unname(resi(mod.geeglm, nboot = 10, data = data.gee)$coefficients[,'RESI']), c(0.0000, 0.4850899, 0.000, 0.5591547, 0.2889370), tolerance = 1e-07)
-  expect_equal(unname(resi(mod.lme, nboot = 10)$coefficients[,'RESI']), c(3.659090, 1.739166, 0.512371), tolerance = 1e-07)
-  expect_equal(unname(resi(mod.lmerMod, nboot = 10)$coefficients[,'RESI']),c(8.434942, 1.533073), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.gee, nboot = 10, data = data.gee)$coefficients[,'L-RESI']), c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.geeglm, nboot = 10, data = data.gee)$coefficients[,'L-RESI']), c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.gee, nboot = 10, data = data.gee)$coefficients[,'CS-RESI']), c(-0.015478959, -0.281553120, 0.008449009, 0.321466713, -0.171546277), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.geeglm, nboot = 10, data = data.gee)$coefficients[,'CS-RESI']), c(-0.015478959, -0.281553120, 0.008449009, 0.321466713, -0.171546277), tolerance = 1e-07)
+  expect_equal(unname(suppressWarnings(resi(mod.lme, nboot = 10)$coefficients[,'RESI'])), c(3.659090, 1.739166, 0.512371), tolerance = 1e-07)
+  expect_equal(unname(suppressWarnings(resi(mod.lmerMod, nboot = 10)$coefficients[,'RESI'])),c(8.434942, 1.533073), tolerance = 1e-07)
 })
 
 test_that("RESI estimates are in between the confidence limits", {
@@ -157,6 +160,31 @@ test_that("RESI estimates are in between the confidence limits", {
   resi.obj = resi(mod.coxph, data = data.surv, nboot = 500)
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
   expect_true(all(resi.obj$anova$RESI >= resi.obj$anova$`2.5%`) & all(resi.obj$anova$RESI <= resi.obj$anova$`97.5%`))
+  # commented for time
+  # resi.obj = resi(mod.hurdle, nboot = 500)
+  # expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
+  resi.obj = resi(mod.geeglm, nboot = 500)
+  expect_true(all(resi.obj$coefficients$`L-RESI` >= resi.obj$coefficients$`L 2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`L 97.5%`))
+  expect_true(all(resi.obj$coefficients$`CS-RESI` >= resi.obj$coefficients$`CS 2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`CS 97.5%`))
+  expect_true(all(resi.obj$anova$`L-RESI` >= resi.obj$anova$`L 2.5%`) & all(resi.obj$anova$RESI <= resi.obj$anova$`L 97.5%`))
+  expect_true(all(resi.obj$anova$`CS-RESI` >= resi.obj$anova$`CS 2.5%`) & all(resi.obj$anova$RESI <= resi.obj$anova$`CS 97.5%`))
+})
+
+test_that("vcov methods same for gee and geeglm",{
+  expect_equal(unname(mod.gee$robust.variance), mod.geeglm$geese$vbeta)
+  modg1 = glm(formula = formula(mod.gee), family = mod.gee$family, data = data.gee,
+              contrasts = mod.gee$contrasts)
+  modg2 = glm(formula = formula(mod.geeglm), family = mod.geeglm$family, data = data.gee,
+              contrasts = mod.geeglm$contrasts)
+  expect_equal(sandwich::vcovHC(modg1, type = "HC0"), sandwich::vcovHC(modg2, type = "HC0"))
+})
+
+test_that("boot.results same (approx) for gee and geeglm",{
+  set.seed(123)
+  resi.obj = resi(mod.geeglm, nboot = 5, store.boot = T, anova = F)
+  set.seed(123)
+  resi.obj2 = resi(mod.gee, data = data.gee, nboot = 5, store.boot = T)
+  expect_equal(resi.obj$boot.results, resi.obj2$boot.results, tolerance = 1e-09)
 })
 
 test_that("unbiased = FALSE returns same abs. RESI as Chi-sq/F",{
@@ -205,7 +233,7 @@ test_that("specifying additional Anova args works",{
 })
 
 test_that("vcovfunc = vcov changes naive.var to TRUE",{
-  expect_true(resi(mod, vcovfunc = vcov)$naive.var == TRUE)
+  expect_true(resi(mod, vcovfunc = vcov, nboot = 10)$naive.var == TRUE)
 })
 
 test_that("tibbles work", {
@@ -225,10 +253,10 @@ test_that("tibbles work", {
   expect_equal(unname(resi(mod.coxph.tib, nboot = 1, data = data.surv)$estimates), c(0.224354226, 0.136138740, -0.213293162, 0.008641209, 0.117732151, 0.202042262, 0.000000000))
   expect_equal(unname(resi(mod.hurdle.tib, nboot = 1)$estimates[c(1, 2, 5, 8, 10)]), c(0.28063439, 0.12770489, -0.06898884, 0.02686305, 0.06039791), tolerance = 1e-07)
   expect_equal(unname(resi(mod.zinf.tib, nboot = 1)$estimates[c(1, 2, 5, 8, 10)]), c(0.23725614, 0.11892936, -0.07014934, -0.03481673, -0.03461235), tolerance = 1e-07)
-  expect_equal(unname(resi(mod.gee.tib, nboot = 10, data = data.gee)$coefficients[,'RESI']), c(0.0000, 0.4850899, 0.0000, 0.5591547, 0.2889370), tolerance = 1e-07)
-  expect_equal(unname(resi(mod.geeglm.tib, nboot = 10, data = data.gee)$coefficients[,'RESI']), c(0.0000, 0.4850899, 0.000, 0.5591547, 0.2889370), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.gee.tib, nboot = 10, data = data.gee)$coefficients[,'L-RESI']), c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.geeglm.tib, nboot = 10, data = data.gee)$coefficients[,'L-RESI']), c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258), tolerance = 1e-07)
   # expect_equal(unname(resi(mod.lme, nboot = 10)$coefficients[,'RESI']), c(3.659090, 1.739166, 0.512371), tolerance = 1e-07)
-  expect_equal(unname(resi(mod.lmerMod.tib, nboot = 10)$coefficients[,'RESI']),c(8.434942, 1.533073), tolerance = 1e-07)
+  expect_equal(unname(suppressWarnings(resi(mod.lmerMod.tib, nboot = 10))$coefficients[,'RESI']),c(8.434942, 1.533073), tolerance = 1e-07)
 })
 
 # important because some resi_pe methods use waldtest and some use wald.test
@@ -237,4 +265,6 @@ test_that("wald.test and waldtest still consistent",{
                unname(aod::wald.test(vcovHC(mod.lm), coef(mod.lm),
                                      Terms = 2:nrow(vcovHC(mod.lm)))$result$chi2["chi2"]))
 })
+
+
 
