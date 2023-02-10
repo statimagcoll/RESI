@@ -59,6 +59,6 @@ vcovnls <- function (nlsout, type = "HC") {
   hmat <- m$gradient()
   xhm <- hmat
   yresidhm <- resid + hmat %*% b
-  lmout <- lm(yresidhm ~ xhm - 1)
+  lmout <- stats::lm(yresidhm ~ xhm - 1)
   sandwich::vcovHC(lmout, type)
 }
