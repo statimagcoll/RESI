@@ -19,7 +19,7 @@
 #' @importFrom car Anova
 #' @importFrom lmtest waldtest
 #' @importFrom sandwich vcovHC
-#' @importFrom stats anova as.formula coef formula glm hatvalues nobs pchisq pf predict quantile rbinom residuals rnorm runif update vcov
+#' @importFrom stats anova as.formula coef formula glm hatvalues lm nobs pchisq pf predict quantile rbinom residuals rnorm runif update vcov
 #' @importFrom utils capture.output
 #' @export
 #' @details The RESI, denoted as S, is applicable across many model types. It is a unitless
@@ -67,7 +67,7 @@
 #' @return Returns a list that includes function arguments, RESI point estimates,
 #' and confidence intervals in coefficients/anova-style tables
 #' @family RESI functions
-#' @seealso \code{\link{resi_pe}}, \code{\link{vcovHC}}, \code{\link{nlshc}},
+#' @seealso \code{\link{resi_pe}}, \code{\link{vcovHC}},
 #' \code{\link{f2S}}, \code{\link{chisq2S}}, \code{\link{z2S}}, \code{\link{t2S}}
 #'
 #' @examples
@@ -551,7 +551,8 @@ resi.geeglm <- function(model.full, data, anova = TRUE,
     skip_to_next <- FALSE
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
-    boot.model.full = update(model.full, data = boot.data, corstr = corstr_spec)
+    boot.model.full = update(model.full, data = boot.data, corstr = corstr_spec,
+                             id = boot.data$bootid)
     rv.boot = tryCatch(resi_pe(boot.model.full,  data = boot.data, anova = anova,
                                coefficients = coefficients, unbiased = unbiased, ...),
                        error = function(e){skip_to_next <<- TRUE})
@@ -631,7 +632,8 @@ resi.gee <- function(model.full, data, nboot = 1000, alpha = 0.05,
     boot.data = boot.samp(data, id.var = id_var)
     # re-fit the model
     suppressMessages(capture.output(boot.model.full <-
-                                      update(model.full, data = boot.data, id = bootid),
+                                      update(model.full, data = boot.data,
+                                             id = boot.data$bootid),
                                     file =  nullfile()))
     boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full,
                                                 data = boot.data,
