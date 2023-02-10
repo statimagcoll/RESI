@@ -74,7 +74,7 @@ resi(model.full, ...)
   coefficients = TRUE,
   nboot = 1000,
   boot.method = "nonparam",
-  vcovfunc = regtools::nlshc,
+  vcovfunc = vcovnls,
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),

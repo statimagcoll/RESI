@@ -18,7 +18,6 @@
 #' @importFrom aod wald.test
 #' @importFrom car Anova
 #' @importFrom lmtest waldtest
-#' @importFrom regtools nlshc
 #' @importFrom sandwich vcovHC
 #' @importFrom stats anova as.formula coef formula glm hatvalues nobs pchisq pf predict quantile rbinom residuals rnorm runif update vcov
 #' @importFrom utils capture.output
@@ -297,7 +296,7 @@ resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @export
 resi.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE,
                      nboot = 1000, boot.method = 'nonparam',
-                     vcovfunc = regtools::nlshc, alpha = 0.05, store.boot = FALSE,
+                     vcovfunc = vcovnls, alpha = 0.05, store.boot = FALSE,
                      vcov.args = list(), unbiased = TRUE, ...){
 
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
