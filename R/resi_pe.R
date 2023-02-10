@@ -567,7 +567,8 @@ resi_pe.geeglm <- function(model.full, data, anova = TRUE,
   # model form
   form = formula(model.full)
   # independence model
-  data$w_resi = model.full$prior.weights
+  w_resi = model.full$prior.weights
+  data$w_resi = w_resi
   mod_indg = glm(formula = form, family = model.full$family, data = data,
                  weights = w_resi, contrasts = model.full$contrasts)
 
@@ -584,14 +585,6 @@ resi_pe.geeglm <- function(model.full, data, anova = TRUE,
   cov_long = vcov(model.full)
   # convert it to the estimate for \Sigma_long = Cov(\sqrt{N}(\hat{\beta}_long - \beta_0))
   cov_long = cov_long * N
-
-  # The pm-RESI estimates
-  # mod_tab_ind = anova(mod_ind)
-  coef_mod = coef(mod_ind)
-  n.vars = length(coef_mod ) # num of coefficients in the model
-  var_names = names(coef_mod) # coefficient names ...
-  term_names = labels(terms(mod_ind)) # terms ...
-  n.terms = length(term_names) # num of terms ...
 
   # longitudinal RESI
   # coefficients (z statistics)
