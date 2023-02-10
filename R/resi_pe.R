@@ -233,7 +233,7 @@ resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     if (unbiased){
       coefficients.df[,'RESI'] = t2S(coefficients.df[,'t value'], nrow(data), model.full$df.residual)
     } else{
-      coefficients.df[,'RESI'] = t2S_alt(coefficients.df[,'t value'], model.full$df.residual)
+      coefficients.df[,'RESI'] = t2S_alt(coefficients.df[,'t value'], model.full$df.residual, nrow(data))
     }
 
     output$coefficients = coefficients.df
@@ -321,7 +321,7 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data, coefficients = T
     if (unbiased){
       coefficients.df[,'RESI'] = t2S(coefficients.df[,'t value'], nrow(data), res.df)
     } else{
-      coefficients.df[,'RESI'] = t2S_alt(coefficients.df[,'t value'], res.df)
+      coefficients.df[,'RESI'] = t2S_alt(coefficients.df[,'t value'], res.df, nrow(data))
     }
     output$coefficients = coefficients.df
     output$estimates = c(output$estimates, coefficients.df$RESI)
@@ -607,8 +607,8 @@ resi_pe.geeglm <- function(model.full, data, anova = TRUE,
     }
 
     # CS RESI
-    # M: use new mod with substituted variance
-    coefficients.tabcs <- lmtest::coeftest(mod_ind)
+    # M: use independence mod
+    coefficients.tabcs <- lmtest::coeftest(mod_ind, vcov. = cov_ind)
     z_cs = coefficients.tabcs[,'z value']
     if (unbiased){
       coefficients.df[,'CS-RESI'] = z2S(z_cs, N)
@@ -657,10 +657,21 @@ resi_pe.gee <- function(model.full, data, unbiased = TRUE, ...){
 
   # independence model
   data$new_id = 1:nrow(data)
-  suppressMessages(capture.output(mod_ind <- update(model.full, id = new_id, data = data),
-                                            file =  nullfile()))
-  # adjust covariance
-  mod_ind$robust.variance = mod_ind$robust.variance * tot_obs/N
+  # suppressMessages(capture.output(mod_ind <- update(model.full, id = new_id, data = data),
+  #                                           file =  nullfile()))
+  # # adjust covariance
+  # mod_ind$robust.variance = mod_ind$robust.variance * tot_obs/N
+  # to match geeglm
+  mod_indg = glm(formula = formula(model.full), family = model.full$family, data = data,
+                 contrasts = model.full$contrasts)
+
+  # the var-cov matrix estimate from the independence model
+  # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
+  cov_ind = sandwich::vcovHC(mod_indg, type = "HC0")
+  cov_ind = cov_ind * tot_obs/N
+  # make copy of full model and substitute independence variance
+  mod_ind = model.full
+  mod_ind$robust.variance = cov_ind
 
   output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
                  estimates = c())
@@ -685,7 +696,7 @@ resi_pe.gee <- function(model.full, data, unbiased = TRUE, ...){
 
   # CS RESI
   # M: use new mod with substituted variance
-  coefficients.tabcs <- summary(mod_ind)$coefficients
+  coefficients.tabcs = summary(mod_ind)$coefficients
   z_cs = coefficients.tabcs[,'Robust z']
   if (unbiased){
     coefficients.df[,'CS-RESI'] = z2S(z_cs, N)
