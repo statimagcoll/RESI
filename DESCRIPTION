@@ -37,7 +37,6 @@ Imports:
     clubSandwich,
     lmtest,
     nlme,
-    regtools,
     sandwich
 Suggests:
     gee,
@@ -45,6 +44,7 @@ Suggests:
     knitr,
     lme4,
     pscl,
+    regtools,
     rmarkdown,
     splines,
     survival,
