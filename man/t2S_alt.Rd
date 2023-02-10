@@ -41,5 +41,5 @@ mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
 ts = lmtest::coeftest(mod, vcov. = sandwich::vcovHC)[,'t value']
 
 # get RESI estimates
-t2S_alt(ts, rdf = mod$df.residual)
+t2S_alt(ts, rdf = mod$df.residual, n = nrow(RESI::insurance))
 }

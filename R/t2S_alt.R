@@ -24,7 +24,7 @@
 #' ts = lmtest::coeftest(mod, vcov. = sandwich::vcovHC)[,'t value']
 #'
 #' # get RESI estimates
-#' t2S_alt(ts, rdf = mod$df.residual)
+#' t2S_alt(ts, rdf = mod$df.residual, n = nrow(RESI::insurance))
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
 #' @export
 t2S_alt <- function(t, rdf, n){
