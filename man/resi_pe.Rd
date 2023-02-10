@@ -61,7 +61,7 @@ resi_pe(model.full, ...)
   model.reduced = NULL,
   data,
   coefficients = TRUE,
-  vcovfunc = regtools::nlshc,
+  vcovfunc = vcovnls,
   vcov.args = list(),
   unbiased = TRUE,
   ...
@@ -122,7 +122,7 @@ resi_pe(model.full, ...)
   ...
 )
 
-\method{resi_pe}{gee}(model.full, unbiased = TRUE, ...)
+\method{resi_pe}{gee}(model.full, data, unbiased = TRUE, ...)
 
 \method{resi_pe}{lme}(
   model.full,
