@@ -1,3 +1,7 @@
+## RESI 1.1.1
+
+* Minor argument consistency fix
+
 ## RESI 1.1.0
 
 * Expanded longitudinal methods

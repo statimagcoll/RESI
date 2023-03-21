@@ -3,6 +3,24 @@
 * rhub::check_for_cran()
 * win-builder
 
+## R CMD check results
+There were no ERRORs, WARNINGs, or NOTEs.
+
+## CRAN Submission 1.1.1
+This update changes "object" to "mod" in Anova.resi for S3 method consistency with car::Anova, based on warning that was was given by CRAN's package check.
+
+Words flagged by spell_check are not misspelled.
+
+## Downstream dependencies
+There are currently no downstream dependencies for this package.
+
+## Previous cran-comments
+
+## Test Environments
+* local R installation, version 4.2.2
+* rhub::check_for_cran()
+* win-builder
+
 
 ## R CMD check results
 There were no ERRORs, WARNINGs, or NOTEs.
@@ -14,8 +32,6 @@ Words flagged by spell_check are not misspelled.
 
 ## Downstream dependencies
 There are currently no downstream dependencies for this package.
-
-## Previous cran-comments
 
 ## Test Environments
 * local R installation, version 4.1.2
