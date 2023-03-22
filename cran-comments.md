@@ -7,7 +7,7 @@
 There were no ERRORs, WARNINGs, or NOTEs.
 
 ## CRAN Submission 1.1.1
-This update changes "object" to "mod" in Anova.resi for S3 method consistency with car::Anova, based on warning that was was given by CRAN's package check.
+This update changes "object" to "mod" in Anova.resi for S3 method consistency with car::Anova, based on warning that was was given by CRAN's package check and makes a minor change to resi.geeglm.
 
 Words flagged by spell_check are not misspelled.
 
