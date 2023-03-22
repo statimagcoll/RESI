@@ -554,7 +554,8 @@ resi_pe.zeroinfl <- resi_pe.hurdle
 #' @export
 resi_pe.geeglm <- function(model.full, data, anova = TRUE,
                            coefficients = TRUE, unbiased = TRUE, ...){
-  data = model.full$model
+  data = model.full$data
+  
   # sample size
   N = length(summary(model.full)$clusz)
   # total num of observations
