@@ -1,7 +1,7 @@
 #' Covert R^2 to S
 #'
 #' Converts R^2, the partial coefficient of determination, to
-#' robust effect size index (S) using the formula from Vandekar, Rao, & Blume (2020).
+#' robust effect size index (S) using the formula from Vandekar, Tao, & Blume (2020).
 #' @param Rsq Numeric, R^2
 #' @return Returns an estimate of R^2 based on the RESI
 #' @details The formula for the conversion is:

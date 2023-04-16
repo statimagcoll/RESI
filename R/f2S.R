@@ -1,6 +1,6 @@
 #' Compute the robust effect size index estimate from F-statistic
 #'
-#' This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
+#' This function computes the robust effect size index from Vandekar, Tao, & Blume (2020).
 #' Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
 #' @param f The F statistic for the parameter of interest.
 #' @param df Number of degrees of freedom of the F statistic.

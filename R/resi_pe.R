@@ -1,6 +1,6 @@
 #' Robust Effect Size Index (RESI) Point Estimation
 #'
-#' This function will estimate the robust effect size (RESI) from Vandekar, Rao, & Blume (2020).
+#' This function will estimate the robust effect size (RESI) from Vandekar, Tao, & Blume (2020).
 #' The overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in coefficients-style table.
 #' RESI is (optionally) estimated for each variable/interaction in an Anova-style table
 #' for models with existing Anova methods. This function is the building block for the \code{\link{resi}} function.
@@ -139,6 +139,8 @@ resi_pe.default <- function(model.full, model.reduced = NULL, data,
   return(output)
 }
 
+
+## ADD DATA EXTRACTION IF MISSING
 #' @describeIn resi_pe RESI point estimation for generalized linear models
 #' @export
 resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
@@ -555,7 +557,7 @@ resi_pe.zeroinfl <- resi_pe.hurdle
 resi_pe.geeglm <- function(model.full, data, anova = TRUE,
                            coefficients = TRUE, unbiased = TRUE, ...){
   data = model.full$data
-  
+
   # sample size
   N = length(summary(model.full)$clusz)
   # total num of observations

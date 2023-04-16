@@ -1,7 +1,7 @@
 #' Covert Cohen's \emph{f}^2 to S
 #'
 #' Converts Cohen's \emph{f}^2 to robust effect size index (S)
-#' using the formula from Vandekar, Rao, & Blume (2020).
+#' using the formula from Vandekar, Tao, & Blume (2020).
 #' @param fsq Numeric, value of Cohen's \emph{f}^2.
 #' @return Returns an estimate the robust effect size index
 #' @details The formula for the conversion is:

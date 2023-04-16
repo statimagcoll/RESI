@@ -1,6 +1,6 @@
 #' Compute the robust effect size index estimate from t statistic (alternative)
 #'
-#' This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
+#' This function computes the robust effect size index from Vandekar, Tao, & Blume (2020).
 #' Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
 #' @param t The t statistic for the parameter of interest.
 #' @param rdf Model residual degrees of freedom or number of independent samples.
