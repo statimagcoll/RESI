@@ -1,0 +1,159 @@
+---
+title: "Comparing internal and boot package bootstrapping"
+author: "Megan Jones"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# current RESI
+library(RESI)
+
+# fit example model
+mod1 = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
+
+# use internal bootstrapping
+set.seed(123)
+t1 = Sys.time()
+resi_internal = resi(mod1, store.boot = TRUE)
+t2 = Sys.time()
+dt = difftime(t2, t1)
+dt
+```
+
+```{r}
+# try using boot package
+library(boot)
+
+resi_stat = function(dat, inds, mod.full){
+  mod = update(mod.full, data = dat[inds,])
+  out = resi_pe(mod, data = dat[inds,])$estimates
+  out
+}
+
+set.seed(123)
+t1b = Sys.time()
+resi_boot = boot(RESI::insurance, R = 1000, statistic = resi_stat, mod.full = mod1)
+t2b = Sys.time()
+dtb = difftime(t2b, t1b)
+dtb
+
+summary(resi_boot)
+boot_cis = apply(resi_boot$t, 2, quantile, probs = c(0.025, 0.975))
+boot_cis
+resi_internal
+
+# getting random seed from boot
+seedboot = resi_boot$seed
+
+# see if this changes resi internal
+set.seed(seedboot)
+resi_internal_seedboot = resi(mod1, store.boot = TRUE)
+boot_cis
+resi_internal_seedboot
+```
+
+```{r}
+# try to implement bayesian bootstrap
+resi_bstat = function(dat, inds, mod.full){
+  n = nrow(dat)
+  repeat{
+    # Generate the random numbers from unif(0, 1)
+    u = runif(n-1)
+    u.sort = sort(u)
+    g = c(u.sort, 1) - c(0, u.sort)
+    if (sum(g == 0) == 0) break
+  } # end `repeat`
+  boot.data = cbind(dat, g)
+  mod = update(mod.full, data = boot.data)
+  out = resi_pe(mod, data = boot.data)$estimates
+  out
+}
+
+set.seed(123)
+t1ba = Sys.time()
+resi_internalb = resi(mod1, boot.method = "bayes",store.boot = TRUE)
+t2ba = Sys.time()
+dtba = difftime(t2ba, t1ba)
+dtba
+
+set.seed(123)
+t1bb = Sys.time()
+resi_bootb = boot(RESI::insurance, R = 1000, statistic = resi_bstat, mod.full = mod1)
+t2bb = Sys.time()
+dtbb = difftime(t2bb, t1bb)
+dtbb
+boot_cisb = apply(resi_boot$t, 2, quantile, probs = c(0.025, 0.975))
+boot_cisb
+resi_internalb
+```
+
+```{r}
+# writing function in the argument
+set.seed(123)
+t1bi = Sys.time()
+resi_booti = boot(RESI::insurance, R = 1000, statistic = function(dt,i){resi_pe(update(mod1, 
+                                                                       data = dt[i,]))$estimates})
+t2bi = Sys.time()
+dtbi = difftime(t2bi, t1bi)
+dtbi
+```
+
+
+```{r}
+# trying snow option
+set.seed(123)
+t1s = Sys.time()
+resi_boot_snow = boot(RESI::insurance, R = 1000, statistic = resi_stat, mod.full = mod1,
+                      parallel = "snow")
+t2s = Sys.time()
+dts = difftime(t2s, t1s)
+dts
+
+summary(resi_boot_snow)
+boot_cis_snow = apply(resi_boot_snow$t, 2, quantile, probs = c(0.025, 0.975))
+boot_cis_snow
+```
+
+
+```{r}
+# comparing average boot time with average internal time
+boot_times = c()
+internal_times = c()
+boot_cis_lower = boot_cis_upper = internal_cis_lower = internal_cis_upper = data.frame()
+for (i in 1:100){
+  # boot
+  set.seed(123)
+  t1b = Sys.time()
+  rboot = boot(RESI::insurance, R = 1000, statistic = resi_stat, mod.full = mod1,
+                   parallel = "snow")
+  t2b = Sys.time()
+  dtb = difftime(t2b, t1b)
+  boot_times = c(boot_times, dtb)
+  # confidence intervals
+  bcis = apply(rboot$t, 2, quantile, probs = c(0.025, 0.975))
+  boot_cis_lower = rbind(boot_cis_lower, bcis[1,])
+  boot_cis_upper = rbind(boot_cis_upper, bcis[2,])
+  
+  # internal
+  set.seed(123)
+  t1i = Sys.time()
+  rint = resi(mod1, store.boot = T)
+  t2i = Sys.time()
+  dti = difftime(t2i, t1i)
+  internal_times = cbind(internal_times, dti)
+  icis = apply(resi_internal$boot.results, 2, quantile, probs = c(0.025, 0.975))
+  internal_cis_lower = rbind(internal_cis_lower, icis[1,])
+  internal_cis_upper = rbind(internal_cis_upper, icis[2,])
+} 
+avgtime_boot = mean(boot_times)
+avgtime_internal = mean(internal_times)
+avg_boot_lower = colMeans(boot_cis_lower)
+avg_boot_upper = colMeans(boot_cis_upper)
+avg_internal_lower = colMeans(internal_cis_lower)
+avg_internal_upper = colMeans(internal_cis_upper)
+```
