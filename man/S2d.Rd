@@ -16,7 +16,7 @@ Returns an estimate of Cohen's \emph{d} based on the RESI.
 }
 \description{
 Converts the robust effect size index (S) to Cohen's d using the formula from
-Vandekar, Rao, & Blume (2020).
+Vandekar, Tao, & Blume (2020).
 }
 \details{
 The pi parameter comes from the fact that Cohen's d doesn't account

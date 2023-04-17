@@ -29,7 +29,7 @@ dfs = car::Anova(mod, vcov. = sandwich::vcovHC)$Df
 f2S(fs, df = dfs, rdf = mod$df.residual, n = nrow(RESI::insurance))
 }
 \description{
-This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
+This function computes the robust effect size index from Vandekar, Tao, & Blume (2020).
 Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
 }
 \details{

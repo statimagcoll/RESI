@@ -17,7 +17,7 @@ chisq2S(chisq, df, n)
 Returns a scalar or vector argument of the the robust effect size index estimate.
 }
 \description{
-This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
+This function computes the robust effect size index from Vandekar, Tao, & Blume (2020).
 Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
 For mixed effects models, RESI is conditional on the average correlation
 structure within subjects.

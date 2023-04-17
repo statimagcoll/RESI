@@ -1,6 +1,9 @@
 #' Summary method for resi objects
 #'
-#' After running the \code{\link{resi}} function on a fitted model, this function can be used to print the coefficients table component. If the resi function was run with the `store.boot = TRUE` option to store the full matrix of bootstrapped estimates, the user can specify a different alpha level for this function's confidence intervals.
+#' After running the \code{\link{resi}} function on a fitted model, this function can
+#' be used to print the coefficients table component. If the resi function was run with
+#' the `store.boot = TRUE` option to store the full matrix of bootstrapped estimates,
+#' the user can specify a different alpha level for this function's confidence intervals.
 #' @param object an object resulting from resi function
 #' @param alpha an optional new specification for the confidence level. Can be vector-valued
 #' @param ... ignored
@@ -10,10 +13,10 @@
 #' mod = lm(charges ~ bmi + sex, data = RESI::insurance)
 #'
 #' # run resi with the store.boot = TRUE option
-#' resi.obj = resi(mod, nboot = 100, store.boot = TRUE, alpha = 0.01)
+#' resi_obj = resi(mod, nboot = 100, store.boot = TRUE, alpha = 0.01)
 #'
 #' # run summary, specifying a different alpha level if desired
-#' summary(resi.obj, alpha = 0.05)
+#' summary(resi_obj, alpha = 0.05)
 #' @export
 summary.resi <- function(object, alpha = NULL, ...){
   if(is.null(object$coefficients)){

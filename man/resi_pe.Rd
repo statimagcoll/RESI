@@ -167,7 +167,7 @@ resi_pe(model.full, ...)
 Returns a list containing RESI point estimates
 }
 \description{
-This function will estimate the robust effect size (RESI) from Vandekar, Rao, & Blume (2020).
+This function will estimate the robust effect size (RESI) from Vandekar, Tao, & Blume (2020).
 The overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in coefficients-style table.
 RESI is (optionally) estimated for each variable/interaction in an Anova-style table
 for models with existing Anova methods. This function is the building block for the \code{\link{resi}} function.
