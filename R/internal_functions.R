@@ -10,13 +10,30 @@ chisq2Ssq = function(chisq, df, n){
   S = (chisq - df)/n
 }
 
+#' Statistic for bootstrapping RESI estimates with boot package
+#'
+#' @param dat data.frame; original dataset
+#' @param inds bootstrapped indices
+#' @param mod.full full model passed to resi
+#' @return Returns a vector of RESI estimates for a single bootstrap replicate
+#' @noRd
+resi_stat = function(dat, inds, mod.full, mod.reduced, ...){
+  mod = update(mod.full, data = dat[inds,])
+  if (is.null(mod.reduced)){
+    mod.red = NULL} else{
+      mod.red = update(mod.reduced, data = data[inds,])
+    }
+  out = resi_pe(mod, model.reduced = mod.red, data = dat[inds,], ...)$estimates
+  return(out)
+}
+
 #' Non-parametric bootstrap sampling
 #'
 #' @param data data frame; The data frame that need bootstrapping
 #' @param id.var character; for clustered/longitudinal data, the name of id variable used as sampling unit.
 #' @return Returns a data frame containing bootstrapped data.
 #' @noRd
-boot.samp <- function(data, id.var = NULL) {
+boot.samp = function(data, id.var = NULL) {
   params = as.list(match.call()[-1])
   if (is.matrix(data)) data = as.data.frame(data)
   if (is.null(id.var)) {
@@ -35,7 +52,7 @@ boot.samp <- function(data, id.var = NULL) {
 #' @param data data frame; The data frame that need bootstrapping
 #' @return Returns a data frame containing weights generated via Bayesian bootstraps.
 #' @noRd
-bayes.samp <- function(data) {
+bayes.samp = function(data) {
   if (is.matrix(data)) data = as.data.frame(data)
   n = nrow(data)
   repeat{
@@ -52,13 +69,13 @@ bayes.samp <- function(data) {
 #' Copied regtools::nlshc (to be removed later, current reverse dependency issue)
 #' @return Returns robust covariance for nls model
 #' @noRd
-vcovnls <- function (nlsout, type = "HC") {
-  b <- coef(nlsout)
-  m <- nlsout$m
-  resid <- m$resid()
-  hmat <- m$gradient()
-  xhm <- hmat
-  yresidhm <- resid + hmat %*% b
-  lmout <- stats::lm(yresidhm ~ xhm - 1)
+vcovnls = function (nlsout, type = "HC") {
+  b = coef(nlsout)
+  m = nlsout$m
+  resid = m$resid()
+  hmat = m$gradient()
+  xhm = hmat
+  yresidhm = resid + hmat %*% b
+  lmout = stats::lm(yresidhm ~ xhm - 1)
   sandwich::vcovHC(lmout, type)
 }
