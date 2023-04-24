@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(RESI)
 
 # fit example model
-mod1 = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
+mod1 = glm(formula = charges ~ region * age + bmi + sex, data = RESI::insurance)
 
 # use internal bootstrapping
 set.seed(123)
@@ -26,35 +26,98 @@ dt
 ```
 
 ```{r}
-# try using boot package
+# try using boot package and new functions
 library(boot)
 
-resi_stat = function(dat, inds, mod.full){
+resi_stat = function(dat, inds, mod.full, mod.reduced, ...){
   mod = update(mod.full, data = dat[inds,])
-  out = resi_pe(mod, data = dat[inds,])$estimates
-  out
+  if (is.null(mod.reduced)){
+    mod.red = NULL} else{
+      mod.red = update(mod.reduced, data = data[inds,])
+    }
+  out = resi_pe(mod, model.reduced = mod.red, data = dat[inds,], ...)$estimates
+  return(out)
+}
+
+resi_boot <- function(model.full, ...){
+  UseMethod("resi_boot")
+}
+
+resi_boot.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+                         coefficients = TRUE, nboot = 1000,
+                         vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
+                         Anova.args = list(), vcov.args = list(), unbiased = TRUE,
+                         parallel = c("no", "multicore", "snow"), ncpus = getOption("boot.ncpus", 1L),
+                         ...){
+  dots = list(...)
+  if ("boot.method" %in% names(dots)){
+    message("Only nonparametric bootstrap supported for model type")
+  }
+
+  if (missing(data)){
+    data = model.full$model
+    tryCatch(update(model.full, data = data), error = function(e){
+      message("Updating model fit failed. Try rerunning with providing data argument")})
+  }
+  else{
+    data = as.data.frame(data)
+  }
+
+  # point estimation
+  output <- list(alpha = alpha, nboot = nboot, boot.method = "nonparam")
+  output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
+                             data = data, anova = anova, coefficients = coefficients,
+                             vcovfunc = vcovfunc, Anova.args = Anova.args,
+                             vcov.args = vcov.args, unbiased = unbiased, ...))
+
+
+  # bootstrapping
+  boot_out = boot(data = data, R = nboot, statistic = resi_stat, parallel = parallel,
+                  ncpus = ncpus, mod.full = model.full, mod.reduced = model.reduced,
+                  anova = anova, coefficients = coefficients, vcovfunc = vcovfunc,
+                  Anova.args = Anova.args, vcov.args = vcov.args, unbiased = unbiased,
+                  ...)
+
+  # bootstrapped estimates
+  boot.results = boot_out$t
+  colnames(boot.results) = names(boot_out$t0)
+
+  alpha.order = sort(c(alpha/2, 1-alpha/2))
+  output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] =
+    quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
+
+  if (coefficients){
+    CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile,
+                probs = alpha.order, na.rm = TRUE)
+    CIs = t(CIs)
+    output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+  }
+
+  if (anova){
+    CIs = apply(boot.results[,(ncol(boot.results)-length(which(rownames(output$anova) !=
+                                                             "Residuals"))+1):
+                           ncol(boot.results)], 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    CIs = t(CIs)
+    output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+  }
+
+  if(store.boot){
+    output$boot.results = boot.results
+  }
+  class(output) = "resi"
+  return(output)
 }
 
 set.seed(123)
 t1b = Sys.time()
-resi_boot = boot(RESI::insurance, R = 1000, statistic = resi_stat, mod.full = mod1)
+resi_boot_obj = resi_boot(mod1, store.boot = TRUE)
 t2b = Sys.time()
 dtb = difftime(t2b, t1b)
 dtb
 
-summary(resi_boot)
-boot_cis = apply(resi_boot$t, 2, quantile, probs = c(0.025, 0.975))
-boot_cis
+resi_boot_obj
 resi_internal
 
-# getting random seed from boot
-seedboot = resi_boot$seed
-
-# see if this changes resi internal
-set.seed(seedboot)
-resi_internal_seedboot = resi(mod1, store.boot = TRUE)
-boot_cis
-resi_internal_seedboot
 ```
 
 ```{r}
@@ -87,36 +150,23 @@ resi_bootb = boot(RESI::insurance, R = 1000, statistic = resi_bstat, mod.full = 
 t2bb = Sys.time()
 dtbb = difftime(t2bb, t1bb)
 dtbb
-boot_cisb = apply(resi_boot$t, 2, quantile, probs = c(0.025, 0.975))
+boot_cisb = apply(resi_bootb$t, 2, quantile, probs = c(0.025, 0.975))
 boot_cisb
 resi_internalb
-```
-
-```{r}
-# writing function in the argument
-set.seed(123)
-t1bi = Sys.time()
-resi_booti = boot(RESI::insurance, R = 1000, statistic = function(dt,i){resi_pe(update(mod1, 
-                                                                       data = dt[i,]))$estimates})
-t2bi = Sys.time()
-dtbi = difftime(t2bi, t1bi)
-dtbi
 ```
 
 
 ```{r}
 # trying snow option
+### may not be setting snow up correctly
 set.seed(123)
 t1s = Sys.time()
-resi_boot_snow = boot(RESI::insurance, R = 1000, statistic = resi_stat, mod.full = mod1,
-                      parallel = "snow")
+resi_boot_snow = resi_boot(mod1, store.boot = TRUE, parallel = "snow")
 t2s = Sys.time()
 dts = difftime(t2s, t1s)
 dts
 
-summary(resi_boot_snow)
-boot_cis_snow = apply(resi_boot_snow$t, 2, quantile, probs = c(0.025, 0.975))
-boot_cis_snow
+resi_boot_snow
 ```
 
 
@@ -129,13 +179,12 @@ for (i in 1:100){
   # boot
   set.seed(123)
   t1b = Sys.time()
-  rboot = boot(RESI::insurance, R = 1000, statistic = resi_stat, mod.full = mod1,
-                   parallel = "snow")
+  rboot = resi_boot(mod1, store.boot = TRUE, parallel = "snow")
   t2b = Sys.time()
   dtb = difftime(t2b, t1b)
   boot_times = c(boot_times, dtb)
   # confidence intervals
-  bcis = apply(rboot$t, 2, quantile, probs = c(0.025, 0.975))
+  bcis = apply(rboot$boot.results, 2, quantile, probs = c(0.025, 0.975))
   boot_cis_lower = rbind(boot_cis_lower, bcis[1,])
   boot_cis_upper = rbind(boot_cis_upper, bcis[2,])
   
@@ -156,4 +205,9 @@ avg_boot_lower = colMeans(boot_cis_lower)
 avg_boot_upper = colMeans(boot_cis_upper)
 avg_internal_lower = colMeans(internal_cis_lower)
 avg_internal_upper = colMeans(internal_cis_upper)
+
+avgtime_boot
+avgtime_internal
+avg_boot_lower - avg_internal_lower
+avg_boot_upper - avg_internal_upper
 ```

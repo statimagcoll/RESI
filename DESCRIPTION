@@ -32,6 +32,7 @@ Collate:
   'plot.R'
   'print.R'
   'omnibus.R'
+  'resi_boot.R'
 Imports:
     aod,
     car,
