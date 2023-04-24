@@ -193,13 +193,23 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
 
   if (coefficients){
-    CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    co = boot.results[,2:(1+nrow(output$coefficients))]
+    if (is.null(dim(co))){
+      CIs = quantile(co, probs = alpha.order, na.rm = TRUE)
+    } else{
+      CIs = apply(co, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    }
     CIs = t(CIs)
     output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
   }
 
   if (anova){
-    CIs = apply(boot.results[,(ncol(boot.results)-length(which(rownames(output$anova) != "Residuals"))+1):ncol(boot.results)], 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    an = boot.results[,(ncol(boot.results)-length(which(rownames(output$anova) != "Residuals"))+1):ncol(boot.results)]
+    if (is.null(dim(an))){
+      CIs = quantile(an, probs = alpha.order, na.rm = TRUE)
+    } else{
+      CIs = apply(an, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    }
     CIs = t(CIs)
     output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
   }
@@ -281,13 +291,23 @@ resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
 
   if (coefficients){
-    CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    co = boot.results[,2:(1+nrow(output$coefficients))]
+    if (is.null(dim(co))){
+      CIs = quantile(co, probs = alpha.order, na.rm = TRUE)
+    } else{
+      CIs = apply(co, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    }
     CIs = t(CIs)
     output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
   }
 
   if (anova){
-    CIs = apply(boot.results[,(ncol(boot.results)-length(which(rownames(output$anova) != "Residuals"))+1):ncol(boot.results)], 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    an = boot.results[,(ncol(boot.results)-length(which(rownames(output$anova) != "Residuals"))+1):ncol(boot.results)]
+    if (is.null(dim(an))){
+      CIs = quantile(an, probs = alpha.order, na.rm = TRUE)
+    } else{
+      CIs = apply(an, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    }
     CIs = t(CIs)
     output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
   }
@@ -388,7 +408,12 @@ resi.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE
   output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
 
   if (coefficients){
-    CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    co = boot.results[,2:(1+nrow(output$coefficients))]
+    if (is.null(dim(co))){
+      CIs = quantile(co, probs = alpha.order, na.rm = TRUE)
+    } else{
+      CIs = apply(co, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    }
     CIs = t(CIs)
     output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
   }
@@ -505,7 +530,12 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, coefficients = T
   output$overall[nrow(output$overall),c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = quantile(boot.results[,1], probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
 
   if (coefficients){
-    CIs = apply(boot.results[,2:(1+nrow(output$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+    co = boot.results[,2:(1+nrow(output$coefficients))]
+    if(is.null(dim(co))){
+      CIs = quantile(co, probs = alpha.order, na.rm = TRUE)
+    } else{
+      CIs = apply(co, 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+    }
     CIs = t(CIs)
     output$coefficients[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''), paste((1-alpha/2)*100, '%', sep=''))] = CIs
   }
@@ -576,26 +606,43 @@ resi.geeglm <- function(model.full, data, anova = TRUE,
   alpha.order = sort(c(alpha/2, 1-alpha/2))
 
   if (coefficients){
-    lCIs = apply(boot.results[,1:nrow(output$coefficients)], 2,  quantile,
+    lco = boot.results[,1:nrow(output$coefficients)]
+    if (is.null(dim(lco))){
+      lCIs = quantile(lco, probs = alpha.order, na.rm = TRUE)
+    } else{
+      lCIs = apply(lco, 2,  quantile,
                  probs = alpha.order, na.rm = TRUE)
+      }
     lCIs = t(lCIs)
     output$coefficients[1:nrow(lCIs), paste("L ",alpha.order*100, '%', sep='')] = lCIs
-    cCIs = apply(boot.results[,(nrow(output$coefficients)+1):(2*nrow(output$coefficients))],
-                 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    cco = boot.results[,(nrow(output$coefficients)+1):(2*nrow(output$coefficients))]
+    if (is.null(dim(cco))){
+      cCIs = quantile(cco, probs = alpha.order, na.rm = TRUE)
+    } else{
+      cCIs = apply(cco, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    }
     cCIs = t(cCIs)
     output$coefficients[1:nrow(cCIs), paste("CS ",alpha.order*100, '%', sep='')] = cCIs
   }
 
   if (anova){
-    lCIs = apply(boot.results[,(ncol(boot.results)-
-                                  2*length(rownames(output$anova))+1):
-                                (ncol(boot.results)-length(rownames(output$anova)))],
-                 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    lan = boot.results[,(ncol(boot.results)-
+                           2*length(rownames(output$anova))+1):
+                         (ncol(boot.results)-length(rownames(output$anova)))]
+    if (is.null(dim(lan))){
+      lCIs = quantile(lan, probs = alpha.order, na.rm = TRUE)
+    } else{
+      lCIs = apply(lan, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    }
     lCIs = t(lCIs)
     output$anova[1:nrow(lCIs), paste("L ", alpha.order*100, '%', sep='')] = lCIs
-    cCIs = apply(boot.results[,(ncol(boot.results)-length(rownames(output$anova))+1):
-                                ncol(boot.results)],
-                 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    can = boot.results[,(ncol(boot.results)-length(rownames(output$anova))+1):
+                         ncol(boot.results)]
+    if (is.null(dim(can))){
+      cCIs = quantile(can, probs = alpha.order, na.rm = TRUE)
+    } else{
+      cCIs = apply(can, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    }
     cCIs = t(cCIs)
     output$anova[1:nrow(cCIs), paste("CS ", alpha.order*100, '%', sep='')] = cCIs
   }
@@ -649,13 +696,22 @@ resi.gee <- function(model.full, data, nboot = 1000, alpha = 0.05,
 
   alpha.order = sort(c(alpha/2, 1-alpha/2))
 
-  lCIs = apply(boot.results[,1:nrow(output$coefficients)], 2,  quantile,
-                probs = alpha.order, na.rm = TRUE)
+  lco = boot.results[,1:nrow(output$coefficients)]
+  if (is.null(dim(lco))){
+    lCIs = quantile(lco, probs = alpha.order, na.rm = TRUE)
+  } else{
+    lCIs = apply(lco, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+  }
   lCIs = t(lCIs)
   output$coefficients[1:nrow(lCIs), paste("L ", alpha.order*100, '%', sep='')] = lCIs
-  cCIs = apply(boot.results[,(nrow(output$coefficients) + 1):
-                              (2 * nrow(output$coefficients))], 2,  quantile,
+  cco = boot.results[,(nrow(output$coefficients) + 1):
+                       (2 * nrow(output$coefficients))]
+  if (is.null(dim(cco))){
+    cCIs = quantile(cco, probs = alpha.order, na.rm = TRUE)
+  } else{
+    cCIs = apply(cco, 2,  quantile,
                probs = alpha.order, na.rm = TRUE)
+  }
   cCIs = t(cCIs)
   output$coefficients[1:nrow(cCIs), paste("CS ", alpha.order*100, '%', sep='')] = cCIs
 
