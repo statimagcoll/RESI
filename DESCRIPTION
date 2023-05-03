@@ -35,6 +35,7 @@ Collate:
   'resi_boot.R'
 Imports:
     aod,
+    boot,
     car,
     clubSandwich,
     lmtest,

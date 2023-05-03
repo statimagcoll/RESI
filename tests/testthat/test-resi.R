@@ -132,16 +132,17 @@ test_that("Specifying non-allowed vcov produces warning",{
                  "vcovfunc argument ignored for coxph objects")}
 })
 
+
 test_that("boot.method = 'bayes' only works for lm and nls", {
   expect_true(resi(mod.lm, nboot = 1, boot.method = "bayes")$boot.method == "bayes")
   expect_true(resi(mod.nls, data = data.nls, nboot = 1, boot.method = "bayes")$boot.method == "bayes")
-  expect_true(resi(mod, nboot = 1, boot.method = "bayes")$boot.method == "nonparam")
+  expect_error(resi(mod, nboot = 1, boot.method = "bayes"))
   if(requireNamespace("survival")){
-  expect_true(resi(mod.surv, data = data.surv, nboot = 1, boot.method = "bayes")$boot.method == "nonparam")
-  expect_true(resi(mod.coxph, data = data.surv, nboot = 1, boot.method = "bayes")$boot.method == "nonparam")}
+    expect_error(resi(mod.surv, data = data.surv, nboot = 1, boot.method = "bayes"))
+    expect_error(resi(mod.coxph, data = data.surv, nboot = 1, boot.method = "bayes"))}
   if(requireNamespace("pscl")){
-  expect_true(resi(mod.hurdle, nboot = 1, boot.method = "bayes")$boot.method == "nonparam")
-  expect_true(resi(mod.zinf, nboot = 1, boot.method = "bayes")$boot.method == "nonparam")}
+    expect_error(resi(mod.hurdle, nboot = 1, boot.method = "bayes"))
+    expect_error(resi(mod.zinf, nboot = 1, boot.method = "bayes"))}
 })
 
 test_that("data is needed for certain models", {

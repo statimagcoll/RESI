@@ -37,12 +37,15 @@ resi(model.full, ...)
   anova = TRUE,
   coefficients = TRUE,
   nboot = 1000,
+  boot.method = "nonparam",
   vcovfunc = sandwich::vcovHC,
   alpha = 0.05,
   store.boot = FALSE,
   Anova.args = list(),
   vcov.args = list(),
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
   ...
 )
 
@@ -59,6 +62,8 @@ resi(model.full, ...)
   Anova.args = list(),
   vcov.args = list(),
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
   ...
 )
 
@@ -76,6 +81,8 @@ resi(model.full, ...)
   Anova.args = list(),
   vcov.args = list(),
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
   ...
 )
 
@@ -91,6 +98,8 @@ resi(model.full, ...)
   store.boot = FALSE,
   vcov.args = list(),
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
   ...
 )
 
@@ -205,6 +214,8 @@ resi(model.full, ...)
   Anova.args = list(),
   vcov.args = list(),
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
   ...
 )
 
@@ -221,6 +232,8 @@ resi(model.full, ...)
   Anova.args = list(),
   vcov.args = list(),
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
   ...
 )
 
@@ -369,6 +382,8 @@ resi(model.full, ...)
 
 \item{nboot}{Numeric, the number of bootstrap replicates. By default, 1000.}
 
+\item{boot.method}{String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.}
+
 \item{vcovfunc}{The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).}
 
 \item{alpha}{Numeric, significance level of the constructed CIs. By default, 0.05.}
@@ -380,8 +395,6 @@ resi(model.full, ...)
 \item{vcov.args}{List, additional arguments to be passed to vcovfunc.}
 
 \item{unbiased}{Logical, whether to use the unbiased or alternative T/Z statistic to RESI conversion. By default, `TRUE`. See details.}
-
-\item{boot.method}{String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.}
 }
 \value{
 Returns a list that includes function arguments, RESI point estimates,
