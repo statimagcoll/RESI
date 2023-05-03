@@ -15,17 +15,45 @@ chisq2Ssq = function(chisq, df, n){
 #' @param dat data.frame; original dataset
 #' @param inds bootstrapped indices
 #' @param mod.full full model passed to resi
+#' @param mod.reduced reduced model passed to resi
+#' @param boot.method non-parametric (default) or Bayesian bootstrap
 #' @return Returns a vector of RESI estimates for a single bootstrap replicate
 #' @noRd
-resi_stat = function(dat, inds, mod.full, mod.reduced, ...){
-  mod = update(mod.full, data = dat[inds,])
-  if (is.null(mod.reduced)){
-    mod.red = NULL} else{
-      mod.red = update(mod.reduced, data = data[inds,])
+resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",...){
+  # nonparametric bootstrap
+  if (boot.method == "nonparam"){
+    boot.data = dat[inds,]
+    mod.full = try(update(mod.full, data = boot.data), silent = T)
+    if (!(is.null(mod.reduced))){
+      mod.reduced = try(update(mod.reduced, data = boot.data), silent = T)}
     }
-  out = resi_pe(mod, model.reduced = mod.red, data = dat[inds,], ...)$estimates
+
+  else{
+    # Bayesian bootstrap
+    n = nrow(dat)
+    repeat{
+      # Generate the random numbers from unif(0, 1)
+      u = runif(n-1)
+      u.sort = sort(u)
+      g = c(u.sort, 1) - c(0, u.sort)
+      if (sum(g == 0) == 0) break
+    } # end `repeat`
+    boot.data = cbind(dat, g)
+    mod.full = try(update(mod.full, data = boot.data, weights = g), silent = T)
+    if (!(is.null(mod.reduced))){
+      mod.reduced = try(update(mod.reduced, data = boot.data, weights = g), silent = T)}
+  }
+
+  if(!(inherits(mod.full, "try-error") | inherits(mod.reduced, "try-error"))){
+    out = resi_pe(mod.full, model.reduced = mod.reduced, data = boot.data, ...)$estimates
+  } else{
+    out = NA
+  }
+
+  # for models with fail checking, count nboot-nrow(t0) for number of failures
   return(out)
 }
+
 
 #' Non-parametric bootstrap sampling
 #'
