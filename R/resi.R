@@ -141,18 +141,16 @@ resi <- function(model.full, ...){
   UseMethod("resi")
 }
 
-# take out bayes option for glm
-
 #' @describeIn resi RESI point and interval estimation for models
 #' @export
 resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                          coefficients = TRUE, nboot = 1000, boot.method = 'nonparam',
                          vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
                          Anova.args = list(), vcov.args = list(), unbiased = TRUE,
-                         parallel = c("no", "multicore", "snow"), ncpus = getOption("boot.ncpus", 1L),
-                         ...){
-  # current goal is for default method to work with all cross sectional model types
-  # need to check for supported type somehow XXX
+                         parallel = c("no", "multicore", "snow"),
+                         ncpus = getOption("boot.ncpus", 1L), long = FALSE,
+                         clvar = NULL, ...){
+  # need to check for supported type
   dots = list(...)
 
   if (missing(data)){
@@ -185,40 +183,90 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                              vcovfunc = vcovfunc, Anova.args = Anova.args,
                              vcov.args = vcov.args, unbiased = unbiased, ...))
 
+  if (long){
+    data = unique(data[, clvar])
+  }
+
   # bootstrapping
-  boot_out = boot(data = data, R = nboot, statistic = resi_stat, parallel = parallel,
+  suppressMessages(capture.output(boot_out <- boot(data = data, R = nboot, statistic = resi_stat, parallel = parallel,
                   ncpus = ncpus, mod.full = model.full, mod.reduced = model.reduced,
                   anova = anova, coefficients = coefficients, vcovfunc = vcovfunc,
                   Anova.args = Anova.args, vcov.args = vcov.args, unbiased = unbiased,
-                  boot.method = boot.method,...)
+                  boot.method = boot.method, clvar = clvar, ...), file = nullfile()))
 
   # bootstrapped estimates
   boot.results = boot_out$t
   colnames(boot.results) = names(boot_out$t0)
 
   alpha.order = sort(c(alpha/2, 1-alpha/2))
-  output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
 
-  if (coefficients){
-    co = boot.results[,2:(1+nrow(output$coefficients))]
-    if (is.null(dim(co))){
-      CIs = quantile(co, probs = alpha.order, na.rm = TRUE)
-    } else{
-      CIs = apply(co, 2,  quantile, probs = alpha.order, na.rm = TRUE)
-    }
-    CIs = t(CIs)
-    output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
-  }
+  if (!long){
+    output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
 
-  if (anova){
-    an = boot.results[,(ncol(boot.results)-length(which(rownames(output$anova) != "Residuals"))+1):ncol(boot.results)]
-    if (is.null(dim(an))){
-      CIs = quantile(an, probs = alpha.order, na.rm = TRUE)
-    } else{
-      CIs = apply(an, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+    if (coefficients){
+      co = boot.results[,2:(1+nrow(output$coefficients))]
+      if (is.null(dim(co))){
+        CIs = quantile(co, probs = alpha.order, na.rm = TRUE)
+      } else{
+        CIs = apply(co, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+      }
+      CIs = t(CIs)
+      output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
     }
-    CIs = t(CIs)
-    output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+
+    if (anova){
+      an = boot.results[,(ncol(boot.results)-length(which(rownames(output$anova) != "Residuals"))+1):ncol(boot.results)]
+      if (is.null(dim(an))){
+        CIs = quantile(an, probs = alpha.order, na.rm = TRUE)
+      } else{
+        CIs = apply(an, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+      }
+      CIs = t(CIs)
+      output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+    }
+  } else {
+    # L-RESI and CS-RESI for longitudinal models
+    if (coefficients){
+      lco = boot.results[,1:nrow(output$coefficients)]
+      if (is.null(dim(lco))){
+        lCIs = quantile(lco, probs = alpha.order, na.rm = TRUE)
+      } else{
+        lCIs = apply(lco, 2,  quantile,
+                     probs = alpha.order, na.rm = TRUE)
+      }
+      lCIs = t(lCIs)
+      output$coefficients[1:nrow(lCIs), paste("L ",alpha.order*100, '%', sep='')] = lCIs
+      cco = boot.results[,(nrow(output$coefficients)+1):(2*nrow(output$coefficients))]
+      if (is.null(dim(cco))){
+        cCIs = quantile(cco, probs = alpha.order, na.rm = TRUE)
+      } else{
+        cCIs = apply(cco, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+      }
+      cCIs = t(cCIs)
+      output$coefficients[1:nrow(cCIs), paste("CS ",alpha.order*100, '%', sep='')] = cCIs
+    }
+
+    if (anova){
+      lan = boot.results[,(ncol(boot.results)-
+                             2*length(rownames(output$anova))+1):
+                           (ncol(boot.results)-length(rownames(output$anova)))]
+      if (is.null(dim(lan))){
+        lCIs = quantile(lan, probs = alpha.order, na.rm = TRUE)
+      } else{
+        lCIs = apply(lan, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+      }
+      lCIs = t(lCIs)
+      output$anova[1:nrow(lCIs), paste("L ", alpha.order*100, '%', sep='')] = lCIs
+      can = boot.results[,(ncol(boot.results)-length(rownames(output$anova))+1):
+                           ncol(boot.results)]
+      if (is.null(dim(can))){
+        cCIs = quantile(can, probs = alpha.order, na.rm = TRUE)
+      } else{
+        cCIs = apply(can, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+      }
+      cCIs = t(cCIs)
+      output$anova[1:nrow(cCIs), paste("CS ", alpha.order*100, '%', sep='')] = cCIs
+    }
   }
 
   if(store.boot){
@@ -299,7 +347,9 @@ resi.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE
 resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                          coefficients = TRUE, nboot = 1000,
                          vcovfunc = vcov, alpha = 0.05, store.boot = FALSE,
-                         Anova.args = list(), unbiased = TRUE, ...){
+                         Anova.args = list(), unbiased = TRUE,
+                         parallel = c("no", "multicore", "snow"),
+                         ncpus = getOption("boot.ncpus", 1L),...){
   dots = list(...)
   if (missing(data)){
     stop('\nData argument is required for model type')
@@ -314,7 +364,8 @@ resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
                anova = anova, coefficients = coefficients, nboot = nboot, vcovfunc = vcovfunc,
                store.boot = store.boot, Anova.args = Anova.args,
-               unbiased = unbiased, alpha = alpha, boot.method = "nonparam", ...)
+               unbiased = unbiased, alpha = alpha, boot.method = "nonparam", parallel = parallel,
+               ncpus = ncpus, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for coxph models
@@ -322,7 +373,9 @@ resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                        coefficients = TRUE, nboot = 1000,
                        vcovfunc = vcov, alpha = 0.05, store.boot = FALSE,
-                       Anova.args = list(), unbiased = TRUE, ...){
+                       Anova.args = list(), unbiased = TRUE,
+                       parallel = c("no", "multicore", "snow"),
+                       ncpus = getOption("boot.ncpus", 1L),...){
   dots = list(...)
   if (missing(data)){
     stop('\nData argument is required for model type')
@@ -340,7 +393,7 @@ resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                anova = anova, coefficients = coefficients, nboot = nboot, vcovfunc = vcovfunc,
                store.boot = store.boot, Anova.args = Anova.args,
                unbiased = unbiased, alpha = alpha, boot.method = "nonparam",
-               skip.red = TRUE,...)
+               skip.red = TRUE, parallel = parallel, ncpus = ncpus, ...)
 }
 
 
@@ -348,7 +401,9 @@ resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @export
 resi.hurdle <- function(model.full, model.reduced = NULL, data, coefficients = TRUE,
                      nboot = 1000, vcovfunc = sandwich::sandwich,
-                     alpha = 0.05, store.boot = FALSE, vcov.args = list(), unbiased = TRUE, ...){
+                     alpha = 0.05, store.boot = FALSE, vcov.args = list(),
+                     unbiased = TRUE, parallel = c("no", "multicore", "snow"),
+                     ncpus = getOption("boot.ncpus", 1L), ...){
 
   dots = list(...)
   if ("boot.method" %in% names(dots)){
@@ -357,7 +412,8 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, coefficients = T
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
                anova = FALSE, coefficients = coefficients, nboot = nboot,
                vcovfunc = vcovfunc, store.boot = store.boot, vcov.args = vcov.args,
-               unbiased = unbiased, alpha = alpha, boot.method = "nonparam",...)
+               unbiased = unbiased, alpha = alpha, boot.method = "nonparam",
+               parallel = parallel, ncpus = ncpus, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for zeroinfl models
@@ -366,11 +422,11 @@ resi.zeroinfl <- resi.hurdle
 
 #' @describeIn resi RESI point and interval estimation for GEE models
 #' @export
-
 resi.geeglm <- function(model.full, data, anova = TRUE,
                         coefficients = TRUE, nboot = 1000,
                         alpha = 0.05, store.boot = FALSE,
-                        unbiased = TRUE, ...){
+                        unbiased = TRUE, parallel = c("no", "multicore", "snow"),
+                        ncpus = getOption("boot.ncpus", 1L), ...){
   dots = list(...)
   if ("boot.method" %in% names(dots)){
     stop("\nOnly nonparametric bootstrap supported for model type")
@@ -385,91 +441,26 @@ resi.geeglm <- function(model.full, data, anova = TRUE,
     data = as.data.frame(data)
   }
 
-  # point estimation
-  output <- list(alpha = alpha, nboot = nboot, boot.method = "nonparam")
-  output = c(output, resi_pe(model.full = model.full, data = data, anova = anova,
-                             coefficients = coefficients, unbiased = unbiased, ...))
-
   # id variable name
   id_var = as.character(model.full$call$id)
-  corstr_spec = model.full$corstr
+
   # bootstrapping
-  boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
-  colnames(boot.results) = names(output$estimates)
-  fail = 0
-  for (i in 1:nboot){
-    skip_to_next <- FALSE
-    boot.data = boot.samp(data, id.var = id_var)
-    # re-fit the model
-    boot.model.full = update(model.full, data = boot.data, corstr = corstr_spec,
-                             id = boot.data$bootid)
-    rv.boot = tryCatch(resi_pe(boot.model.full,  data = boot.data, anova = anova,
-                               coefficients = coefficients, unbiased = unbiased, ...),
-                       error = function(e){skip_to_next <<- TRUE})
-    if (skip_to_next) {
-      fail = fail + 1
-      next}
-    #output.boot$RESI= cbind(output.boot$RESI, rv.boot$resi[, 'RESI'])
-    boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full,
-                                                data = boot.data, anova = anova,
-                                                coefficients = coefficients,
-                                                unbiased = unbiased, ...)$estimates)
+  output = resi.default(model.full = model.full, model.reduced = NULL, data = data,
+               anova = anova, coefficients = coefficients, nboot = nboot, vcovfunc = vcovfunc,
+               store.boot = TRUE, Anova.args = Anova.args, vcov.args = vcov.args,
+               unbiased = unbiased, alpha = alpha, parallel = parallel,
+               ncpus = ncpus, boot.method = "nonparam", cluster = TRUE,
+               clvar = id_var, mod.dat = data, skip.red = TRUE, long = TRUE, ...)
+
+
+  # number of bootstrap replicates with failed updating
+  output$nfail = length(which(is.na(output$boot.results[,1])))
+
+  if (!store.boot){
+    output = output[names(output) != "boot.results"]
   }
-
-  alpha.order = sort(c(alpha/2, 1-alpha/2))
-
-  if (coefficients){
-    lco = boot.results[,1:nrow(output$coefficients)]
-    if (is.null(dim(lco))){
-      lCIs = quantile(lco, probs = alpha.order, na.rm = TRUE)
-    } else{
-      lCIs = apply(lco, 2,  quantile,
-                 probs = alpha.order, na.rm = TRUE)
-      }
-    lCIs = t(lCIs)
-    output$coefficients[1:nrow(lCIs), paste("L ",alpha.order*100, '%', sep='')] = lCIs
-    cco = boot.results[,(nrow(output$coefficients)+1):(2*nrow(output$coefficients))]
-    if (is.null(dim(cco))){
-      cCIs = quantile(cco, probs = alpha.order, na.rm = TRUE)
-    } else{
-      cCIs = apply(cco, 2,  quantile, probs = alpha.order, na.rm = TRUE)
-    }
-    cCIs = t(cCIs)
-    output$coefficients[1:nrow(cCIs), paste("CS ",alpha.order*100, '%', sep='')] = cCIs
-  }
-
-  if (anova){
-    lan = boot.results[,(ncol(boot.results)-
-                           2*length(rownames(output$anova))+1):
-                         (ncol(boot.results)-length(rownames(output$anova)))]
-    if (is.null(dim(lan))){
-      lCIs = quantile(lan, probs = alpha.order, na.rm = TRUE)
-    } else{
-      lCIs = apply(lan, 2,  quantile, probs = alpha.order, na.rm = TRUE)
-    }
-    lCIs = t(lCIs)
-    output$anova[1:nrow(lCIs), paste("L ", alpha.order*100, '%', sep='')] = lCIs
-    can = boot.results[,(ncol(boot.results)-length(rownames(output$anova))+1):
-                         ncol(boot.results)]
-    if (is.null(dim(can))){
-      cCIs = quantile(can, probs = alpha.order, na.rm = TRUE)
-    } else{
-      cCIs = apply(can, 2,  quantile, probs = alpha.order, na.rm = TRUE)
-    }
-    cCIs = t(cCIs)
-    output$anova[1:nrow(cCIs), paste("CS ", alpha.order*100, '%', sep='')] = cCIs
-  }
-
-  if(store.boot){
-    output$boot.results = boot.results
-  }
-
-  output$nfail = fail
 
   class(output) = "resi"
-  return(output)
-
-  # RESI_se = apply(output.boot$RESI, 1, sd, na.rm = TRUE)
 
   return(output)
 }
@@ -478,7 +469,9 @@ resi.geeglm <- function(model.full, data, anova = TRUE,
 #' @describeIn resi RESI point and interval estimation for GEE models
 #' @export
 resi.gee <- function(model.full, data, nboot = 1000, alpha = 0.05,
-                     store.boot = FALSE, unbiased = TRUE, ...){
+                     store.boot = FALSE, unbiased = TRUE,
+                     parallel = c("no", "multicore", "snow"),
+                     ncpus = getOption("boot.ncpus", 1L), ...){
   dots = list(...)
   if ("boot.method" %in% names(dots)){
     stop("\nOnly nonparametric bootstrap supported for model type")
@@ -490,53 +483,33 @@ resi.gee <- function(model.full, data, nboot = 1000, alpha = 0.05,
     data = as.data.frame(data)
   }
 
-  output <- list(alpha = alpha, nboot = nboot, boot.method = "nonparam")
-  # RESI point estimates
-  output = c(output, resi_pe(model.full, data, unbiased, ...))
-  # id variable name
   id_var = as.character(model.full$call$id)
 
+  #
+  # # re-fit the model
+  # suppressMessages(capture.output(boot.model.full <-
+  #                                   update(model.full, data = boot.data,
+  #                                          id = boot.data$bootid),
+  #                                 file =  nullfile()))
+
   # bootstrapping
-  boot.results = data.frame(matrix(nrow = nboot, ncol = length(output$estimates)))
-  colnames(boot.results) = names(output$estimates)
-  for (i in 1:nboot){
-    boot.data = boot.samp(data, id.var = id_var)
-    # re-fit the model
-    suppressMessages(capture.output(boot.model.full <-
-                                      update(model.full, data = boot.data,
-                                             id = boot.data$bootid),
-                                    file =  nullfile()))
-    boot.results[i,] = suppressWarnings(resi_pe(model.full = boot.model.full,
-                                                data = boot.data,
-                                                unbiased = unbiased, ...)$estimates)
+  output = resi.default(model.full = model.full, model.reduced = NULL, data = data,
+                        coefficients = TRUE, nboot = nboot, vcovfunc = vcovfunc,
+                        store.boot = TRUE, anova = FALSE, vcov.args = vcov.args,
+                        unbiased = unbiased, alpha = alpha, parallel = parallel,
+                        ncpus = ncpus, boot.method = "nonparam", cluster = TRUE,
+                        clvar = id_var, mod.dat = data, skip.red = TRUE, long = TRUE, ...)
+
+
+  # number of bootstrap replicates with failed updating
+  output$nfail = length(which(is.na(output$boot.results[,1])))
+
+  if (!store.boot){
+    output = output[names(output) != "boot.results"]
   }
 
-  alpha.order = sort(c(alpha/2, 1-alpha/2))
+  class(output) = "resi"
 
-  lco = boot.results[,1:nrow(output$coefficients)]
-  if (is.null(dim(lco))){
-    lCIs = quantile(lco, probs = alpha.order, na.rm = TRUE)
-  } else{
-    lCIs = apply(lco, 2,  quantile, probs = alpha.order, na.rm = TRUE)
-  }
-  lCIs = t(lCIs)
-  output$coefficients[1:nrow(lCIs), paste("L ", alpha.order*100, '%', sep='')] = lCIs
-  cco = boot.results[,(nrow(output$coefficients) + 1):
-                       (2 * nrow(output$coefficients))]
-  if (is.null(dim(cco))){
-    cCIs = quantile(cco, probs = alpha.order, na.rm = TRUE)
-  } else{
-    cCIs = apply(cco, 2,  quantile,
-               probs = alpha.order, na.rm = TRUE)
-  }
-  cCIs = t(cCIs)
-  output$coefficients[1:nrow(cCIs), paste("CS ", alpha.order*100, '%', sep='')] = cCIs
-
-  if(store.boot){
-    output$boot.results = boot.results
-  }
-
-  class(output)= 'resi'
   return(output)
 }
 
