@@ -556,12 +556,20 @@ resi_pe.zeroinfl <- resi_pe.hurdle
 #' @export
 resi_pe.geeglm <- function(model.full, data, anova = TRUE,
                            coefficients = TRUE, unbiased = TRUE, ...){
-  data = model.full$data
+  if (missing(data)){
+    data = model.full$data
+  }
 
   # sample size
   N = length(summary(model.full)$clusz)
   # total num of observations
   tot_obs = nrow(data)
+
+  # num of observations from each subject
+  n_i = table(model.full$id)
+  n_i = rep(n_i, times = n_i)
+  # weight in independent model
+  data$w = 1 / n_i
 
   output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
                  estimates = c())
@@ -570,24 +578,27 @@ resi_pe.geeglm <- function(model.full, data, anova = TRUE,
   # model form
   form = formula(model.full)
   # independence model
-  w_resi = model.full$prior.weights
-  data$w_resi = w_resi
-  mod_indg = glm(formula = form, family = model.full$family, data = data,
-                 weights = w_resi, contrasts = model.full$contrasts)
-
+  # w_resi = model.full$prior.weights
+  # data$w_resi = w_resi
+  mod_indg = suppressWarnings(glm(formula = form, family = model.full$family, data = data,
+                 weights = w, contrasts = model.full$contrasts))
+  mod_indg$residuals = mod_indg$residuals / sqrt(mod_indg$weights)
   # the var-cov matrix estimate from the independence model
   # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
   cov_ind = sandwich::vcovHC(mod_indg, type = "HC0")
-  cov_ind = cov_ind * tot_obs/N
+
+
+  ### cov_ind = cov_ind * tot_obs/N
+
   # make copy of model.full, replace vbeta with independence
   mod_ind = model.full
   mod_ind$geese$vbeta = cov_ind
 
   # The var-cov matrix estimate from the analysis model (the one considering correlation )
   # Note: this is the estimate for Cov(\hat{\beta}_long)
-  cov_long = vcov(model.full)
+  ### cov_long = vcov(model.full)
   # convert it to the estimate for \Sigma_long = Cov(\sqrt{N}(\hat{\beta}_long - \beta_0))
-  cov_long = cov_long * N
+  ### cov_long = cov_long * N
 
   # longitudinal RESI
   # coefficients (z statistics)
@@ -656,20 +667,26 @@ resi_pe.gee <- function(model.full, data, unbiased = TRUE, ...){
   # total num of observations
   tot_obs = nrow(data)
 
+  # num of observations from each subject
+  n_i = table(model.full$id)
+  n_i = rep(n_i, times = n_i)
+  # weight in independent model
+  data$w = 1 / n_i
+
   # independence model
-  data$new_id = 1:nrow(data)
+  # data$new_id = 1:nrow(data)
   # suppressMessages(capture.output(mod_ind <- update(model.full, id = new_id, data = data),
   #                                           file =  nullfile()))
   # # adjust covariance
   # mod_ind$robust.variance = mod_ind$robust.variance * tot_obs/N
   # to match geeglm
-  mod_indg = glm(formula = formula(model.full), family = model.full$family, data = data,
-                 contrasts = model.full$contrasts)
-
+  mod_indg = suppressWarnings(glm(formula = formula(model.full), family = model.full$family, data = data,
+                 contrasts = model.full$contrasts, weights = w))
+  mod_indg$residuals = mod_indg$residuals / sqrt(mod_indg$weights)
   # the var-cov matrix estimate from the independence model
   # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
   cov_ind = sandwich::vcovHC(mod_indg, type = "HC0")
-  cov_ind = cov_ind * tot_obs/N
+  # cov_ind = cov_ind * tot_obs/N
   # make copy of full model and substitute independence variance
   mod_ind = model.full
   mod_ind$robust.variance = cov_ind
