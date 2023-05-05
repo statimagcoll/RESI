@@ -168,7 +168,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   if (is.null(model.reduced)){
     if(!("skip.red" %in% names(dots))){
       form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
-      if(!(is.null(model.full$model))){
+      if(!(is.null(model.full$model)) & !long){
         model.reduced <- update(model.full, formula = form.reduced, data = model.full$model)
       } else{
         model.reduced <- update(model.full, formula = form.reduced, data = data)
@@ -225,9 +225,16 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
       output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
     }
   } else {
+    r = 1
+    if (!is.null(output$overall)){
+      # L-RESI for geeglm model overall Wald test
+      output$overall[nrow(output$overall),paste("L ",alpha.order*100, '%', sep='')] =
+        quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
+      r = 2
+    }
     # L-RESI and CS-RESI for longitudinal models
     if (coefficients){
-      lco = boot.results[,1:nrow(output$coefficients)]
+      lco = boot.results[,r:(nrow(output$coefficients) + r -1)]
       if (is.null(dim(lco))){
         lCIs = quantile(lco, probs = alpha.order, na.rm = TRUE)
       } else{
@@ -236,7 +243,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
       }
       lCIs = t(lCIs)
       output$coefficients[1:nrow(lCIs), paste("L ",alpha.order*100, '%', sep='')] = lCIs
-      cco = boot.results[,(nrow(output$coefficients)+1):(2*nrow(output$coefficients))]
+      cco = boot.results[,(nrow(output$coefficients)+r):(2*nrow(output$coefficients) + r - 1)]
       if (is.null(dim(cco))){
         cCIs = quantile(cco, probs = alpha.order, na.rm = TRUE)
       } else{
@@ -422,7 +429,7 @@ resi.zeroinfl <- resi.hurdle
 
 #' @describeIn resi RESI point and interval estimation for GEE models
 #' @export
-resi.geeglm <- function(model.full, data, anova = TRUE,
+resi.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                         coefficients = TRUE, nboot = 1000,
                         alpha = 0.05, store.boot = FALSE,
                         unbiased = TRUE, parallel = c("no", "multicore", "snow"),
@@ -445,12 +452,12 @@ resi.geeglm <- function(model.full, data, anova = TRUE,
   id_var = as.character(model.full$call$id)
 
   # bootstrapping
-  output = resi.default(model.full = model.full, model.reduced = NULL, data = data,
+  output = resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
                anova = anova, coefficients = coefficients, nboot = nboot, vcovfunc = vcovfunc,
                store.boot = TRUE, Anova.args = Anova.args, vcov.args = vcov.args,
                unbiased = unbiased, alpha = alpha, parallel = parallel,
                ncpus = ncpus, boot.method = "nonparam", cluster = TRUE,
-               clvar = id_var, mod.dat = data, skip.red = TRUE, long = TRUE, ...)
+               clvar = id_var, mod.dat = data, long = TRUE, ...)
 
 
   # number of bootstrap replicates with failed updating
@@ -466,7 +473,7 @@ resi.geeglm <- function(model.full, data, anova = TRUE,
 }
 
 
-#' @describeIn resi RESI point and interval estimation for GEE models
+ #' @describeIn resi RESI point and interval estimation for GEE models
 #' @export
 resi.gee <- function(model.full, data, nboot = 1000, alpha = 0.05,
                      store.boot = FALSE, unbiased = TRUE,

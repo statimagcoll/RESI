@@ -554,7 +554,7 @@ resi_pe.zeroinfl <- resi_pe.hurdle
 
 #' @describeIn resi_pe RESI point estimation for geeglm object
 #' @export
-resi_pe.geeglm <- function(model.full, data, anova = TRUE,
+resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                            coefficients = TRUE, unbiased = TRUE, ...){
   if (missing(data)){
     data = model.full$data
@@ -571,15 +571,9 @@ resi_pe.geeglm <- function(model.full, data, anova = TRUE,
   # weight in independent model
   data$w = 1 / n_i
 
-  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
-                 estimates = c())
-  names.est = c()
-
   # model form
   form = formula(model.full)
   # independence model
-  # w_resi = model.full$prior.weights
-  # data$w_resi = w_resi
   mod_indg = suppressWarnings(glm(formula = form, family = model.full$family, data = data,
                  weights = w, contrasts = model.full$contrasts))
   mod_indg$residuals = mod_indg$residuals / sqrt(mod_indg$weights)
@@ -587,18 +581,52 @@ resi_pe.geeglm <- function(model.full, data, anova = TRUE,
   # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
   cov_ind = sandwich::vcovHC(mod_indg, type = "HC0")
 
-
-  ### cov_ind = cov_ind * tot_obs/N
-
   # make copy of model.full, replace vbeta with independence
   mod_ind = model.full
   mod_ind$geese$vbeta = cov_ind
 
-  # The var-cov matrix estimate from the analysis model (the one considering correlation )
-  # Note: this is the estimate for Cov(\hat{\beta}_long)
-  ### cov_long = vcov(model.full)
-  # convert it to the estimate for \Sigma_long = Cov(\sqrt{N}(\hat{\beta}_long - \beta_0))
-  ### cov_long = cov_long * N
+  # reduced model
+  if (is.null(model.reduced)){
+    form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
+    model.reduced = update(model.full, formula = form.reduced, data = data)
+  } else{
+    form.reduced = formula(model.reduced)
+  }
+  # # reduced independence model
+  # mod_indg_reduced = suppressWarnings(glm(formula = form.reduced, family = model.reduced$family, data = data,
+  #                                 weights = w, contrasts = model.reduced$contrasts))
+  # mod_indg_reduced$residuals = mod_indg_reduced$residuals / sqrt(mod_indg_reduced$weights)
+  # # the var-cov matrix estimate from the independence model
+  # # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
+  # cov_ind_reduced = sandwich::vcovHC(mod_indg_reduced, type = "HC0")
+  # # make copy of model.reduced, replace vbeta with independence
+  # mod_ind_reduced = model.reduced
+  # mod_ind_reduced$geese$vbeta = cov_ind_reduced
+
+
+  # overall
+  # longitudinal
+  overall.tab = anova(model.full, model.reduced)
+  overall.tab[,'L-RESI'] = chisq2S(overall.tab[,'X2'], overall.tab[,'Df'], N)
+  # # cross-sectional (independence models) (not working for now)
+  # overallcs = anova(mod_ind, mod_ind_reduced)
+  # overall.tab[,'CS-RESI'] = chisq2S(overallcs[,'X2'], overallcs[,'Df'], N)
+
+  output = list(model.full = list(call = model.full$call, formula = form),
+                model.reduced = list(call = model.reduced$call, formula = form.reduced),
+                estimates = c(overall.tab[,"L-RESI"]), overall = overall.tab)
+  names.est = c("Overall-L")
+  names(output$estimates) = names.est
+
+  # stats = overall.tab["chi2"]
+  # overall.df = overall.tab["df"]
+  # res.df = nrow(data) - overall.df
+  # overall.resi.hat = chisq2S(stats, overall.df, model.full$n)
+  # overall.tab['RESI'] = overall.resi.hat
+  # overall.tab = as.data.frame(t(overall.tab))
+  # rownames(overall.tab) = "Wald Test"
+
+
 
   # longitudinal RESI
   # coefficients (z statistics)
@@ -630,8 +658,9 @@ resi_pe.geeglm <- function(model.full, data, anova = TRUE,
     }
 
     output$coefficients = coefficients.df
-    output$estimates = c(coefficients.df$`L-RESI`, coefficients.df[,"CS-RESI"])
-    names.est = rep(rownames(coefficients.df), 2)
+    output$estimates = c(output$estimates, coefficients.df$`L-RESI`,
+                         coefficients.df[,"CS-RESI"])
+    names.est = c(names.est, rep(rownames(coefficients.df), 2))
     names(output$estimates) = names.est
   }
 

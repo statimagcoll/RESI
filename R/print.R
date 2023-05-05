@@ -31,17 +31,15 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
     } else{
       if ((x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")))){
         cat("\nOverall RESI comparing model to intercept-only model:\n\n")
-        overall = as.data.frame(x$overall)[2,]
-        rownames(overall) = NULL
-        print(round(overall, digits = digits))
       }
       else{
-        cat("\nOverall RESI comparing full model to reduced model:\n\n")
-        overall = as.data.frame(x$overall)[2,]
-        rownames(overall) = NULL
-        print(round(overall, digits = digits))
+        cat("\nOverall RESI comparing full model to reduced model:\n\n")}
+      overall = as.data.frame(x$overall)
+      overall = overall[nrow(overall),]
+      rownames(overall) = NULL
+      print(round(overall, digits = digits))
       }
-    }}
+    }
 
   cat("\nNotes:")
   if (x$naive.var) cat("\n1. The RESI was calculated using the naive covariance estimator.")

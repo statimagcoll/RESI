@@ -19,14 +19,24 @@ chisq2Ssq = function(chisq, df, n){
 #' @param boot.method non-parametric (default) or Bayesian bootstrap
 #' @return Returns a vector of RESI estimates for a single bootstrap replicate
 #' @noRd
-resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",...){
+resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",
+                     cluster = FALSE, clvar = NULL, mod.dat = NULL, ...){
   # nonparametric bootstrap
   if (boot.method == "nonparam"){
-    boot.data = dat[inds,]
-    mod.full = try(update(mod.full, data = boot.data), silent = T)
-    if (!(is.null(mod.reduced))){
-      mod.reduced = try(update(mod.reduced, data = boot.data), silent = T)}
+    if(!cluster){
+      boot.data = dat[inds,]
+      mod.full = try(update(mod.full, data = boot.data), silent = T)
+      if (!(is.null(mod.reduced))){
+        mod.reduced = try(update(mod.reduced, data = boot.data), silent = T)}
     }
+     else{
+      # for clustered data, dat is unique ids and inds is which of the ids
+      boot.data = mod.dat[unlist(lapply(inds, function(x) which(x == mod.dat[, clvar]))), ]
+      boot.data$bootid = rep(1:length(unique(mod.dat[, clvar])),
+                unlist(lapply(inds, function(x) length(which(x==mod.dat[,clvar])))))
+
+      mod.full = try(update(mod.full, data = boot.data, id = bootid), silent = T)
+    }}
 
   else{
     # Bayesian bootstrap
