@@ -36,6 +36,8 @@ resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",
                 unlist(lapply(inds, function(x) length(which(x==mod.dat[,clvar])))))
 
       mod.full = try(update(mod.full, data = boot.data, id = bootid), silent = T)
+      if (!(is.null(mod.reduced))){
+        mod.reduced = try(update(mod.reduced, data = boot.data, id = bootid), silent = T)}
     }}
 
   else{
