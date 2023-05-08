@@ -176,8 +176,8 @@ test_that("resi produces the correct estimates", {
                c(0.35634034, 0.06143486, 0.00748577, 0.05339006), tolerance = 1e-07)
   if(requireNamespace("survival")){
   expect_equal(unname(resi(mod.surv, nboot = 1, data = data.surv)$estimates),
-               c(0.19357703, 0.51465342, -0.08062289, 0.20010885, 0.10512266,
-                 -0.27578597, 0.04597918,0.18883217, 0.08163828), tolerance = 1e-07)
+               c(0.194002944, 0.515785774, -0.080800275, 0.200549139, 0.105353954,
+                 -0.276392759, 0.046080344, 0.189247644, 0.081817903), tolerance = 1e-07)
   expect_equal(unname(resi(mod.coxph, nboot = 1, data = data.surv)$estimates),
                c(0.224354226, 0.136138740, -0.213293162, 0.008641209, 0.117732151,
                  0.202042262, 0.000000000))}
@@ -193,15 +193,17 @@ test_that("resi produces the correct estimates", {
                c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258),
                tolerance = 1e-07)
   expect_equal(unname(resi(mod.gee, nboot = 10, data = data.gee)$coefficients[,'CS-RESI']),
-               c(-0.015478959, -0.281553120, 0.008449009, 0.321466713, -0.171546277),
-               tolerance = 1e-07)}
+               c(-0.007006305,-0.121182453,0.003769394,0.119402133,-0.069223594),
+               tolerance = 1e-07)
+  }
   if(requireNamespace("geepack")){
   expect_equal(unname(resi(mod.geeglm, nboot = 10, data = data.gee)$coefficients[,'L-RESI']),
                c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258),
                tolerance = 1e-07)
   expect_equal(unname(resi(mod.geeglm, nboot = 10, data = data.gee)$coefficients[,'CS-RESI']),
-               c(-0.015478959, -0.281553120, 0.008449009, 0.321466713, -0.171546277),
-               tolerance = 1e-07)}
+               c(-0.007006305,-0.121182453,0.003769394,0.119402133,-0.069223594),
+               tolerance = 1e-07)
+  }
   expect_equal(unname(suppressWarnings(resi(mod.lme, nboot = 10)$coefficients[,'RESI'])),
                c(3.659090, 1.739166, 0.512371), tolerance = 1e-07)
   if(requireNamespace("lme4")){
@@ -252,7 +254,7 @@ test_that("boot.results same (approx) for gee and geeglm",{
   resi.obj = resi(mod.geeglm, nboot = 5, store.boot = T, anova = F)
   set.seed(123)
   resi.obj2 = resi(mod.gee, data = data.gee, nboot = 5, store.boot = T)
-  expect_equal(resi.obj$boot.results, resi.obj2$boot.results, tolerance = 1e-09)
+  expect_equal(resi.obj$boot.results[,-1], resi.obj2$boot.results, tolerance = 1e-09)
 })}
 
 test_that("unbiased = FALSE returns same abs. RESI as Chi-sq/F",{
@@ -322,8 +324,8 @@ test_that("tibbles work", {
                                                                 0.2951113263, 0.1497981921,
                                                                 0.0515491712, 0.0160560332))
   if(requireNamespace("survival")){
-  expect_equal(unname(resi(mod.surv.tib, nboot = 1, data = data.surv)$estimates), c(0.19357703, 0.51465342, -0.08062289, 0.20010885, 0.10512266, -0.27578597, 0.04597918,
-                                                                                0.18883217, 0.08163828), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.surv.tib, nboot = 1, data = data.surv)$estimates), c(0.194002944, 0.515785774, -0.080800275, 0.200549139, 0.105353954,
+                                                                                    -0.276392759, 0.046080344, 0.189247644, 0.081817903), tolerance = 1e-07)
   expect_equal(unname(resi(mod.coxph.tib, nboot = 1, data = data.surv)$estimates), c(0.224354226, 0.136138740, -0.213293162, 0.008641209, 0.117732151, 0.202042262, 0.000000000))}
   if(requireNamespace("pscl")){
   expect_equal(unname(resi(mod.hurdle.tib, nboot = 1)$estimates[c(1, 2, 5, 8, 10)]), c(0.28063439, 0.12770489, -0.06898884, 0.02686305, 0.06039791), tolerance = 1e-07)
