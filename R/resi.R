@@ -14,6 +14,10 @@
 #' @param Anova.args List, additional arguments to be passed to \link[car]{Anova} function.
 #' @param vcov.args List, additional arguments to be passed to vcovfunc.
 #' @param unbiased Logical, whether to use the unbiased or alternative T/Z statistic to RESI conversion. By default, `TRUE`. See details.
+#' @param parallel See documentation for \code{\link{boot}}.
+#' @param ncpus See documentation for \code{\link{boot}}.
+#' @param long Logical, whether the data is longitudinal/clustered. By default, `FALSE`.
+#' @param clvar Character, the name of the cluster/id variable if data is clustered. By default, `NULL`
 #' @param ... Ignored.
 #' @importFrom aod wald.test
 #' @importFrom boot boot

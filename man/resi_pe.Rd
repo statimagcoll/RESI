@@ -115,6 +115,7 @@ resi_pe(model.full, ...)
 
 \method{resi_pe}{geeglm}(
   model.full,
+  model.reduced = NULL,
   data,
   anova = TRUE,
   coefficients = TRUE,
