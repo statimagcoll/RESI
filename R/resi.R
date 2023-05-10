@@ -7,6 +7,7 @@
 #' @param vcovfunc The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).
 #' @param coefficients Logical, whether to produce a coefficients (summary) table with the RESI columns added. By default = `TRUE`.
 #' @param anova Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.
+#' @param overall Logical, whether to produce an overall Wald test comparing full to reduced model with RESI columns added. By default = `TRUE`.
 #' @param nboot Numeric, the number of bootstrap replicates. By default, 1000.
 #' @param boot.method String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.
 #' @param alpha Numeric, significance level of the constructed CIs. By default, 0.05.
@@ -17,7 +18,7 @@
 #' @param parallel See documentation for \code{\link{boot}}.
 #' @param ncpus See documentation for \code{\link{boot}}.
 #' @param long Logical, whether the data is longitudinal/clustered. By default, `FALSE`.
-#' @param clvar Character, the name of the cluster/id variable if data is clustered. By default, `NULL`
+#' @param clvar Character, the name of the cluster/id variable if data is clustered. By default, `NULL`.
 #' @param ... Ignored.
 #' @importFrom aod wald.test
 #' @importFrom boot boot
@@ -148,12 +149,14 @@ resi <- function(model.full, ...){
 #' @describeIn resi RESI point and interval estimation for models
 #' @export
 resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                         coefficients = TRUE, nboot = 1000, boot.method = 'nonparam',
-                         vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
-                         Anova.args = list(), vcov.args = list(), unbiased = TRUE,
+                         coefficients = TRUE, overall = TRUE, nboot = 1000,
+                         boot.method = 'nonparam', vcovfunc = sandwich::vcovHC,
+                         alpha = 0.05, store.boot = FALSE, Anova.args = list(),
+                         vcov.args = list(), unbiased = TRUE,
                          parallel = c("no", "multicore", "snow"),
                          ncpus = getOption("boot.ncpus", 1L), long = FALSE,
                          clvar = NULL, ...){
+  #browser()
   # need to check for supported type
   dots = list(...)
 
@@ -172,31 +175,33 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   if (is.null(model.reduced)){
     if(!("skip.red" %in% names(dots))){
       form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
-      if(!(is.null(model.full$model)) & !long){
-        model.reduced <- update(model.full, formula = form.reduced, data = model.full$model)
-      } else{
-        model.reduced <- update(model.full, formula = form.reduced, data = data)
+      if (!(form.reduced == formula(model.full))){
+        if(!(is.null(model.full$model)) & !long){
+          model.reduced <- update(model.full, formula = form.reduced, data = model.full$model)
+        } else{
+          model.reduced <- update(model.full, formula = form.reduced, data = data)
+        }
       }
-    }
-  }
+    }}
 
   # point estimation
   output = list(alpha = alpha, nboot = nboot, boot.method = boot.method)
   output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
                              data = data, anova = anova, coefficients = coefficients,
-                             vcovfunc = vcovfunc, Anova.args = Anova.args,
-                             vcov.args = vcov.args, unbiased = unbiased, ...))
+                             overall = overall, vcovfunc = vcovfunc,
+                             Anova.args = Anova.args, vcov.args = vcov.args,
+                             unbiased = unbiased, ...))
 
   if (long){
     data = unique(data[, clvar])
   }
 
   # bootstrapping
-  suppressMessages(capture.output(boot_out <- boot(data = data, R = nboot, statistic = resi_stat, parallel = parallel,
+  suppressWarnings(suppressMessages(capture.output(boot_out <- boot(data = data, R = nboot, statistic = resi_stat, parallel = parallel,
                   ncpus = ncpus, mod.full = model.full, mod.reduced = model.reduced,
-                  anova = anova, coefficients = coefficients, vcovfunc = vcovfunc,
+                  anova = anova, coefficients = coefficients, overall = overall, vcovfunc = vcovfunc,
                   Anova.args = Anova.args, vcov.args = vcov.args, unbiased = unbiased,
-                  boot.method = boot.method, clvar = clvar, ...), file = nullfile()))
+                  boot.method = boot.method, clvar = clvar, ...), file = nullfile())))
 
   # bootstrapped estimates
   boot.results = boot_out$t
@@ -205,10 +210,21 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   alpha.order = sort(c(alpha/2, 1-alpha/2))
 
   if (!long){
-    output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] = quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
+    if (overall & !is.null(output$overall)){
+      if(nrow(output$overall) == 1){
+        names.overall = colnames(output$overall)
+        for (i in 1:length(alpha.order)){
+          output$overall = cbind(output$overall, quantile(boot.results[,1],
+                                                          probs = alpha.order[i], na.rm = TRUE))
+        }
+        colnames(output$overall) = c(names.overall, paste(alpha.order*100, '%', sep=''))
+      } else{
+        output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] =
+          quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)}
+    }
 
     if (coefficients){
-      co = boot.results[,2:(1+nrow(output$coefficients))]
+      co = boot.results[,(1+!(is.null(output$overall))):((!is.null(output$overall))+nrow(output$coefficients))]
       if (is.null(dim(co))){
         CIs = quantile(co, probs = alpha.order, na.rm = TRUE)
       } else{
@@ -290,7 +306,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @describeIn resi RESI point and interval estimation for models
 #' @export
 resi.glm = function(model.full, model.reduced = NULL, data, anova = TRUE,
-                    coefficients = TRUE, nboot = 1000,
+                    coefficients = TRUE, overall = TRUE, nboot = 1000,
                     vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
                     Anova.args = list(), vcov.args = list(), unbiased = TRUE,
                     parallel = c("no", "multicore", "snow"), ncpus = getOption("boot.ncpus", 1L),
@@ -300,8 +316,9 @@ resi.glm = function(model.full, model.reduced = NULL, data, anova = TRUE,
     stop("\nOnly nonparametric bootstrap supported for model type")
   }
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
-               anova = anova, coefficients = coefficients, nboot = nboot, vcovfunc = vcovfunc,
-               store.boot = store.boot, Anova.args = Anova.args, vcov.args = vcov.args,
+               anova = anova, coefficients = coefficients, overall = overall,
+               nboot = nboot, vcovfunc = vcovfunc, store.boot = store.boot,
+               Anova.args = Anova.args, vcov.args = vcov.args,
                unbiased = unbiased, alpha = alpha, parallel = parallel,
                ncpus = ncpus, ...)
 
@@ -310,25 +327,27 @@ resi.glm = function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @describeIn resi RESI point and interval estimation for lm models
 #' @export
 resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                    coefficients = TRUE, nboot = 1000, boot.method = 'nonparam',
-                    vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
-                    Anova.args = list(), vcov.args = list(), unbiased = TRUE,
-                    parallel = c("no", "multicore", "snow"), ncpus = getOption("boot.ncpus", 1L),
-                    ...){
+                    coefficients = TRUE, overall = TRUE, nboot = 1000,
+                    boot.method = 'nonparam', vcovfunc = sandwich::vcovHC,
+                    alpha = 0.05, store.boot = FALSE, Anova.args = list(),
+                    vcov.args = list(), unbiased = TRUE,
+                    parallel = c("no", "multicore", "snow"),
+                    ncpus = getOption("boot.ncpus", 1L), ...){
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
-               anova = anova, coefficients = coefficients, nboot = nboot, vcovfunc = vcovfunc,
-               store.boot = store.boot, Anova.args = Anova.args, vcov.args = vcov.args,
-               unbiased = unbiased, alpha = alpha, parallel = parallel,
-               ncpus = ncpus, boot.method = boot.method, ...)
+               anova = anova, coefficients = coefficients, overall = overall,
+               nboot = nboot, vcovfunc = vcovfunc, store.boot = store.boot,
+               Anova.args = Anova.args, vcov.args = vcov.args, unbiased = unbiased,
+               alpha = alpha, parallel = parallel, ncpus = ncpus,
+               boot.method = boot.method, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for nls models
 #' @export
 resi.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE,
-                     nboot = 1000, boot.method = 'nonparam',
-                     vcovfunc = vcovnls, alpha = 0.05, store.boot = FALSE,
-                     vcov.args = list(), unbiased = TRUE,
+                     overall = TRUE, nboot = 1000, boot.method = 'nonparam',
+                     anova = FALSE, vcovfunc = vcovnls, alpha = 0.05,
+                     store.boot = FALSE, vcov.args = list(), unbiased = TRUE,
                      parallel = c("no", "multicore", "snow"), ncpus = getOption("boot.ncpus", 1L),
                      ...){
 
@@ -338,10 +357,12 @@ resi.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE
     stop('\nData argument is required for nls model')
   }
 
-  output = resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
-               anova = FALSE, coefficients = coefficients, nboot = nboot, vcovfunc = vcovfunc,
-               store.boot = TRUE, unbiased = unbiased, alpha = alpha, vcov.args = vcov.args,
-               parallel = parallel, ncpus = ncpus, boot.method = boot.method, skip.red = TRUE, ...)
+  output = resi.default(model.full = model.full, model.reduced = model.reduced,
+                        data = data, anova = FALSE, coefficients = coefficients,
+                        overall = overall, nboot = nboot, vcovfunc = vcovfunc,
+                        store.boot = TRUE, unbiased = unbiased, alpha = alpha,
+                        vcov.args = vcov.args, parallel = parallel,
+                        ncpus = ncpus, boot.method = boot.method, skip.red = TRUE, ...)
 
   # number of bootstrap replicates with failed updating
   output$nfail = length(which(is.na(output$boot.results[,1])))
@@ -356,7 +377,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE
 #' @describeIn resi RESI point and interval estimation for survreg models
 #' @export
 resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                         coefficients = TRUE, nboot = 1000,
+                         coefficients = TRUE, overall = TRUE, nboot = 1000,
                          vcovfunc = vcov, alpha = 0.05, store.boot = FALSE,
                          Anova.args = list(), unbiased = TRUE,
                          parallel = c("no", "multicore", "snow"),
@@ -373,16 +394,16 @@ resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   }
 
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
-               anova = anova, coefficients = coefficients, nboot = nboot, vcovfunc = vcovfunc,
-               store.boot = store.boot, Anova.args = Anova.args,
-               unbiased = unbiased, alpha = alpha, boot.method = "nonparam", parallel = parallel,
-               ncpus = ncpus, ...)
+               anova = anova, coefficients = coefficients, overall = overall,
+               nboot = nboot, vcovfunc = vcovfunc, store.boot = store.boot,
+               Anova.args = Anova.args, unbiased = unbiased, alpha = alpha,
+               boot.method = "nonparam", parallel = parallel, ncpus = ncpus, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for coxph models
 #' @export
 resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                       coefficients = TRUE, nboot = 1000,
+                       coefficients = TRUE, overall = TRUE, nboot = 1000,
                        vcovfunc = vcov, alpha = 0.05, store.boot = FALSE,
                        Anova.args = list(), unbiased = TRUE,
                        parallel = c("no", "multicore", "snow"),
@@ -401,30 +422,32 @@ resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     warning('Reduced model argument ignored for coxph model')
   }
   resi.default(model.full = model.full, model.reduced = NULL, data = data,
-               anova = anova, coefficients = coefficients, nboot = nboot, vcovfunc = vcovfunc,
-               store.boot = store.boot, Anova.args = Anova.args,
-               unbiased = unbiased, alpha = alpha, boot.method = "nonparam",
-               skip.red = TRUE, parallel = parallel, ncpus = ncpus, ...)
+               anova = anova, coefficients = coefficients, overall = overall,
+               nboot = nboot, vcovfunc = vcovfunc, store.boot = store.boot,
+               Anova.args = Anova.args, unbiased = unbiased, alpha = alpha,
+               boot.method = "nonparam", parallel = parallel, ncpus = ncpus,
+               skip.red = TRUE, ...)
 }
 
 
 #' @describeIn resi RESI point and interval estimation for hurdle models
 #' @export
 resi.hurdle <- function(model.full, model.reduced = NULL, data, coefficients = TRUE,
-                     nboot = 1000, vcovfunc = sandwich::sandwich,
-                     alpha = 0.05, store.boot = FALSE, vcov.args = list(),
-                     unbiased = TRUE, parallel = c("no", "multicore", "snow"),
-                     ncpus = getOption("boot.ncpus", 1L), ...){
+                        overall = TRUE, nboot = 1000, vcovfunc = sandwich::sandwich,
+                        anova = FALSE, alpha = 0.05, store.boot = FALSE,
+                        vcov.args = list(), unbiased = TRUE,
+                        parallel = c("no", "multicore", "snow"),
+                        ncpus = getOption("boot.ncpus", 1L), ...){
 
   dots = list(...)
   if ("boot.method" %in% names(dots)){
     stop("\nOnly nonparametric bootstrap supported for model type")
   }
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
-               anova = FALSE, coefficients = coefficients, nboot = nboot,
-               vcovfunc = vcovfunc, store.boot = store.boot, vcov.args = vcov.args,
-               unbiased = unbiased, alpha = alpha, boot.method = "nonparam",
-               parallel = parallel, ncpus = ncpus, ...)
+               coefficients = coefficients, overall = overall, nboot = nboot,
+               anova = FALSE, vcovfunc = vcovfunc, store.boot = store.boot,
+               vcov.args = vcov.args, unbiased = unbiased, alpha = alpha,
+               boot.method = "nonparam", parallel = parallel, ncpus = ncpus, ...)
 }
 
 #' @describeIn resi RESI point and interval estimation for zeroinfl models
@@ -434,7 +457,7 @@ resi.zeroinfl <- resi.hurdle
 #' @describeIn resi RESI point and interval estimation for GEE models
 #' @export
 resi.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                        coefficients = TRUE, nboot = 1000,
+                        coefficients = TRUE, overall = TRUE, nboot = 1000,
                         alpha = 0.05, store.boot = FALSE,
                         unbiased = TRUE, parallel = c("no", "multicore", "snow"),
                         ncpus = getOption("boot.ncpus", 1L), ...){
@@ -456,12 +479,13 @@ resi.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   id_var = as.character(model.full$call$id)
 
   # bootstrapping
-  output = resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
-               anova = anova, coefficients = coefficients, nboot = nboot, vcovfunc = vcovfunc,
-               store.boot = TRUE, Anova.args = Anova.args, vcov.args = vcov.args,
-               unbiased = unbiased, alpha = alpha, parallel = parallel,
-               ncpus = ncpus, boot.method = "nonparam", cluster = TRUE,
-               clvar = id_var, mod.dat = data, long = TRUE, ...)
+  output = resi.default(model.full = model.full, model.reduced = model.reduced,
+                        data = data, anova = anova, coefficients = coefficients,
+                        overall = overall, nboot = nboot, vcovfunc = vcovfunc,
+                        store.boot = TRUE, Anova.args = Anova.args,
+                        vcov.args = vcov.args, unbiased = unbiased, alpha = alpha,
+                        parallel = parallel, ncpus = ncpus, boot.method = "nonparam",
+                        cluster = TRUE, clvar = id_var, mod.dat = data, long = TRUE, ...)
 
 
   # number of bootstrap replicates with failed updating
@@ -509,7 +533,8 @@ resi.gee <- function(model.full, data, nboot = 1000, alpha = 0.05,
                         store.boot = TRUE, anova = FALSE, vcov.args = vcov.args,
                         unbiased = unbiased, alpha = alpha, parallel = parallel,
                         ncpus = ncpus, boot.method = "nonparam", cluster = TRUE,
-                        clvar = id_var, mod.dat = data, skip.red = TRUE, long = TRUE, ...)
+                        clvar = id_var, mod.dat = data, skip.red = TRUE, long = TRUE,
+                        overall = FALSE, ...)
 
 
   # number of bootstrap replicates with failed updating
