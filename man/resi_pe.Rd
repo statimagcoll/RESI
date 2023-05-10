@@ -22,11 +22,14 @@ resi_pe(model.full, ...)
   model.full,
   model.reduced = NULL,
   data,
+  anova = TRUE,
   coefficients = TRUE,
+  overall = TRUE,
   vcovfunc = sandwich::vcovHC,
   Anova.args = list(),
   vcov.args = list(),
   unbiased = TRUE,
+  waldtype = 0,
   ...
 )
 
@@ -36,10 +39,12 @@ resi_pe(model.full, ...)
   data,
   anova = TRUE,
   coefficients = TRUE,
+  overall = TRUE,
   vcovfunc = sandwich::vcovHC,
   Anova.args = list(),
   vcov.args = list(),
   unbiased = TRUE,
+  waldtype = 0,
   ...
 )
 
@@ -53,6 +58,7 @@ resi_pe(model.full, ...)
   Anova.args = list(),
   vcov.args = list(),
   unbiased = TRUE,
+  overall = TRUE,
   ...
 )
 
@@ -61,9 +67,11 @@ resi_pe(model.full, ...)
   model.reduced = NULL,
   data,
   coefficients = TRUE,
+  anova = FALSE,
   vcovfunc = vcovnls,
   vcov.args = list(),
   unbiased = TRUE,
+  overall = TRUE,
   ...
 )
 
@@ -76,6 +84,7 @@ resi_pe(model.full, ...)
   vcovfunc = vcov,
   Anova.args = list(),
   unbiased = TRUE,
+  overall = TRUE,
   ...
 )
 
@@ -88,6 +97,7 @@ resi_pe(model.full, ...)
   vcovfunc = vcov,
   Anova.args = list(),
   unbiased = TRUE,
+  overall = TRUE,
   ...
 )
 
@@ -96,9 +106,11 @@ resi_pe(model.full, ...)
   model.reduced = NULL,
   data,
   coefficients = TRUE,
+  anova = TRUE,
   vcovfunc = sandwich::sandwich,
   vcov.args = list(),
   unbiased = TRUE,
+  overall = TRUE,
   ...
 )
 
@@ -107,9 +119,11 @@ resi_pe(model.full, ...)
   model.reduced = NULL,
   data,
   coefficients = TRUE,
+  anova = TRUE,
   vcovfunc = sandwich::sandwich,
   vcov.args = list(),
   unbiased = TRUE,
+  overall = TRUE,
   ...
 )
 
@@ -152,7 +166,11 @@ resi_pe(model.full, ...)
 
 \item{data}{Data.frame or object coercible to data.frame of model.full data (required for some model types).}
 
+\item{anova}{Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.}
+
 \item{coefficients}{Logical, whether to produce a coefficients (summary) table with the RESI columns added. By default = `TRUE`.}
+
+\item{overall}{Logical, whether to produce an overall Wald test comparing full to reduced model with RESI columns added. By default = `TRUE`.}
 
 \item{vcovfunc}{The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).}
 
@@ -162,7 +180,7 @@ resi_pe(model.full, ...)
 
 \item{unbiased}{Logical, whether to use the unbiased or alternative T/Z statistic to RESI conversion. By default, `TRUE`. See details.}
 
-\item{anova}{Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.}
+\item{waldtype}{Numeric, indicates which function to use for overall Waldtest. 0 (default) = lmtest::waldtest Chi-square, 1 = lmtest::waldtest F, 2 = aod::wald.test}
 }
 \value{
 Returns a list containing RESI point estimates

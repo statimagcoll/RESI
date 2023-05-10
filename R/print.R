@@ -24,7 +24,7 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   }
 
   # overall
-  if (!(is.null(x$model.reduced))){
+  if (!(is.null(x$overall))){
     if (is.null(x$model.reduced$formula)){
       cat("\nOverall RESI comparing model to intercept-only model:\n\n")
       print(round(x$overall, digits = digits))

@@ -24,6 +24,7 @@ resi(model.full, ...)
   data,
   anova = TRUE,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   boot.method = "nonparam",
   vcovfunc = sandwich::vcovHC,
@@ -45,6 +46,7 @@ resi(model.full, ...)
   data,
   anova = TRUE,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   vcovfunc = sandwich::vcovHC,
   alpha = 0.05,
@@ -63,6 +65,7 @@ resi(model.full, ...)
   data,
   anova = TRUE,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   boot.method = "nonparam",
   vcovfunc = sandwich::vcovHC,
@@ -81,8 +84,10 @@ resi(model.full, ...)
   model.reduced = NULL,
   data,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   boot.method = "nonparam",
+  anova = FALSE,
   vcovfunc = vcovnls,
   alpha = 0.05,
   store.boot = FALSE,
@@ -99,6 +104,7 @@ resi(model.full, ...)
   data,
   anova = TRUE,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   vcovfunc = vcov,
   alpha = 0.05,
@@ -116,6 +122,7 @@ resi(model.full, ...)
   data,
   anova = TRUE,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   vcovfunc = vcov,
   alpha = 0.05,
@@ -132,8 +139,10 @@ resi(model.full, ...)
   model.reduced = NULL,
   data,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   vcovfunc = sandwich::sandwich,
+  anova = FALSE,
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
@@ -148,8 +157,10 @@ resi(model.full, ...)
   model.reduced = NULL,
   data,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   vcovfunc = sandwich::sandwich,
+  anova = FALSE,
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
@@ -165,6 +176,7 @@ resi(model.full, ...)
   data,
   anova = TRUE,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   alpha = 0.05,
   store.boot = FALSE,
@@ -217,6 +229,8 @@ resi(model.full, ...)
 
 \item{coefficients}{Logical, whether to produce a coefficients (summary) table with the RESI columns added. By default = `TRUE`.}
 
+\item{overall}{Logical, whether to produce an overall Wald test comparing full to reduced model with RESI columns added. By default = `TRUE`.}
+
 \item{nboot}{Numeric, the number of bootstrap replicates. By default, 1000.}
 
 \item{boot.method}{String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.}
@@ -239,7 +253,7 @@ resi(model.full, ...)
 
 \item{long}{Logical, whether the data is longitudinal/clustered. By default, `FALSE`.}
 
-\item{clvar}{Character, the name of the cluster/id variable if data is clustered. By default, `NULL`}
+\item{clvar}{Character, the name of the cluster/id variable if data is clustered. By default, `NULL`.}
 }
 \value{
 Returns a list that includes function arguments, RESI point estimates,
