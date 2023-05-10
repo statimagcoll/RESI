@@ -24,7 +24,8 @@ resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",
   # nonparametric bootstrap
   if (boot.method == "nonparam"){
     if(!cluster){
-      boot.data = dat[inds,]
+      boot.data = as.data.frame(dat[inds,])
+      colnames(boot.data) = colnames(dat)
       mod.full = try(update(mod.full, data = boot.data), silent = T)
       if (!(is.null(mod.reduced))){
         mod.reduced = try(update(mod.reduced, data = boot.data), silent = T)}
@@ -104,18 +105,4 @@ bayes.samp = function(data) {
   } # end `repeat`
   boot.data = cbind(data, g)
   return(boot.data)
-}
-
-#' Copied regtools::nlshc (to be removed later, current reverse dependency issue)
-#' @return Returns robust covariance for nls model
-#' @noRd
-vcovnls = function (nlsout, type = "HC") {
-  b = coef(nlsout)
-  m = nlsout$m
-  resid = m$resid()
-  hmat = m$gradient()
-  xhm = hmat
-  yresidhm = resid + hmat %*% b
-  lmout = stats::lm(yresidhm ~ xhm - 1)
-  sandwich::vcovHC(lmout, type)
 }
