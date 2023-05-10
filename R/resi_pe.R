@@ -10,11 +10,14 @@
 #' @param vcovfunc The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).
 #' @param coefficients Logical, whether to produce a coefficients (summary) table with the RESI columns added. By default = `TRUE`.
 #' @param anova Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.
+#' @param overall Logical, whether to produce an overall Wald test comparing full to reduced model with RESI columns added. By default = `TRUE`.
 #' @param Anova.args List, additional arguments to be passed to Anova function.
 #' @param vcov.args List, additional arguments to be passed to vcovfunc.
 #' @param unbiased Logical, whether to use the unbiased or alternative T/Z statistic to RESI conversion. By default, `TRUE`. See details.
+#' @param waldtype Numeric, indicates which function to use for overall Waldtest. 0 (default) = lmtest::waldtest Chi-square, 1 = lmtest::waldtest F, 2 = aod::wald.test
 #' @param ... Ignored.
 #' @importFrom aod wald.test
+#' @importFrom regtools nlshc
 #' @importFrom car Anova
 #' @importFrom lmtest waldtest
 #' @importFrom sandwich vcovHC
@@ -69,31 +72,46 @@
 #' resi_pe(mod, unbiased = FALSE)
 #' @references Vandekar S, Tao R, Blume J. A Robust Effect Size Index. \emph{Psychometrika}. 2020 Mar;85(1):232-246. doi: 10.1007/s11336-020-09698-2.
 
-resi_pe <- function(model.full, ...){
+resi_pe = function(model.full, ...){
   UseMethod("resi_pe")
 }
 
 #' @describeIn resi_pe RESI point estimation
 #' @export
-resi_pe.default <- function(model.full, model.reduced = NULL, data,
-                    coefficients = TRUE, vcovfunc = sandwich::vcovHC, Anova.args = list(),
-                    vcov.args = list(), unbiased = TRUE, ...){
+resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
+                           coefficients = TRUE, overall = TRUE, vcovfunc = sandwich::vcovHC,
+                           Anova.args = list(), vcov.args = list(), unbiased = TRUE,
+                           waldtype = 0, ...){
+
+  #browser()
+  dots = list(...)
   if (missing(data)){
+    if (!is.null(model.full$model)){
       data = model.full$model
+    } else{
+      stop("\nData argument needed for model type")
+    }
   }
   else{
     data = as.data.frame(data)
   }
 
   if (is.null(model.reduced)){
-    form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
-    if (is.null(model.full$na.action)){
-      model.reduced <- update(model.full, formula = form.reduced, data = data)
-    }
-    else{
-      model.reduced <- update(model.full, formula = form.reduced, data = model.full$model)
-    }
-  }
+    if(!("skip.red.pe" %in% names(dots))){
+      form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
+      if ((form.reduced == formula(model.full))){
+        overall = FALSE} else{
+          if (is.null(model.full$na.action)){
+            model.reduced <- update(model.full, formula = form.reduced, data = data)
+          }
+          else{
+            if (!is.null(model.full$model)){
+              model.reduced <- update(model.full, formula = form.reduced,
+                                      data = model.full$model)
+            } else{
+              model.reduced <- update(model.full, formula = form.reduced,
+                                      data = data[which(!(1:nrow(data)%in% model.full$na.action)),])
+            }}}}}
 
   # dealing with additional vcov args
   if (length(vcov.args) == 0){
@@ -105,30 +123,75 @@ resi_pe.default <- function(model.full, model.reduced = NULL, data,
       do.call(vcovfunc, vcov.args)}
   }
 
-  # overall
-  wald.test = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc2, test = 'Chisq')
-  stats = wald.test$Chisq[2]
-  overall.df = wald.test$Df[2]
-  res.df = wald.test$Res.Df[2]
-  overall.resi.hat = chisq2S(stats, overall.df, nrow(data))
-  wald.test[2, 'RESI'] = overall.resi.hat
-  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
-                 model.reduced = list(call = model.reduced$call, formula = formula(model.reduced)),
-                 estimates = overall.resi.hat, overall = wald.test)
-  names.est = "Overall"
-  names(output$estimates) = names.est
+  # covariance matrix
+  var.names = names(coef(model.full))
+  vcovmat = vcovfunc2(model.full)
+  tryCatch(rownames(vcovmat) <- colnames(vcovmat) <- var.names, error = function(e){})
 
-  # coefficients table (z statistics)
-  if (coefficients){
-    coefficients.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc2)
-    coefficients.df = data.frame(coefficients.tab[,'Estimate'], coefficients.tab[,'Std. Error'],
-                             coefficients.tab[,'z value'], coefficients.tab[,'Pr(>|z|)'], row.names = rownames(coefficients.tab))
-    colnames(coefficients.df) = colnames(coefficients.tab)
-    if (unbiased){
-      coefficients.df[,'RESI'] = z2S(coefficients.df[,'z value'], nrow(data))
+
+  # set up output
+  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
+                 model.reduced = list(call = model.reduced$call, formula = unlist(formula(model.reduced))))
+  # need initialize vector of estimates?
+  names.est = c()
+  # overall
+  if (overall){
+    if (waldtype %in% c(0,1)){
+      # 0 is Chisq with lmtest
+      # 1 is F with lmtest
+      wtype = ifelse(waldtype == 0, "Chisq", "F")
+      overall.tab = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc2,
+                                     test = wtype)
+      stats = overall.tab[,wtype][2]
+      overall.df = overall.tab$Df[2]
+      res.df = overall.tab$Res.Df[2]
     }
-    else{
-      coefficients.df[,'RESI'] = suppressWarnings(z2S_alt(coefficients.df[,'z value'], nrow(data)))
+
+    if (waldtype == 2){
+      # 2 is aod (nls, coxph)
+      overall.tab = aod::wald.test(vcovmat, coef(model.full),
+                                   Terms = 1:length(coef(model.full)))$result$chi2
+      stats = overall.tab["chi2"]
+      overall.df = overall.tab["df"]
+      res.df = nrow(data) - overall.df
+      overall.tab = t(as.data.frame(overall.tab))
+    }
+    overall.resi.hat = ifelse(waldtype == 1, f2S(stats, overall.df, res.df, nrow(data)),
+                              chisq2S(stats, overall.df, nrow(data)))
+    if (nrow(overall.tab) == 1){
+      overall.tab = cbind(overall.tab, RESI = overall.resi.hat)
+    } else{
+      overall.tab[nrow(overall.tab), 'RESI'] = overall.resi.hat
+    }
+    output$estimates = overall.resi.hat
+    output$overall = overall.tab
+    names.est = "Overall"
+    names(output$estimates) = names.est
+  }
+
+  # coefficients table (z or t statistics)
+  if (coefficients){
+    if ("coeftest_df" %in% names(dots)){
+      coeftest_df = dots$coeftest_df} else{
+        coeftest_df = NULL
+      }
+    coefficients.tab = lmtest::coeftest(model.full, vcov. = vcovmat, df = coeftest_df)
+
+    torZ = ifelse("z value" %in% colnames(coefficients.tab), "z", "t")
+    coefficients.df = data.frame(coefficients.tab[,'Estimate'], coefficients.tab[,'Std. Error'],
+                                 coefficients.tab[,paste(torZ, "value")],
+                                 coefficients.tab[,paste("Pr(>|", torZ, "|)", sep = "")],
+                                 row.names = rownames(coefficients.tab))
+    colnames(coefficients.df) = colnames(coefficients.tab)
+
+    if (torZ == "z"){
+      coefficients.df[,'RESI'] = suppressWarnings(z2S(coefficients.df[,3], nrow(data), unbiased))
+    } else{
+      if(!overall){
+        res.df = model.full$df.residual
+      }
+      coefficients.df[,'RESI'] = suppressWarnings(t2S(coefficients.df[,'t value'],
+                                                      res.df, nrow(data), unbiased))
     }
     output$coefficients = coefficients.df
     output$estimates = c(output$estimates, coefficients.df$RESI)
@@ -136,34 +199,21 @@ resi_pe.default <- function(model.full, model.reduced = NULL, data,
     names(output$estimates) = names.est
   }
 
-  return(output)
-}
-
-
-## ADD DATA EXTRACTION IF MISSING
-#' @describeIn resi_pe RESI point estimation for generalized linear models
-#' @export
-resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                        coefficients = TRUE, vcovfunc = sandwich::vcovHC,
-                        Anova.args = list(), vcov.args = list(), unbiased = TRUE, ...){
-  output <- resi_pe.default(model.full = model.full, model.reduced = model.reduced,
-                            data = data, coefficients = coefficients, vcovfunc = vcovfunc,
-                            Anova.args = Anova.args, vcov.args = vcov.args, unbiased = unbiased, ...)
-
-  if (length(vcov.args) == 0){
-    vcovfunc2 <- vcovfunc
-  } else{
-    vcov.args = c(formals(vcovfunc)[1], vcov.args)
-    vcovfunc2 <- function(x) {
-      vcov.args[[1]] = x
-      do.call(vcovfunc, vcov.args)}
-  }
-
-  # Anova table (Chi sq statistics)
   if (anova){
-    suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full, test.statistic = 'Wald', vcov. = vcovfunc2), Anova.args)))
-    anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], nrow(data))
-    output$anova = anova.tab[which(rownames(anova.tab) != "Residuals"),]
+    if ("anovaF" %in% names(dots)){
+      suppressMessages(anova.tab <- do.call(car::Anova,
+                                            c(list(mod = model.full,
+                                                   vcov. = vcovmat), Anova.args)))
+      anova.tab[,'RESI'] = f2S(anova.tab[,'F'], anova.tab[,'Df'], res.df, nrow(data))
+    } else {
+      suppressMessages(anova.tab <- do.call(car::Anova,
+                                            c(list(mod = model.full, test.statistic = 'Wald',
+                                                   vcov. = vcovmat), Anova.args)))
+      anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], nrow(data))
+    }
+
+    anova.tab = anova.tab[which(rownames(anova.tab) != "Residuals"),]
+    output$anova = anova.tab
     names.est = names(output$estimates)
     output$estimates = c(output$estimates, anova.tab$RESI)
     names.est = c(names.est, rownames(anova.tab))
@@ -177,98 +227,38 @@ resi_pe.glm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   else{
     output$naive.var = FALSE
   }
-  class(output) = "resi"
+
   return(output)
 }
+
+
+## ADD DATA EXTRACTION IF MISSING
+#' @describeIn resi_pe RESI point estimation for generalized linear models
+#' @export
+resi_pe.glm = resi_pe.default
 
 #' @describeIn resi_pe RESI point estimation for linear models
 #' @export
-resi_pe.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                       coefficients = TRUE, vcovfunc = sandwich::vcovHC,
-                       Anova.args = list(), vcov.args = list(), unbiased = TRUE, ...){
-  if (missing(data)){
-    data = model.full$model
-  }
-  else{
-    data = as.data.frame(data)
-  }
+resi_pe.lm = function(model.full, model.reduced = NULL, data, anova = TRUE,
+                      coefficients = TRUE, vcovfunc = sandwich::vcovHC, Anova.args = list(),
+                      vcov.args = list(), unbiased = TRUE,
+                      overall = TRUE, ...){
 
-  if (is.null(model.reduced)){
-    form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
-    if (is.null(model.full$na.action)){
-      model.reduced <- update(model.full, formula = form.reduced, data = data)
-    }
-    else{
-      model.reduced <- update(model.full, formula = form.reduced, data = model.full$model)
-    }
-  }
-
-  if (length(vcov.args) == 0){
-    vcovfunc2 <- vcovfunc
-  } else{
-    vcov.args = c(formals(vcovfunc)[1], vcov.args)
-    vcovfunc2 <- function(x) {
-      vcov.args[[1]] = x
-      do.call(vcovfunc, vcov.args)}
-  }
-
-  # overall
-  wald.test = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc2, test = 'F')
-  stats = wald.test$F[2]
-  overall.df = wald.test$Df[2]
-  res.df = wald.test$Res.Df[2]
-  overall.resi.hat = f2S(stats, overall.df, res.df, nrow(data))
-  wald.test[2, 'RESI'] = overall.resi.hat
-  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
-                 model.reduced = list(call = model.reduced$call, formula = formula(model.reduced)),
-                 estimates = overall.resi.hat, overall = wald.test)
-  names.est = "Overall"
-  names(output$estimates) = names.est
-
-  # coefficients table (t statistics)
-  if (coefficients){
-    coefficients.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc2)
-    coefficients.df = data.frame(coefficients.tab[,'Estimate'], coefficients.tab[,'Std. Error'],
-                            coefficients.tab[,'t value'], coefficients.tab[,'Pr(>|t|)'], row.names = rownames(coefficients.tab))
-    colnames(coefficients.df) = colnames(coefficients.tab)
-    if (unbiased){
-      coefficients.df[,'RESI'] = t2S(coefficients.df[,'t value'], nrow(data), model.full$df.residual)
-    } else{
-      coefficients.df[,'RESI'] = t2S_alt(coefficients.df[,'t value'], model.full$df.residual, nrow(data))
-    }
-
-    output$coefficients = coefficients.df
-    output$estimates = c(output$estimates, coefficients.df$RESI)
-    names.est = c(names.est, rownames(coefficients.df))
-    names(output$estimates) = names.est
-  }
-
-  # Anova table (F statistics)
-  if (anova){
-    suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full,
-                                              vcov. = vcovfunc2), Anova.args)))
-    anova.tab[,'RESI'] = f2S(anova.tab[,'F'], anova.tab[,'Df'], res.df, nrow(data))
-    output$anova = anova.tab[which(rownames(anova.tab) != "Residuals"),]
-    output$estimates = c(output$estimates, anova.tab$RESI)
-    names.est = c(names.est, rownames(anova.tab))
-    names(output$estimates) = names.est
-    output$estimates = output$estimates[which(output$estimates != "Residuals")]
-    class(output$anova) = c("anova_resi", class(output$anova))
-  }
-
-  if(identical(vcovfunc, stats::vcov)){
-    output$naive.var = TRUE
-  }
-  else{
-    output$naive.var = FALSE
-  }
+  output = resi_pe.default(model.full = model.full, model.reduced = model.reduced,
+                           data = data, anova = anova, coefficients = coefficients,
+                           vcovfunc = vcovfunc, Anova.args = Anova.args,
+                           vcov.args = vcov.args, unbiased = unbiased,
+                           overall = overall, waldtype = 1, anovaF = TRUE, ...)
   return(output)
 }
 
+
+
 #' @describeIn resi_pe RESI point estimation for nonlinear least squares models
 #' @export
-resi_pe.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE,
-                        vcovfunc = vcovnls, vcov.args = list(), unbiased = TRUE, ...){
+resi_pe.nls = function(model.full, model.reduced = NULL, data, coefficients = TRUE,
+                       anova = FALSE, vcovfunc = vcovnls, vcov.args = list(),
+                       unbiased = TRUE, overall = TRUE, ...){
   if (missing(data) | is.null(data)){
     stop('\nData argument is required for nls model')
   }
@@ -280,68 +270,15 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data, coefficients = T
   }
 
   if (identical(vcovfunc, sandwich::vcovHC)){
-    # vcovfunc = regtools::nlshc
-    ## current issue with reverse dependencies coming through regtools
-    ## for now copy needed function and move regtools to suggests to
-    ## avoid package potentially getting archived until issue is fixed
-    ## copied code in internal_functions.R
-    vcovfunc = vcovnls
-
+    vcovfunc = regtools::nlshc
     warning("Sandwich vcov function not applicable for nls model type, vcovfunc set to regtools::nlshc")
   }
 
-  if (length(vcov.args) == 0){
-    vcovfunc2 <- vcovfunc
-  } else{
-    vcov.args = c(formals(vcovfunc)[1], vcov.args)
-    vcovfunc2 <- function(x) {
-      vcov.args[[1]] = x
-      do.call(vcovfunc, vcov.args)}
-  }
+  output = resi_pe.default(model.full = model.full, model.reduced = NULL, data = data,
+                           anova = FALSE, coefficients = coefficients, vcovfunc = vcovfunc,
+                           vcov.args = vcov.args, unbiased = unbiased, overall = overall,
+                           waldtype = 2, skip.red.pe = TRUE, ...)
 
-  var.names = names(coef(model.full))
-  vcovmat = vcovfunc2(model.full)
-  rownames(vcovmat) = var.names
-  colnames(vcovmat) = var.names
-
-  # overall
-  overall.tab = aod::wald.test(vcovmat, coef(model.full), Terms = 1:length(coef(model.full)))$result$chi2
-  stats = overall.tab["chi2"]
-  overall.df = overall.tab["df"]
-  res.df = nrow(data) - overall.df
-  overall.resi.hat = chisq2S(stats, overall.df, nrow(data))
-  overall.tab['RESI'] = overall.resi.hat
-  overall.tab = as.data.frame(t(overall.tab))
-  rownames(overall.tab) = "Wald Test"
-  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
-                 model.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1")),
-                 estimates = overall.resi.hat, overall = overall.tab)
-  names.est = "Overall"
-  names(output$estimates) = names.est
-
-  # coefficients table (t statistics)
-  if (coefficients){
-    coefficients.tab <- lmtest::coeftest(model.full, vcov. = vcovmat)
-    coefficients.df = data.frame(coefficients.tab[,'Estimate'], coefficients.tab[,'Std. Error'],
-                                 coefficients.tab[,'t value'], coefficients.tab[,'Pr(>|t|)'], row.names = rownames(coefficients.tab))
-    colnames(coefficients.df) = colnames(coefficients.tab)
-    if (unbiased){
-      coefficients.df[,'RESI'] = t2S(coefficients.df[,'t value'], nrow(data), res.df)
-    } else{
-      coefficients.df[,'RESI'] = t2S_alt(coefficients.df[,'t value'], res.df, nrow(data))
-    }
-    output$coefficients = coefficients.df
-    output$estimates = c(output$estimates, coefficients.df$RESI)
-    names.est = c(names.est, rownames(coefficients.df))
-    names(output$estimates) = names.est
-  }
-
-  if(identical(vcovfunc, stats::vcov)){
-    output$naive.var = TRUE
-  }
-  else{
-    output$naive.var = FALSE
-  }
   return(output)
 }
 
@@ -349,8 +286,9 @@ resi_pe.nls <- function(model.full, model.reduced = NULL, data, coefficients = T
 # change warning message to not print if left as default for this and coxph
 #' @describeIn resi_pe RESI point estimation for survreg
 #' @export
-resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                        coefficients = TRUE, vcovfunc = vcov, Anova.args = list(), unbiased = TRUE, ...){
+resi_pe.survreg = function(model.full, model.reduced = NULL, data, anova = TRUE,
+                           coefficients = TRUE, vcovfunc = vcov, Anova.args = list(),
+                           unbiased = TRUE, overall = TRUE, ...){
 
   if (missing(data)){
     stop('\nData argument is required for survreg model')
@@ -363,32 +301,10 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
     warning("vcovfunc argument ignored for survreg objects")
   }
 
-  if(is.null(model.reduced)){
-    form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
-    if (is.null(model.full$na.action)){
-      model.reduced <- update(model.full, formula = form.reduced, data = data)
-    }
-    else{
-      model.reduced <- update(model.full, formula = form.reduced, data = data[which(!(1:nrow(data)%in% model.full$na.action)),])
-    }
-  }
-
-  output = resi_pe.default(model.full, model.reduced, data, coefficients, vcovfunc = vcov, unbiased = unbiased)
-
-  # Anova table (Chi sq statistics)
-  if (anova){
-    anova.tab <- suppressMessages(do.call(car::Anova, c(list(mod = model.full,
-                                            test.statistic = 'Wald',
-                                            error.df = df.residual(model.full)),
-                                       Anova.args)))
-    anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], nrow(data))
-    output$anova = anova.tab[which(rownames(anova.tab) != "Residuals"),]
-    names.est = names(output$estimates)
-    output$estimates = c(output$estimates, anova.tab$RESI)
-    names.est = c(names.est, rownames(anova.tab))
-    names(output$estimates) = names.est
-    class(output$anova) = c("anova_resi", class(output$anova))
-  }
+  output = resi_pe.default(model.full = model.full, model.reduced = model.reduced,
+                           data = data, anova = anova, coefficients = coefficients,
+                           vcovfunc = vcov, Anova.args = Anova.args, unbiased = unbiased,
+                           overall = overall, waldtype = 0, ...)
 
   if(is.null(model.full$naive.var)){
     output$naive.var = TRUE
@@ -402,8 +318,9 @@ resi_pe.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE
 
 #' @describeIn resi_pe RESI point estimation for coxph models
 #' @export
-resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                          coefficients = TRUE, vcovfunc = vcov, Anova.args = list(), unbiased = TRUE, ...){
+resi_pe.coxph = function(model.full, model.reduced = NULL, data, anova = TRUE,
+                         coefficients = TRUE, vcovfunc = vcov, Anova.args = list(),
+                         unbiased = TRUE, overall = TRUE, ...){
   if (missing(data)){
     stop('\nData argument is required for coxph model')
   }
@@ -420,48 +337,10 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     warning('Reduced model argument ignored for coxph model')
   }
 
-  # overall
-  overall.tab = aod::wald.test(vcov(model.full), coef(model.full), Terms = 1:length(coef(model.full)))$result$chi2
-  stats = overall.tab["chi2"]
-  overall.df = overall.tab["df"]
-  res.df = nrow(data) - overall.df
-  overall.resi.hat = chisq2S(stats, overall.df, model.full$n)
-  overall.tab['RESI'] = overall.resi.hat
-  overall.tab = as.data.frame(t(overall.tab))
-  rownames(overall.tab) = "Wald Test"
-  ## the output object
-  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
-                 model.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1")),
-                 estimates = overall.resi.hat, overall = overall.tab)
-  names.est = "Overall"
-  names(output$estimates) = names.est
-
-  if (coefficients){
-    coefficients.tab <- lmtest::coeftest(model.full, vcov. = vcov)
-    coefficients.df = data.frame(coefficients.tab[,'Estimate'], coefficients.tab[,'Std. Error'],
-                            coefficients.tab[,'z value'], coefficients.tab[,'Pr(>|z|)'], row.names = rownames(coefficients.tab))
-    colnames(coefficients.df) = colnames(coefficients.tab)
-    if (unbiased){
-      coefficients.df[,'RESI'] = z2S(coefficients.df[,'z value'], model.full$n)
-    } else{
-      coefficients.df[,'RESI'] = suppressWarnings(z2S_alt(coefficients.df[,'z value'], model.full$n))
-    }
-    output$coefficients = coefficients.df
-    output$estimates = c(output$estimates, coefficients.df$RESI)
-    names.est = c(names.est, rownames(coefficients.df))
-    names(output$estimates) = names.est
-  }
-
-  # Anova table (Chi sq statistics)
-  if (anova){
-    suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full, test.statistic = 'Wald'), Anova.args)))
-    anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], model.full$n)
-    output$anova = anova.tab[which(rownames(anova.tab) != "Residuals"),]
-    output$estimates = c(output$estimates, anova.tab$RESI)
-    names.est = c(names.est, rownames(anova.tab))
-    names(output$estimates) = names.est
-    class(output$anova) = c("anova_resi", class(output$anova))
-  }
+  output = resi_pe.default(model.full = model.full, model.reduced = NULL,
+                           data = data, anova = anova, coefficients = coefficients,
+                           vcovfunc = vcov, Anova.args = Anova.args, unbiased = unbiased,
+                           overall = overall, waldtype = 2, ...)
 
   if(is.null(model.full$naive.var)){
     output$naive.var = TRUE
@@ -475,82 +354,26 @@ resi_pe.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
 #' @describeIn resi_pe RESI point estimation for hurdle models
 #' @export
-resi_pe.hurdle <- function(model.full, model.reduced = NULL, data, coefficients = TRUE,
-                           vcovfunc = sandwich::sandwich, vcov.args = list(), unbiased = TRUE, ...){
-  if (missing(data)){
-    data = model.full$model
-  }
-  else{
-    data = as.data.frame(data)
-  }
-
-  if (is.null(model.reduced)){
-    form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
-    if (nrow(model.full$model) == nrow(data)){
-      model.reduced <- update(model.full, formula = form.reduced, data = data)
-    }
-    else{
-      model.reduced <- update(model.full, formula = form.reduced, data = model.full$model)
-    }
-  }
+resi_pe.hurdle = function(model.full, model.reduced = NULL, data, coefficients = TRUE,
+                          anova = TRUE, vcovfunc = sandwich::sandwich, vcov.args = list(),
+                          unbiased = TRUE, overall = TRUE, ...){
 
   if (identical(vcovfunc, sandwich::vcovHC)){
     vcovfunc = sandwich::sandwich
   }
 
-  if (length(vcov.args) == 0){
-    vcovfunc2 <- vcovfunc
-  } else{
-    vcov.args = c(formals(vcovfunc)[1], vcov.args)
-    vcovfunc2 <- function(x) {
-      vcov.args[[1]] = x
-      do.call(vcovfunc, vcov.args)}
-  }
-
-  # overall
-  wald.test = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc2, test = 'Chisq')
-  stats = wald.test$Chisq[2]
-  overall.df = wald.test$Df[2]
-  res.df = wald.test$Res.Df[2]
-  overall.resi.hat = chisq2S(stats, overall.df, nrow(data))
-  wald.test[2, 'RESI'] = overall.resi.hat
-  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
-                 model.reduced = list(call = model.reduced$call, formula = formula(model.reduced)),
-                 estimates = overall.resi.hat, overall = wald.test)
-  names.est = "Overall"
-  names(output$estimates) = names.est
-
-  # coefficients table (z statistics)
-  if (coefficients){
-    coefficients.tab <- lmtest::coeftest(model.full, vcov. = vcovfunc2, df = 0)
-    coefficients.df = data.frame(coefficients.tab[,'Estimate'], coefficients.tab[,'Std. Error'],
-                            coefficients.tab[,'z value'], coefficients.tab[,'Pr(>|z|)'], row.names = rownames(coefficients.tab))
-    colnames(coefficients.df) = colnames(coefficients.tab)
-    if (unbiased){
-      coefficients.df[,'RESI'] = z2S(coefficients.df[,'z value'], nrow(data))
-    }
-    else{
-      coefficients.df[,'RESI'] = suppressWarnings(z2S_alt(coefficients.df[,'z value'], nrow(data)))
-    }
-    output$coefficients = coefficients.df
-    output$estimates = c(output$estimates, coefficients.df$RESI)
-    names.est = c(names.est, rownames(coefficients.df))
-    names(output$estimates) = names.est
-  }
-
-  if(identical(vcovfunc, stats::vcov)){
-    output$naive.var = TRUE
-  }
-  else{
-    output$naive.var = FALSE
-  }
+  output = resi_pe.default(model.full = model.full, model.reduced = model.reduced,
+                           data = data, anova = FALSE, coefficients = coefficients,
+                           vcovfunc = vcovfunc, vcov.args = vcov.args, unbiased = unbiased,
+                           overall = overall, waldtype = 0,
+                           coeftest_df = 0, ...)
 
   return(output)
 }
 
 #' @describeIn resi_pe RESI point estimation for zeroinfl models
 #' @export
-resi_pe.zeroinfl <- resi_pe.hurdle
+resi_pe.zeroinfl = resi_pe.hurdle
 
 #' @describeIn resi_pe RESI point estimation for geeglm object
 #' @export
@@ -575,7 +398,7 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   form = formula(model.full)
   # independence model
   mod_indg = suppressWarnings(glm(formula = form, family = model.full$family, data = data,
-                 weights = w, contrasts = model.full$contrasts))
+                                  weights = w, contrasts = model.full$contrasts))
   mod_indg$residuals = mod_indg$residuals / sqrt(mod_indg$weights)
   # the var-cov matrix estimate from the independence model
   # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
@@ -632,6 +455,7 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   # coefficients (z statistics)
   if (coefficients) {
     # longitudinal resi
+    # geeglm uses robust estimate by default, do not need to specify vcov
     coefficients.tab <- lmtest::coeftest(model.full)
     coefficients.df = data.frame(coefficients.tab[,'Estimate'],
                                  coefficients.tab[,'Std. Error'],
@@ -710,7 +534,7 @@ resi_pe.gee <- function(model.full, data, unbiased = TRUE, ...){
   # mod_ind$robust.variance = mod_ind$robust.variance * tot_obs/N
   # to match geeglm
   mod_indg = suppressWarnings(glm(formula = formula(model.full), family = model.full$family, data = data,
-                 contrasts = model.full$contrasts, weights = w))
+                                  contrasts = model.full$contrasts, weights = w))
   mod_indg$residuals = mod_indg$residuals / sqrt(mod_indg$weights)
   # the var-cov matrix estimate from the independence model
   # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
@@ -728,6 +552,7 @@ resi_pe.gee <- function(model.full, data, unbiased = TRUE, ...){
 
   # longitudinal RESI
   # coefficients (z statistics)
+  # uses different function to calculate than other classes
   coefficients.tab <- summary(model.full)$coefficients
   coefficients.df = data.frame(coefficients.tab[,'Estimate'],
                                coefficients.tab[,'Robust S.E.'],
@@ -738,7 +563,7 @@ resi_pe.gee <- function(model.full, data, unbiased = TRUE, ...){
     coefficients.df[,'L-RESI'] = z2S(coefficients.df[,'z value'], N)
   } else{
     coefficients.df[,'L-RESI'] = suppressWarnings(z2S_alt(coefficients.df[,'z value'],
-                                                        N))
+                                                          N))
   }
 
   # CS RESI
@@ -786,7 +611,7 @@ resi_pe.lme <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::vcovC
                                         'Robust Wald' = (x[, 'Value']^2/robust.var),
                                         RESI = RESI::chisq2S(x[, 'Value']^2/robust.var, 1, N)))
   output = list(model.full = list(call = model.full$call, formula = formula(model.full)),
-       estimates = coefficients.df$RESI, coefficients = coefficients.df)
+                estimates = coefficients.df$RESI, coefficients = coefficients.df)
   names(output$estimates) = rownames(coefficients.df)
 
   # Anova table (Chi sq statistics)
@@ -822,28 +647,28 @@ resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::v
     coefficients.tab = cbind(x, 'Wald' = x[, 't value']^2, RESI = RESI::chisq2S(x[, 't value']^2, 1, N))
     output = list(estimates = coefficients.tab[,"RESI"], coefficients = coefficients.tab, naive.var = TRUE)
     vcovfunc2 = vcovfunc
-    } else {
-      if (length(vcov.args) == 0){
+  } else {
+    if (length(vcov.args) == 0){
+      if (identical(vcovfunc, clubSandwich::vcovCR)){
+        vcov.args = c(formals(vcovfunc)[1], list(type = "CR3"))
+      }} else{
         if (identical(vcovfunc, clubSandwich::vcovCR)){
-          vcov.args = c(formals(vcovfunc)[1], list(type = "CR3"))
-        }} else{
-            if (identical(vcovfunc, clubSandwich::vcovCR)){
-              if (!("type" %in% names(vcov.args))){
-                vcov.args = c(vcov.args, list(type = "CR3"))}}
-            vcov.args = c(formals(vcovfunc)[1], vcov.args)}
+          if (!("type" %in% names(vcov.args))){
+            vcov.args = c(vcov.args, list(type = "CR3"))}}
+        vcov.args = c(formals(vcovfunc)[1], vcov.args)}
 
-      vcovfunc2 <- function(x) {
-        vcov.args[[1]] = x
-        do.call(vcovfunc, vcov.args)}
-      robust_var = diag(vcovfunc2(model.full))
-      robust_se = sqrt(robust_var)
-      coefficients.tab = cbind(x, 'Robust.SE' = robust_se,
-                               'Robust Wald' = (x[, 'Estimate']^2/robust_var),
-                               RESI = RESI::chisq2S(x[, 'Estimate']^2/robust_var, 1, N))
-      # model full is not the same process as others, so print method is missing the call
-      output = list(estimates = coefficients.tab[,"RESI"], coefficients = coefficients.tab,
-                    naive.var = FALSE)
-    }
+    vcovfunc2 <- function(x) {
+      vcov.args[[1]] = x
+      do.call(vcovfunc, vcov.args)}
+    robust_var = diag(vcovfunc2(model.full))
+    robust_se = sqrt(robust_var)
+    coefficients.tab = cbind(x, 'Robust.SE' = robust_se,
+                             'Robust Wald' = (x[, 'Estimate']^2/robust_var),
+                             RESI = RESI::chisq2S(x[, 'Estimate']^2/robust_var, 1, N))
+    # model full is not the same process as others, so print method is missing the call
+    output = list(estimates = coefficients.tab[,"RESI"], coefficients = coefficients.tab,
+                  naive.var = FALSE)
+  }
   names(output$estimates) = rownames(coefficients.tab)
   # Anova table (Chi sq statistics)
   if (anova){
