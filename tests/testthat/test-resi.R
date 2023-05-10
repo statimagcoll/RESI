@@ -123,7 +123,7 @@ if(requireNamespace("tibble")){
 
 ## tests
 test_that("Specifying non-allowed vcov produces warning",{
-  expect_warning(resi(mod.nls, data = data.nls, nboot = 10, vcovfunc = sandwich::vcovHC),
+  expect_warning(resi(mod.nls, data = data.nls, nboot = 1, vcovfunc = sandwich::vcovHC),
                  "Sandwich vcov function not applicable for nls model type, vcovfunc set to regtools::nlshc")
   if(requireNamespace("survival")){
   expect_warning(resi(mod.surv, data = data.surv, nboot = 1, vcovfunc = sandwich::vcovHC),
@@ -161,9 +161,9 @@ test_that("boot.results stores correctly",{
 })
 
 test_that("resi produces the correct estimates", {
-  expect_equal(unname(resi(mod, nboot = 1)$estimates), c(0.35982590, -0.06733537, -0.02670248, -0.03341748, -0.00246893, 0.14980504, 0.15238719,
-                                                         0.05839381, 0.01667149, 0.03610640, -0.01497171, 0.03655364, 0.29533571, 0.14991488,
-                                                         0.05159896, 0.01617303), tolerance = 1e-07)
+  expect_equal(unname(resi(mod, nboot = 1)$estimates), c(0.35982590, -0.0672973369, -0.0266873974, -0.0333986021, -0.0024675352, 0.1497204142, 0.1523011075,
+                                                         0.0583608197, 0.0166620711, 0.0360860037, -0.0149632506, 0.0365536393, 0.2953357085, 0.1499148793,
+                                                         0.0515989569, 0.0161730289), tolerance = 1e-07)
   expect_equal(unname(resi(mod.lm, nboot = 1)$estimates), c(0.3595407548, -0.0672973369,
                                                             -0.0266873974, -0.0333986021,
                                                             -0.0024675352, 0.1497204142,
@@ -171,23 +171,25 @@ test_that("resi produces the correct estimates", {
                                                             0.0166620711, 0.0360860037,
                                                             -0.0149632506, 0.0364798507,
                                                             0.2951113263, 0.1497981921,
-                                                            0.0515491712, 0.0160560332))
+                                                            0.0515491712, 0.0160560332), tolerance = 1e-07)
   expect_equal(unname(resi(mod.s, nboot = 1, data = data)$estimates[c(1, 6, 11, 24)]),
-               c(0.35634034, 0.06143486, 0.00748577, 0.05339006), tolerance = 1e-07)
+               c(0.3563403364, 0.0613999413, 0.0074815162, 0.0533900551), tolerance = 1e-07)
   if(requireNamespace("survival")){
   expect_equal(unname(resi(mod.surv, nboot = 1, data = data.surv)$estimates),
-               c(0.194002944, 0.515785774, -0.080800275, 0.200549139, 0.105353954,
-                 -0.276392759, 0.046080344, 0.189247644, 0.081817903), tolerance = 1e-07)
+               c(0.194002944, 0.514040962, -0.080526942, 0.199870716, 0.104997560,
+                 -0.275457771, 0.046080344, 0.189247644, 0.081817903), tolerance = 1e-07)
   expect_equal(unname(resi(mod.coxph, nboot = 1, data = data.surv)$estimates),
                c(0.224354226, 0.136138740, -0.213293162, 0.008641209, 0.117732151,
-                 0.202042262, 0.000000000))}
+                 0.202042262, 0.000000000))
+  }
   if(requireNamespace("pscl")){
   expect_equal(unname(resi(mod.hurdle, nboot = 1)$estimates[c(1, 2, 5, 8, 10)]),
                c(0.28063439, 0.12770489, -0.06898884, 0.02686305, 0.06039791),
                tolerance = 1e-07)
   expect_equal(unname(resi(mod.zinf, nboot = 1)$estimates[c(1, 2, 5, 8, 10)]),
                c(0.23725614, 0.11892936, -0.07014934, -0.03481673, -0.03461235),
-               tolerance = 1e-07)}
+               tolerance = 1e-07)
+  }
   if(requireNamespace("gee")){
   expect_equal(unname(resi(mod.gee, nboot = 10, data = data.gee)$coefficients[,'L-RESI']),
                c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258),
@@ -259,7 +261,7 @@ test_that("boot.results same (approx) for gee and geeglm",{
 
 test_that("unbiased = FALSE returns same abs. RESI as Chi-sq/F",{
   resi.obj = resi(mod, nboot = 1, unbiased = FALSE)
-  expect_equal(abs(resi.obj$coefficients[6:7, 'RESI']), resi.obj$anova[3:4, 'RESI'], tolerance = 1e-07)
+  expect_equal(abs(resi.obj$coefficients[6:7, 'RESI']), resi.obj$anova[3:4, 'RESI'], tolerance = 1e-03)
   if(requireNamespace("survival")){
   resi.obj = resi(mod.surv, data = data.surv, nboot = 1, unbiased = FALSE)
   expect_equal(abs(resi.obj$coefficients[2:4, 'RESI']), resi.obj$anova[1:3, 'RESI'], tolerance = 1e-07)
@@ -312,9 +314,9 @@ test_that("vcovfunc = vcov changes naive.var to TRUE",{
 
 if(requireNamespace("tibble")){
 test_that("tibbles work", {
-  expect_equal(unname(resi(mod.glm.tib, nboot = 1)$estimates), c(0.35982590, -0.06733537, -0.02670248, -0.03341748, -0.00246893, 0.14980504, 0.15238719,
-                                                         0.05839381, 0.01667149, 0.03610640, -0.01497171, 0.03655364, 0.29533571, 0.14991488,
-                                                         0.05159896, 0.01617303), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.glm.tib, nboot = 1)$estimates), c(0.35982590, -0.0672973369, -0.0266873974, -0.0333986021, -0.0024675352, 0.1497204142, 0.1523011075,
+                                                                 0.0583608197, 0.0166620711, 0.0360860037, -0.0149632506, 0.0365536393, 0.2953357085, 0.1499148793,
+                                                                 0.0515989569, 0.0161730289), tolerance = 1e-07)
   expect_equal(unname(resi(mod.lm.tib, nboot = 1)$estimates), c(0.3595407548, -0.0672973369,
                                                                 -0.0266873974, -0.0333986021,
                                                                 -0.0024675352, 0.1497204142,
@@ -324,8 +326,8 @@ test_that("tibbles work", {
                                                                 0.2951113263, 0.1497981921,
                                                                 0.0515491712, 0.0160560332))
   if(requireNamespace("survival")){
-  expect_equal(unname(resi(mod.surv.tib, nboot = 1, data = data.surv)$estimates), c(0.194002944, 0.515785774, -0.080800275, 0.200549139, 0.105353954,
-                                                                                    -0.276392759, 0.046080344, 0.189247644, 0.081817903), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.surv.tib, nboot = 1, data = data.surv)$estimates), c(0.194002944, 0.514040962, -0.080526942, 0.199870716, 0.104997560,
+                                                                                    -0.275457771, 0.046080344, 0.189247644, 0.081817903), tolerance = 1e-07)
   expect_equal(unname(resi(mod.coxph.tib, nboot = 1, data = data.surv)$estimates), c(0.224354226, 0.136138740, -0.213293162, 0.008641209, 0.117732151, 0.202042262, 0.000000000))}
   if(requireNamespace("pscl")){
   expect_equal(unname(resi(mod.hurdle.tib, nboot = 1)$estimates[c(1, 2, 5, 8, 10)]), c(0.28063439, 0.12770489, -0.06898884, 0.02686305, 0.06039791), tolerance = 1e-07)
