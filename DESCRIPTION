@@ -28,6 +28,7 @@ Collate:
   'd2S.R'
   'fsq2S.R'
   'plot.R'
+  'ggplot.R'
   'print.R'
   'omnibus.R'
 Imports:
@@ -35,6 +36,7 @@ Imports:
     boot,
     car,
     clubSandwich,
+    ggplot2,
     lmtest,
     nlme,
     regtools,
