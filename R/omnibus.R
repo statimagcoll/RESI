@@ -20,10 +20,10 @@
 #' @export
 omnibus <- function(object, alpha = NULL, ...){
   if(!"resi" %in% class(object)){
-    stop('\nThis function only works on resi objects')
+    stop("\nThis function only works on resi objects")
   }
   if(is.null(object$overall)){
-    stop('\nThe resi function for this model type does not have an omnibus test option')
+    stop("\nThe resi object did not compute an omnibus test")
   }
 
   output = list(alpha = alpha, model.full = object$model.full)
@@ -34,24 +34,24 @@ omnibus <- function(object, alpha = NULL, ...){
   else{
     if (!(all(alpha %in% object$alpha))){
       if (is.null(object$boot.results)){
-        stop('\nresi function was not run with store.boot = TRUE option')}
+        stop("\nresi function was not run with store.boot = TRUE option")}
     }
     if(is.null(object$boot.results)){
       output$overall = object$overall[,c(1:(which(colnames(object$overall)
-                                                           == 'RESI')),
+                                                           == "RESI")),
                                                   which(colnames(object$overall)%in%
-                                                          c(paste(alpha/2*100, '%', sep=''),
-                                                            paste((1-alpha/2)*100, '%', sep=''))))]
+                                                          c(paste(alpha/2*100, "%", sep=""),
+                                                            paste((1-alpha/2)*100, "%", sep=""))))]
     }
     else{
-      output$overall = object$overall[,1:(which(colnames(object$overall) == 'RESI'))]
+      output$overall = object$overall[,1:(which(colnames(object$overall) == "RESI"))]
       CIs = quantile(object$boot.results[,1], probs = sort(c(alpha/2, 1-alpha/2)),
                      na.rm = TRUE)
-      output$overall[nrow(object$overall), c(paste(alpha/2*100, '%', sep=''),
-                                         paste((1-rev(alpha)/2)*100, '%', sep=''))] = CIs
+      output$overall[nrow(object$overall), c(paste(alpha/2*100, "%", sep=""),
+                                         paste((1-rev(alpha)/2)*100, "%", sep=""))] = CIs
     }
   }
-  class(output) = c('omnibus_resi')
+  class(output) = c("omnibus_resi")
   output
 }
 
