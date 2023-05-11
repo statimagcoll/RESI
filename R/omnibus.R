@@ -7,7 +7,7 @@
 #' @param object an object resulting from resi function
 #' @param alpha an optional new specification for the confidence level. Can be vector-valued
 #' @param ... ignored
-#' @return Returns a `omnibus_resi` object containing the computed omnbus Wald test
+#' @return Returns a `omnibus_resi` object containing the computed omnibus Wald test
 #' @examples
 #' # fit a model
 #' mod = lm(charges ~ bmi + sex, data = RESI::insurance)

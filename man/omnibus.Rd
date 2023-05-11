@@ -14,7 +14,7 @@ omnibus(object, alpha = NULL, ...)
 \item{...}{ignored}
 }
 \value{
-Returns a `omnibus_resi` object containing the computed omnbus Wald test
+Returns a `omnibus_resi` object containing the computed omnibus Wald test
 }
 \description{
 After running the \code{\link{resi}} function on a fitted model, this function

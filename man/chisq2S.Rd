@@ -32,7 +32,7 @@ The formula for converting a Chi-square statistic to RESI is:
 mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
 
 # run a Wald test with robust variance
-wt = lmtest::waldtest(mod, vcov = sandwich::vcovHC, test = 'Chisq')
+wt = lmtest::waldtest(mod, vcov = sandwich::vcovHC, test = "Chisq")
 
 # get Chi-sq value and degrees of freedom
 chisq = wt$Chisq[2]
