@@ -62,3 +62,13 @@ print.summary_resi <- function(x, digits = max(3L, getOption("digits") - 3L), ..
   print(round(x$coefficients, digits = digits))
   invisible(x)
 }
+
+#' @export
+print.omnibus_resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
+  cat("\nAnalysis of effect sizes based on RESI:")
+  cat("\nConfidence level = ", x$alpha, "\n")
+  print(round(x$overall, digits = digits))
+  invisible(x)
+}
+
+
