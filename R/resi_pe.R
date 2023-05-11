@@ -136,61 +136,64 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
   names.est = c()
   # overall
   if (overall){
-    if (waldtype %in% c(0,1)){
-      # 0 is Chisq with lmtest
-      # 1 is F with lmtest
-      wtype = ifelse(waldtype == 0, "Chisq", "F")
-      overall.tab = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc2,
-                                     test = wtype)
-      stats = overall.tab[,wtype][2]
-      overall.df = overall.tab$Df[2]
-      res.df = overall.tab$Res.Df[2]
-    }
-
-    if (waldtype == 2){
-      # 2 is aod (nls, coxph)
-      overall.tab = aod::wald.test(vcovmat, coef(model.full),
-                                   Terms = 1:length(coef(model.full)))$result$chi2
-      stats = overall.tab["chi2"]
-      overall.df = overall.tab["df"]
-      res.df = nrow(data) - overall.df
-      overall.tab = t(as.data.frame(overall.tab))
-    }
-    overall.resi.hat = ifelse(waldtype == 1, f2S(stats, overall.df, res.df, nrow(data)),
-                              chisq2S(stats, overall.df, nrow(data)))
-    if (nrow(overall.tab) == 1){
-      overall.tab = cbind(overall.tab, RESI = overall.resi.hat)
+    # check if full and reduced model are the same
+    if (model.full$call == model.reduced$call){
+      stop("\nFull and reduced model are identical")
     } else{
-      overall.tab[nrow(overall.tab), 'RESI'] = overall.resi.hat
-    }
-    output$estimates = overall.resi.hat
-    output$overall = overall.tab
-    names.est = "Overall"
-    names(output$estimates) = names.est
-  }
+      if (waldtype %in% c(0,1)){
+        # 0 is Chisq with lmtest
+        # 1 is F with lmtest
+        wtype = ifelse(waldtype == 0, "Chisq", "F")
+        overall.tab = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc2,
+                                       test = wtype)
+        stats = overall.tab[,wtype][2]
+        overall.df = overall.tab$Df[2]
+        res.df = overall.tab$Res.Df[2]
+      }
+
+      if (waldtype == 2){
+        # 2 is aod (nls, coxph)
+        overall.tab = aod::wald.test(vcovmat, coef(model.full),
+                                     Terms = 1:length(coef(model.full)))$result$chi2
+        stats = overall.tab["chi2"]
+        overall.df = overall.tab["df"]
+        res.df = nrow(data) - overall.df
+        overall.tab = t(as.data.frame(overall.tab))
+      }
+      overall.resi.hat = ifelse(waldtype == 1, f2S(stats, overall.df, res.df, nrow(data)),
+                                chisq2S(stats, overall.df, nrow(data)))
+      if (nrow(overall.tab) == 1){
+        overall.tab = cbind(overall.tab, RESI = overall.resi.hat)
+      } else{
+        overall.tab[nrow(overall.tab), "RESI"] = overall.resi.hat
+      }
+      output$estimates = overall.resi.hat
+      output$overall = overall.tab
+      names.est = "Overall"
+      names(output$estimates) = names.est
+    }}
 
   # coefficients table (z or t statistics)
   if (coefficients){
     if ("coeftest_df" %in% names(dots)){
-      coeftest_df = dots$coeftest_df} else{
-        coeftest_df = NULL
+      coefficients.tab = lmtest::coeftest(model.full, vcov. = vcovmat, df = dots$coeftest_df)
       }
-    coefficients.tab = lmtest::coeftest(model.full, vcov. = vcovmat, df = coeftest_df)
+    coefficients.tab = lmtest::coeftest(model.full, vcov. = vcovmat)
 
     torZ = ifelse("z value" %in% colnames(coefficients.tab), "z", "t")
-    coefficients.df = data.frame(coefficients.tab[,'Estimate'], coefficients.tab[,'Std. Error'],
+    coefficients.df = data.frame(coefficients.tab[,"Estimate"], coefficients.tab[,"Std. Error"],
                                  coefficients.tab[,paste(torZ, "value")],
                                  coefficients.tab[,paste("Pr(>|", torZ, "|)", sep = "")],
                                  row.names = rownames(coefficients.tab))
     colnames(coefficients.df) = colnames(coefficients.tab)
 
     if (torZ == "z"){
-      coefficients.df[,'RESI'] = suppressWarnings(z2S(coefficients.df[,3], nrow(data), unbiased))
+      coefficients.df[,"RESI"] = suppressWarnings(z2S(coefficients.df[,3], nrow(data), unbiased))
     } else{
       if(!overall){
         res.df = model.full$df.residual
       }
-      coefficients.df[,'RESI'] = suppressWarnings(t2S(coefficients.df[,'t value'],
+      coefficients.df[,"RESI"] = suppressWarnings(t2S(coefficients.df[,"t value"],
                                                       res.df, nrow(data), unbiased))
     }
     output$coefficients = coefficients.df
@@ -201,15 +204,18 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   if (anova){
     if ("anovaF" %in% names(dots)){
-      suppressMessages(anova.tab <- do.call(car::Anova,
-                                            c(list(mod = model.full,
-                                                   vcov. = vcovmat), Anova.args)))
-      anova.tab[,'RESI'] = f2S(anova.tab[,'F'], anova.tab[,'Df'], res.df, nrow(data))
+      suppressMessages(anova.tab <- try(do.call(car::Anova, c(list(mod = model.full,
+                                              vcov. = vcovmat), Anova.args)), silent = T))
+      if(inherits(anova.tab, "try-error")){
+        stop("car::Anova failed. Try rerunning with anova = FALSE")}
+      anova.tab[,"RESI"] = f2S(anova.tab[,"F"], anova.tab[,"Df"], res.df, nrow(data))
     } else {
-      suppressMessages(anova.tab <- do.call(car::Anova,
-                                            c(list(mod = model.full, test.statistic = 'Wald',
-                                                   vcov. = vcovmat), Anova.args)))
-      anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], nrow(data))
+      tryCatch(suppressMessages(anova.tab <- do.call(car::Anova,
+                                                     c(list(mod = model.full, test.statistic = "Wald",
+                                                            vcov. = vcovmat), Anova.args))),
+               error = function(e){
+                 message("car::Anova failed. Try rerunning with anova = FALSE")})
+      anova.tab[,"RESI"] = chisq2S(anova.tab[,"Chisq"], anova.tab[,"Df"], nrow(data))
     }
 
     anova.tab = anova.tab[which(rownames(anova.tab) != "Residuals"),]
@@ -232,7 +238,6 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
 }
 
 
-## ADD DATA EXTRACTION IF MISSING
 #' @describeIn resi_pe RESI point estimation for generalized linear models
 #' @export
 resi_pe.glm = resi_pe.default
@@ -260,13 +265,13 @@ resi_pe.nls = function(model.full, model.reduced = NULL, data, coefficients = TR
                        anova = FALSE, vcovfunc = vcovnls, vcov.args = list(),
                        unbiased = TRUE, overall = TRUE, ...){
   if (missing(data) | is.null(data)){
-    stop('\nData argument is required for nls model')
+    stop("\nData argument is required for nls model")
   }
   data = as.data.frame(data)
 
   # currently not accepting other reduced models for nls
   if (!is.null(model.reduced)){
-    warning('Reduced model argument ignored for nls model')
+    warning("Reduced model argument ignored for nls model")
   }
 
   if (identical(vcovfunc, sandwich::vcovHC)){
@@ -291,7 +296,7 @@ resi_pe.survreg = function(model.full, model.reduced = NULL, data, anova = TRUE,
                            unbiased = TRUE, overall = TRUE, ...){
 
   if (missing(data)){
-    stop('\nData argument is required for survreg model')
+    stop("\nData argument is required for survreg model")
   }
   else{
     data = as.data.frame(data)
@@ -322,7 +327,7 @@ resi_pe.coxph = function(model.full, model.reduced = NULL, data, anova = TRUE,
                          coefficients = TRUE, vcovfunc = vcov, Anova.args = list(),
                          unbiased = TRUE, overall = TRUE, ...){
   if (missing(data)){
-    stop('\nData argument is required for coxph model')
+    stop("\nData argument is required for coxph model")
   }
   else{
     data = as.data.frame(data)
@@ -334,7 +339,7 @@ resi_pe.coxph = function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # currently not accepting other reduced models for coxph
   if (!is.null(model.reduced)){
-    warning('Reduced model argument ignored for coxph model')
+    warning("Reduced model argument ignored for coxph model")
   }
 
   output = resi_pe.default(model.full = model.full, model.reduced = NULL,
@@ -430,7 +435,7 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   # overall
   # longitudinal
   overall.tab = anova(model.full, model.reduced)
-  overall.tab[,'L-RESI'] = chisq2S(overall.tab[,'X2'], overall.tab[,'Df'], N)
+  overall.tab[,"L-RESI"] = chisq2S(overall.tab[,"X2"], overall.tab[,"Df"], N)
   # # cross-sectional (independence models) (not working for now)
   # overallcs = anova(mod_ind, mod_ind_reduced)
   # overall.tab[,'CS-RESI'] = chisq2S(overallcs[,'X2'], overallcs[,'Df'], N)
@@ -457,27 +462,27 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     # longitudinal resi
     # geeglm uses robust estimate by default, do not need to specify vcov
     coefficients.tab <- lmtest::coeftest(model.full)
-    coefficients.df = data.frame(coefficients.tab[,'Estimate'],
-                                 coefficients.tab[,'Std. Error'],
-                                 coefficients.tab[,'z value'],
-                                 coefficients.tab[,'Pr(>|z|)'],
+    coefficients.df = data.frame(coefficients.tab[,"Estimate"],
+                                 coefficients.tab[,"Std. Error"],
+                                 coefficients.tab[,"z value"],
+                                 coefficients.tab[,"Pr(>|z|)"],
                                  row.names = rownames(coefficients.tab))
     colnames(coefficients.df) = colnames(coefficients.tab)
     if (unbiased){
-      coefficients.df[,'L-RESI'] = z2S(coefficients.df[,'z value'], N)
+      coefficients.df[,"L-RESI"] = z2S(coefficients.df[,"z value"], N)
     } else{
-      coefficients.df[,'L-RESI'] = suppressWarnings(z2S_alt(coefficients.df[,'z value'],
+      coefficients.df[,"L-RESI"] = suppressWarnings(z2S_alt(coefficients.df[,"z value"],
                                                             N))
     }
 
     # CS RESI
     # M: use independence mod
     coefficients.tabcs <- lmtest::coeftest(mod_ind, vcov. = cov_ind)
-    z_cs = coefficients.tabcs[,'z value']
+    z_cs = coefficients.tabcs[,"z value"]
     if (unbiased){
-      coefficients.df[,'CS-RESI'] = z2S(z_cs, N)
+      coefficients.df[,"CS-RESI"] = z2S(z_cs, N)
     } else{
-      coefficients.df[,'CS-RESI'] = suppressWarnings(z2S_alt(z_cs,
+      coefficients.df[,"CS-RESI"] = suppressWarnings(z2S_alt(z_cs,
                                                              N))
     }
 
@@ -492,13 +497,13 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   if (anova) {
     # longitudinal RESI
     anova.tab <- anova(model.full)
-    anova.tab[,'L-RESI'] = chisq2S(anova.tab[,'X2'], anova.tab[,'Df'], N)
+    anova.tab[,"L-RESI"] = chisq2S(anova.tab[,"X2"], anova.tab[,"Df"], N)
 
     # CS RESI
     # M: use anova() on new mod with substituted variance
     anova.tabcs <- suppressMessages(car::Anova(mod_indg, vcov. = cov_ind,
                                                test.statistic = "Wald"))
-    anova.tab[,'CS-RESI'] = chisq2S(anova.tabcs[,'Chisq'], anova.tabcs[,'Df'], N)
+    anova.tab[,"CS-RESI"] = chisq2S(anova.tabcs[,"Chisq"], anova.tabcs[,"Df"], N)
 
     output$anova = anova.tab
     output$estimates = c(output$estimates, anova.tab$`L-RESI`,

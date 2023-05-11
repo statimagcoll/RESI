@@ -150,7 +150,7 @@ resi <- function(model.full, ...){
 #' @export
 resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                          coefficients = TRUE, overall = TRUE, nboot = 1000,
-                         boot.method = 'nonparam', vcovfunc = sandwich::vcovHC,
+                         boot.method = "nonparam", vcovfunc = sandwich::vcovHC,
                          alpha = 0.05, store.boot = FALSE, Anova.args = list(),
                          vcov.args = list(), unbiased = TRUE,
                          parallel = c("no", "multicore", "snow"),
@@ -217,9 +217,9 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
           output$overall = cbind(output$overall, quantile(boot.results[,1],
                                                           probs = alpha.order[i], na.rm = TRUE))
         }
-        colnames(output$overall) = c(names.overall, paste(alpha.order*100, '%', sep=''))
+        colnames(output$overall) = c(names.overall, paste(alpha.order*100, "%", sep=""))
       } else{
-        output$overall[nrow(output$overall),paste(alpha.order*100, '%', sep='')] =
+        output$overall[nrow(output$overall),paste(alpha.order*100, "%", sep="")] =
           quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)}
     }
 
@@ -231,7 +231,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
         CIs = apply(co, 2,  quantile, probs = alpha.order, na.rm = TRUE)
       }
       CIs = t(CIs)
-      output$coefficients[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+      output$coefficients[1:nrow(CIs), paste(alpha.order*100, "%", sep="")] = CIs
     }
 
     if (anova){
@@ -242,13 +242,13 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
         CIs = apply(an, 2,  quantile, probs = alpha.order, na.rm = TRUE)
       }
       CIs = t(CIs)
-      output$anova[1:nrow(CIs), paste(alpha.order*100, '%', sep='')] = CIs
+      output$anova[1:nrow(CIs), paste(alpha.order*100, "%", sep="")] = CIs
     }
   } else {
     r = 1
     if (!is.null(output$overall)){
       # L-RESI for geeglm model overall Wald test
-      output$overall[nrow(output$overall),paste("L ",alpha.order*100, '%', sep='')] =
+      output$overall[nrow(output$overall),paste("L ",alpha.order*100, "%", sep="")] =
         quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
       r = 2
     }
@@ -262,7 +262,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                      probs = alpha.order, na.rm = TRUE)
       }
       lCIs = t(lCIs)
-      output$coefficients[1:nrow(lCIs), paste("L ",alpha.order*100, '%', sep='')] = lCIs
+      output$coefficients[1:nrow(lCIs), paste("L ",alpha.order*100, "%", sep="")] = lCIs
       cco = boot.results[,(nrow(output$coefficients)+r):(2*nrow(output$coefficients) + r - 1)]
       if (is.null(dim(cco))){
         cCIs = quantile(cco, probs = alpha.order, na.rm = TRUE)
@@ -270,7 +270,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
         cCIs = apply(cco, 2,  quantile, probs = alpha.order, na.rm = TRUE)
       }
       cCIs = t(cCIs)
-      output$coefficients[1:nrow(cCIs), paste("CS ",alpha.order*100, '%', sep='')] = cCIs
+      output$coefficients[1:nrow(cCIs), paste("CS ",alpha.order*100, "%", sep="")] = cCIs
     }
 
     if (anova){
@@ -283,7 +283,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
         lCIs = apply(lan, 2,  quantile, probs = alpha.order, na.rm = TRUE)
       }
       lCIs = t(lCIs)
-      output$anova[1:nrow(lCIs), paste("L ", alpha.order*100, '%', sep='')] = lCIs
+      output$anova[1:nrow(lCIs), paste("L ", alpha.order*100, "%", sep="")] = lCIs
       can = boot.results[,(ncol(boot.results)-length(rownames(output$anova))+1):
                            ncol(boot.results)]
       if (is.null(dim(can))){
@@ -292,7 +292,7 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
         cCIs = apply(can, 2,  quantile, probs = alpha.order, na.rm = TRUE)
       }
       cCIs = t(cCIs)
-      output$anova[1:nrow(cCIs), paste("CS ", alpha.order*100, '%', sep='')] = cCIs
+      output$anova[1:nrow(cCIs), paste("CS ", alpha.order*100, "%", sep="")] = cCIs
     }
   }
 
@@ -328,7 +328,7 @@ resi.glm = function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @export
 resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                     coefficients = TRUE, overall = TRUE, nboot = 1000,
-                    boot.method = 'nonparam', vcovfunc = sandwich::vcovHC,
+                    boot.method = "nonparam", vcovfunc = sandwich::vcovHC,
                     alpha = 0.05, store.boot = FALSE, Anova.args = list(),
                     vcov.args = list(), unbiased = TRUE,
                     parallel = c("no", "multicore", "snow"),
@@ -345,7 +345,7 @@ resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @describeIn resi RESI point and interval estimation for nls models
 #' @export
 resi.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE,
-                     overall = TRUE, nboot = 1000, boot.method = 'nonparam',
+                     overall = TRUE, nboot = 1000, boot.method = "nonparam",
                      anova = FALSE, vcovfunc = vcovnls, alpha = 0.05,
                      store.boot = FALSE, vcov.args = list(), unbiased = TRUE,
                      parallel = c("no", "multicore", "snow"), ncpus = getOption("boot.ncpus", 1L),
@@ -354,7 +354,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
   if (missing(data)){
-    stop('\nData argument is required for nls model')
+    stop("\nData argument is required for nls model")
   }
 
   output = resi.default(model.full = model.full, model.reduced = model.reduced,
@@ -384,7 +384,7 @@ resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                          ncpus = getOption("boot.ncpus", 1L),...){
   dots = list(...)
   if (missing(data)){
-    stop('\nData argument is required for model type')
+    stop("\nData argument is required for model type")
   }
   if ("vcov.args" %in% names(dots)){
     warning("vcov.args ignored for model type")
@@ -410,7 +410,7 @@ resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                        ncpus = getOption("boot.ncpus", 1L),...){
   dots = list(...)
   if (missing(data)){
-    stop('\nData argument is required for model type')
+    stop("\nData argument is required for model type")
   }
   if ("vcov.args" %in% names(dots)){
     warning("vcov.args ignored for model type")
@@ -419,7 +419,7 @@ resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     stop("\nOnly nonparametric bootstrap supported for model type")
   }
   if (!is.null(model.reduced)){
-    warning('Reduced model argument ignored for coxph model')
+    warning("Reduced model argument ignored for coxph model")
   }
   resi.default(model.full = model.full, model.reduced = NULL, data = data,
                anova = anova, coefficients = coefficients, overall = overall,
@@ -512,7 +512,7 @@ resi.gee <- function(model.full, data, nboot = 1000, alpha = 0.05,
     stop("\nOnly nonparametric bootstrap supported for model type")
   }
   if (missing(data)){
-    stop('\nData argument is required for GEE models from gee package')
+    stop("\nData argument is required for GEE models from gee package")
   }
   else{
     data = as.data.frame(data)
@@ -580,7 +580,7 @@ resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSand
   # RESI.ci = apply(output.boot, 1, quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
   # output$coefficients = cbind(output$coefficients, t(RESI.ci))
   output$boot.method = "nonparam"
-  class(output) = 'resi'
+  class(output) = "resi"
   return(output)
 }
 
@@ -609,6 +609,6 @@ resi.lmerMod <- function(model.full, alpha = 0.05, nboot = 1000,
   # output = c(output, list(coefficients = cbind(output$coefficients, t(RESI.ci)),
                           # naive.var = output$naive.var))
   output$boot.method = "nonparam"
-  class(output) = 'resi'
+  class(output) = "resi"
   return(output)
 }

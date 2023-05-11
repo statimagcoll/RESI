@@ -69,7 +69,7 @@ Anova.resi <- function(mod, alpha = NULL, ...){
 #' @export
 anova.resi <- function(object, alpha = NULL, ...){
   if(is.null(object$anova)){
-    stop('\nresi function was not run with anova = TRUE option')
+    stop("\nresi function was not run with anova = TRUE option")
   }
 
   if (is.null(alpha)){
@@ -78,23 +78,23 @@ anova.resi <- function(object, alpha = NULL, ...){
   else{
     if (!(all(alpha %in% object$alpha))){
       if (is.null(object$boot.results)){
-        stop('\nresi function was not run with store.boot = TRUE option')}
+        stop("\nresi function was not run with store.boot = TRUE option")}
     }
     if(is.null(object$boot.results)){
-      output = object$anova[c(1:(which(colnames(object$anova) == 'RESI')),
+      output = object$anova[c(1:(which(colnames(object$anova) == "RESI")),
                               which(colnames(object$anova)%in%
-                                      c(paste(alpha/2*100, '%', sep=''),
-                                        paste((1-alpha/2)*100, '%', sep=''))))]
+                                      c(paste(alpha/2*100, "%", sep=""),
+                                        paste((1-alpha/2)*100, "%", sep=""))))]
     }
     else{
-      output = object$anova[,1:(which(colnames(object$anova) == 'RESI'))]
+      output = object$anova[,1:(which(colnames(object$anova) == "RESI"))]
       CIs = apply(object$boot.results[,(ncol(object$boot.results)-
                                           nrow(object$anova)+1):
                                         ncol(object$boot.results)], 2,
                   quantile, probs = sort(c(alpha/2, 1-alpha/2)), na.rm = TRUE)
       CIs = t(CIs)
-      output[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''),
-                            paste((1-rev(alpha)/2)*100, '%', sep=''))] = CIs
+      output[1:nrow(CIs), c(paste(alpha/2*100, "%", sep=""),
+                            paste((1-rev(alpha)/2)*100, "%", sep=""))] = CIs
     }
   }
   return(output)
