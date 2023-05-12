@@ -33,5 +33,8 @@
 #'
 #' @export
 S2d = function(S, pi=0.5){
+  if (pi < 0 | pi > 1){
+    stop("\npi must be between 0 and 1")
+  }
   abs(S * sqrt(1/pi + 1/(1-pi)))
 }
