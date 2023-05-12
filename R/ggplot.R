@@ -1,6 +1,6 @@
 #' @import ggplot2
 #' @export
-ggplot.resi = function(x, alpha = NULL, ...){
+ggplot.resi = function(x, alpha = NULL, error.bars = TRUE, ...){
   #browser()
   dots = list(...)
 
@@ -40,6 +40,19 @@ ggplot.resi = function(x, alpha = NULL, ...){
     geom_vline(xintercept = 0, linetype="dotted") +
     xlab("RESI Estimate") +
     ggtitle(paste("Coefficient RESI Estimates and ", (1-alpha)*100, "%", " CIs", sep=""))
+  if (error.bars) {
+    er = 0.2 * (length(vnames)/(length(vnames)))
+    p = p + sapply(length(vnames):1, function(i) geom_segment(data = dat[-1*(i-length(vnames)) + 1,],
+                                                              aes(x = get(ll),
+                                                                  xend = get(ll),
+                                                                  y = ggpos - er, yend = ggpos + er,
+                                                              ))) +
+      sapply(length(vnames):1, function(i) geom_segment(data = dat[-1*(i-length(vnames)) + 1,],
+                                                          aes(x = get(ul),
+                                                              xend = get(ul),
+                                                              y = ggpos - er, yend = ggpos + er,
+                                                          )))
+  }
   p
 }
 
@@ -47,7 +60,7 @@ ggplot.resi = function(x, alpha = NULL, ...){
 ggplot.summary_resi = ggplot.resi
 
 #' @export
-ggplot.anova_resi = function(x, alpha = NULL, ...){
+ggplot.anova_resi = function(x, alpha = NULL, error.bars = TRUE, ...){
   dots = list(...)
   cols = grep("%", colnames(x))
   if (is.null(alpha)){
@@ -82,6 +95,19 @@ ggplot.anova_resi = function(x, alpha = NULL, ...){
     xlab("RESI Estimate") +
     geom_vline(xintercept = 0, linetype="dotted") +
     ggtitle(paste("ANOVA RESI Estimates and ", (1-alpha)*100, "%", " CIs", sep=""))
+  if (error.bars) {
+    er = 0.2 * (length(vnames)/(length(vnames)))
+    p = p + sapply(length(vnames):1, function(i) geom_segment(data = dat[-1*(i-length(vnames)) + 1,],
+                                                              aes(x = get(ll),
+                                                                  xend = get(ll),
+                                                                  y = ggpos - er, yend = ggpos + er,
+                                                              ))) +
+      sapply(length(vnames):1, function(i) geom_segment(data = dat[-1*(i-length(vnames)) + 1,],
+                                                        aes(x = get(ul),
+                                                            xend = get(ul),
+                                                            y = ggpos - er, yend = ggpos + er,
+                                                        )))
+  }
   p
 }
 
