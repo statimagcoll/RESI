@@ -20,14 +20,14 @@ chisq2Ssq = function(chisq, df, n){
 #' @return Returns a vector of RESI estimates for a single bootstrap replicate
 #' @noRd
 resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",
-                     cluster = FALSE, clvar = NULL, mod.dat = NULL, ...){
+                     cluster = FALSE, clvar = NULL, mod.dat = NULL, overall = TRUE, ...){
   # nonparametric bootstrap
   if (boot.method == "nonparam"){
     if(!cluster){
       boot.data = as.data.frame(dat[inds,])
       colnames(boot.data) = colnames(dat)
       mod.full = try(update(mod.full, data = boot.data), silent = T)
-      if (!(is.null(mod.reduced))){
+      if (!(is.null(mod.reduced)) & overall){
         mod.reduced = try(update(mod.reduced, data = boot.data), silent = T)}
     }
      else{
@@ -37,7 +37,7 @@ resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",
                 unlist(lapply(inds, function(x) length(which(x==mod.dat[,clvar])))))
 
       mod.full = try(update(mod.full, data = boot.data, id = bootid), silent = T)
-      if (!(is.null(mod.reduced))){
+      if (!(is.null(mod.reduced)) & overall){
         mod.reduced = try(update(mod.reduced, data = boot.data, id = bootid), silent = T)}
     }}
 
@@ -53,11 +53,11 @@ resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",
     } # end `repeat`
     boot.data = cbind(dat, g)
     mod.full = try(update(mod.full, data = boot.data, weights = g), silent = T)
-    if (!(is.null(mod.reduced))){
+    if (!(is.null(mod.reduced)) & overall){
       mod.reduced = try(update(mod.reduced, data = boot.data, weights = g), silent = T)}
   }
 
-  if(!(inherits(mod.full, "try-error") | inherits(mod.reduced, "try-error"))){
+  if(!(inherits(mod.full, "try-error") | (inherits(mod.reduced, "try-error") & overall))){
     out = resi_pe(mod.full, model.reduced = mod.reduced, data = boot.data, ...)$estimates
   } else{
     out = NA
