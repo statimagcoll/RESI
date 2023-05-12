@@ -45,6 +45,8 @@ plot.resi = function(x, alpha = NULL, ycex.axis = NULL, yaxis.args = list(),
     par("mai" = omar + c(0, max(w) - omar[2] + 0.25, 0, 0))
   }
 
+  er = 0.2 * (length(vnames)/(length(vnames) + 1))
+
   plot(x = x$coefficients[,"RESI"], y = length(vnames):1,
        xlim = c(min(0, min(x$coefficients[,ll])), max(x$coefficients[,ul])),
        xlab = "RESI Estimate", yaxt = "n", ylab = "",
@@ -53,6 +55,15 @@ plot.resi = function(x, alpha = NULL, ycex.axis = NULL, yaxis.args = list(),
     lines(x = c(x$coefficients[-1*(i-length(vnames)) + 1,ll],
                 x$coefficients[-1*(i-length(vnames)) + 1,ul]), y = c(i,i),
           ...)
+    lines(x = c(x$coefficients[-1*(i-length(vnames)) + 1,ll],
+                x$coefficients[-1*(i-length(vnames)) + 1,ll]),
+          y = c(i-er,i+er),
+          ...)
+    lines(x = c(x$coefficients[-1*(i-length(vnames)) + 1,ul],
+                x$coefficients[-1*(i-length(vnames)) + 1,ul]),
+          y = c(i-er,i+er),
+          ...)
+
   }
   do.call(axis, c(list(side = 2, at = length(vnames):1,
                        labels = vnames, las = 1,
@@ -107,6 +118,8 @@ plot.anova_resi = function(x, alpha = NULL, ycex.axis = NULL, yaxis.args = list(
     par("mai" = omar + c(0, max(w) - omar[2] + 0.25, 0, 0))
   }
 
+  er = 0.2 * (length(vnames)/(length(vnames) + 1))
+
   plot(x = x[which(rownames(x) != "Residuals"), "RESI"], y = length(vnames):1,
        xlim = c(0, max(x[,ul], na.rm = TRUE)), xlab = "RESI Estimate",
        yaxt = "n", ylab = "", main = paste("Anova RESI Estimates and ",
@@ -114,6 +127,13 @@ plot.anova_resi = function(x, alpha = NULL, ycex.axis = NULL, yaxis.args = list(
   for (i in length(vnames):1){
     lines(x = c(x[-1*(i-length(vnames)) + 1,ll],
                 x[-1*(i-length(vnames)) + 1,ul]), y = c(i,i), ...)
+    lines(x = c(x[-1*(i-length(vnames)) + 1,ll],
+                x[-1*(i-length(vnames)) + 1,ll]),
+          y = c(i- er,i+er), ...)
+    lines(x = c(x[-1*(i-length(vnames)) + 1,ul],
+                x[-1*(i-length(vnames)) + 1,ul]),
+          y = c(i-er,i+er), ...)
+
   }
   do.call(axis, c(list(side = 2, at = length(vnames):1,
                        labels = vnames, las = 1,
