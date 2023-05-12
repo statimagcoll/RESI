@@ -83,7 +83,12 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
                            Anova.args = list(), vcov.args = list(), unbiased = TRUE,
                            waldtype = 0, ...){
 
-  #browser()
+  # check for supported model type
+  if(!(any(class(model.full) %in%
+           sapply(as.character(methods(RESI::resi_pe)), function(x) substr(x, 9, nchar(x)))))){
+    warning("Model type not implemented in RESI package, attempting default")
+  }
+
   dots = list(...)
   if (missing(data)){
     if (!is.null(model.full$model)){
@@ -96,22 +101,28 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
     data = as.data.frame(data)
   }
 
-  if (is.null(model.reduced)){
+  if (is.null(model.reduced) & overall){
     if(!("skip.red.pe" %in% names(dots))){
       form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
       if ((form.reduced == formula(model.full))){
         overall = FALSE} else{
           if (is.null(model.full$na.action)){
-            model.reduced <- update(model.full, formula = form.reduced, data = data)
+            model.reduced <- try(update(model.full, formula = form.reduced,
+                                      data = data), silent = T)
           }
           else{
             if (!is.null(model.full$model)){
-              model.reduced <- update(model.full, formula = form.reduced,
-                                      data = model.full$model)
+              model.reduced <- try(update(model.full, formula = form.reduced,
+                                      data = model.full$model), silent = T)
             } else{
-              model.reduced <- update(model.full, formula = form.reduced,
-                                      data = data[which(!(1:nrow(data)%in% model.full$na.action)),])
-            }}}}}
+              model.reduced <- try(update(model.full, formula = form.reduced,
+                                      data = data[which(!(1:nrow(data)%in% model.full$na.action)),]),
+                                   silent = T)
+            }}
+          if(inherits(model.reduced, "try-error")){
+            warning("Fitting intercept-only model failed. No overall test computed")
+            overall = FALSE}
+          }}}
 
   # dealing with additional vcov args
   if (length(vcov.args) == 0){
@@ -125,60 +136,77 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # covariance matrix
   var.names = names(coef(model.full))
-  vcovmat = vcovfunc2(model.full)
+  tryCatch(vcovmat <- vcovfunc2(model.full), error = function(e){
+    stop("\nComputing covariance failed. Trying running with different function for vcovfunc")
+  })
   tryCatch(rownames(vcovmat) <- colnames(vcovmat) <- var.names, error = function(e){})
 
 
   # set up output
-  output <- list(model.full = list(call = model.full$call, formula = formula(model.full)),
+  if ((is.null(model.reduced) & !("skip.red.pe" %in% names(dots))) |
+      inherits(model.reduced, "try-error")){
+    output = list(model.full = list(call = model.full$call, formula = formula(model.full)),
+                  model.reduced = NULL)
+    overall = FALSE
+  } else{
+  output = list(model.full = list(call = model.full$call, formula = formula(model.full)),
                  model.reduced = list(call = model.reduced$call, formula = unlist(formula(model.reduced))))
-  # need initialize vector of estimates?
+  }
   names.est = c()
   # overall
   if (overall){
     # check if full and reduced model are the same
-    if (model.full$call == model.reduced$call){
-      stop("\nFull and reduced model are identical")
-    } else{
-      if (waldtype %in% c(0,1)){
-        # 0 is Chisq with lmtest
-        # 1 is F with lmtest
-        wtype = ifelse(waldtype == 0, "Chisq", "F")
-        overall.tab = lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc2,
-                                       test = wtype)
-        stats = overall.tab[,wtype][2]
-        overall.df = overall.tab$Df[2]
-        res.df = overall.tab$Res.Df[2]
-      }
+    if (!(is.null(model.reduced))){
+      if (model.full$call == model.reduced$call){
+        stop("\nFull and reduced model are identical")
+      }}
 
-      if (waldtype == 2){
-        # 2 is aod (nls, coxph)
-        overall.tab = aod::wald.test(vcovmat, coef(model.full),
-                                     Terms = 1:length(coef(model.full)))$result$chi2
-        stats = overall.tab["chi2"]
-        overall.df = overall.tab["df"]
-        res.df = nrow(data) - overall.df
-        overall.tab = t(as.data.frame(overall.tab))
-      }
-      overall.resi.hat = ifelse(waldtype == 1, f2S(stats, overall.df, res.df, nrow(data)),
-                                chisq2S(stats, overall.df, nrow(data)))
-      if (nrow(overall.tab) == 1){
-        overall.tab = cbind(overall.tab, RESI = overall.resi.hat)
-      } else{
-        overall.tab[nrow(overall.tab), "RESI"] = overall.resi.hat
-      }
-      output$estimates = overall.resi.hat
-      output$overall = overall.tab
-      names.est = "Overall"
-      names(output$estimates) = names.est
-    }}
+    if (waldtype %in% c(0,1)){
+      # 0 is Chisq with lmtest
+      # 1 is F with lmtest
+      wtype = ifelse(waldtype == 0, "Chisq", "F")
+      tryCatch(overall.tab <- lmtest::waldtest(model.reduced, model.full, vcov = vcovfunc2,
+                                               test = wtype), error = function(e){
+                                                 stop("Overall Wald test failed, try running with overall = FALSE")})
+
+      stats = overall.tab[,wtype][2]
+      overall.df = overall.tab$Df[2]
+      res.df = overall.tab$Res.Df[2]
+    }
+
+    if (waldtype == 2){
+      # 2 is aod (nls, coxph)
+      tryCatch(overall.tab <- aod::wald.test(vcovmat, coef(model.full),
+                                             Terms = 1:length(coef(model.full)))$result$chi2,
+               error = function(e){
+                 stop("Overall Wald test failed, try running with overall = FALSE")})
+      stats = overall.tab["chi2"]
+      overall.df = overall.tab["df"]
+      res.df = nrow(data) - overall.df
+      overall.tab = t(as.data.frame(overall.tab))
+    }
+    overall.resi.hat = ifelse(waldtype == 1, f2S(stats, overall.df, res.df, nrow(data)),
+                              chisq2S(stats, overall.df, nrow(data)))
+    if (nrow(overall.tab) == 1){
+      overall.tab = cbind(overall.tab, RESI = overall.resi.hat)
+    } else{
+      overall.tab[nrow(overall.tab), "RESI"] = overall.resi.hat
+    }
+    output$estimates = overall.resi.hat
+    output$overall = overall.tab
+    names.est = "Overall"
+    names(output$estimates) = names.est
+  }
 
   # coefficients table (z or t statistics)
   if (coefficients){
     if ("coeftest_df" %in% names(dots)){
-      coefficients.tab = lmtest::coeftest(model.full, vcov. = vcovmat, df = dots$coeftest_df)
-      }
-    coefficients.tab = lmtest::coeftest(model.full, vcov. = vcovmat)
+      tryCatch(coefficients.tab <- lmtest::coeftest(model.full, vcov. = vcovmat, df = dots$coeftest_df),
+               error = function(e){
+                 stop("Coefficients table failed, try running with coefficients = FALSE")})
+      } else{
+    tryCatch(coefficients.tab <- lmtest::coeftest(model.full, vcov. = vcovmat), error = function(e){
+      stop("Overall Wald test failed, try running with overall = FALSE")})}
 
     torZ = ifelse("z value" %in% colnames(coefficients.tab), "z", "t")
     coefficients.df = data.frame(coefficients.tab[,"Estimate"], coefficients.tab[,"Std. Error"],
@@ -204,17 +232,17 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   if (anova){
     if ("anovaF" %in% names(dots)){
-      suppressMessages(anova.tab <- try(do.call(car::Anova, c(list(mod = model.full,
-                                              vcov. = vcovmat), Anova.args)), silent = T))
-      if(inherits(anova.tab, "try-error")){
-        stop("car::Anova failed. Try rerunning with anova = FALSE")}
+      tryCatch(suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full,
+                                              vcov. = vcovmat), Anova.args))),
+               error = function(e){
+                 stop("car::Anova failed. Try rerunning with anova = FALSE")})
       anova.tab[,"RESI"] = f2S(anova.tab[,"F"], anova.tab[,"Df"], res.df, nrow(data))
     } else {
-      tryCatch(suppressMessages(anova.tab <- do.call(car::Anova,
-                                                     c(list(mod = model.full, test.statistic = "Wald",
-                                                            vcov. = vcovmat), Anova.args))),
+      tryCatch(suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full,
+                                             test.statistic = "Wald",
+                                             vcov. = vcovmat), Anova.args))),
                error = function(e){
-                 message("car::Anova failed. Try rerunning with anova = FALSE")})
+          stop("car::Anova failed. Try rerunning with anova = FALSE")})
       anova.tab[,"RESI"] = chisq2S(anova.tab[,"Chisq"], anova.tab[,"Df"], nrow(data))
     }
 
@@ -383,7 +411,8 @@ resi_pe.zeroinfl = resi_pe.hurdle
 #' @describeIn resi_pe RESI point estimation for geeglm object
 #' @export
 resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
-                           coefficients = TRUE, unbiased = TRUE, ...){
+                           coefficients = TRUE, overall = TRUE, unbiased = TRUE, ...){
+
   if (missing(data)){
     data = model.full$data
   }
@@ -398,6 +427,18 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   n_i = rep(n_i, times = n_i)
   # weight in independent model
   data$w = 1 / n_i
+  # sample size
+  N = length(unique(model.full$id))
+  # total num of observations
+  tot_obs = nrow(data)
+
+  # num of observations from each subject
+  n_i = table(model.full$id)
+  n_i = rep(n_i, times = n_i)
+  # weight in independent model
+  data$w = 1 / n_i
+
+
 
   # model form
   form = formula(model.full)
@@ -413,6 +454,10 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   mod_ind = model.full
   mod_ind$geese$vbeta = cov_ind
 
+  output = list(model.full = list(call = model.full$call, formula = form),
+                model.reduced = NULL)
+  names.est = c()
+  if (overall){
   # reduced model
   if (is.null(model.reduced)){
     form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
@@ -440,11 +485,12 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   # overallcs = anova(mod_ind, mod_ind_reduced)
   # overall.tab[,'CS-RESI'] = chisq2S(overallcs[,'X2'], overallcs[,'Df'], N)
 
-  output = list(model.full = list(call = model.full$call, formula = form),
-                model.reduced = list(call = model.reduced$call, formula = form.reduced),
-                estimates = c(overall.tab[,"L-RESI"]), overall = overall.tab)
+  output$model.reduced = list(call = model.reduced$call, formula = form.reduced)
+  output$estimates = c(overall.tab[,"L-RESI"])
+  output$overall = overall.tab
   names.est = c("Overall-L")
   names(output$estimates) = names.est
+  }
 
   # stats = overall.tab["chi2"]
   # overall.df = overall.tab["df"]

@@ -133,6 +133,7 @@ resi_pe(model.full, ...)
   data,
   anova = TRUE,
   coefficients = TRUE,
+  overall = TRUE,
   unbiased = TRUE,
   ...
 )

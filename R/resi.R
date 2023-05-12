@@ -142,13 +142,13 @@
 #'
 #' Kang, K., Armstrong, K., Avery, S., McHugo, M., Heckers, S., & Vandekar, S. (2021). Accurate confidence interval estimation for non-centrality parameters and effect size indices. \emph{arXiv preprint arXiv:2111.05966}.
 
-resi <- function(model.full, ...){
+resi = function(model.full, ...){
   UseMethod("resi")
 }
 
 #' @describeIn resi RESI point and interval estimation for models
 #' @export
-resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
                          coefficients = TRUE, overall = TRUE, nboot = 1000,
                          boot.method = "nonparam", vcovfunc = sandwich::vcovHC,
                          alpha = 0.05, store.boot = FALSE, Anova.args = list(),
@@ -156,14 +156,18 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                          parallel = c("no", "multicore", "snow"),
                          ncpus = getOption("boot.ncpus", 1L), long = FALSE,
                          clvar = NULL, ...){
-  #browser()
-  # need to check for supported type
+
+  # check for supported model type
+  if(!(any(class(model.full) %in%
+    sapply(as.character(methods(RESI::resi)), function(x) substr(x, 6, nchar(x)))))){
+    warning("Model type not implemented in RESI package, attempting default")
+  }
   dots = list(...)
 
   if (missing(data)){
     data = model.full$model
     tryCatch(update(model.full, data = data), error = function(e){
-      message("Updating model fit failed. Try rerunning with providing data argument")})
+      message("Updating model fit failed. Try running with providing data argument")})
   }
   else{
     if (!(is.null(model.full$na.action))){
@@ -172,17 +176,22 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     data = as.data.frame(data)
   }
 
-  if (is.null(model.reduced)){
+  if (is.null(model.reduced) & overall){
     if(!("skip.red" %in% names(dots))){
       form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
       if (!(form.reduced == formula(model.full))){
         if(!(is.null(model.full$model)) & !long){
-          model.reduced <- update(model.full, formula = form.reduced, data = model.full$model)
+          model.reduced = try(update(model.full, formula = form.reduced,
+                                      data = model.full$model), silent = T)
         } else{
-          model.reduced <- update(model.full, formula = form.reduced, data = data)
+          model.reduced = try(update(model.full, formula = form.reduced,
+                                      data = data), silent = T)
         }
-      }
-    }}
+        if(inherits(model.reduced, "try-error")){
+          warning("Fitting intercept-only model failed. No overall test computed")
+          overall = FALSE
+        }
+    }}}
 
   # point estimation
   output = list(alpha = alpha, nboot = nboot, boot.method = boot.method)
@@ -197,15 +206,19 @@ resi.default <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   }
 
   # bootstrapping
-  suppressWarnings(suppressMessages(capture.output(boot_out <- boot(data = data, R = nboot, statistic = resi_stat, parallel = parallel,
+  suppressMessages(capture.output(boot_out <- boot(data = data, R = nboot, statistic = resi_stat, parallel = parallel,
                   ncpus = ncpus, mod.full = model.full, mod.reduced = model.reduced,
                   anova = anova, coefficients = coefficients, overall = overall, vcovfunc = vcovfunc,
                   Anova.args = Anova.args, vcov.args = vcov.args, unbiased = unbiased,
-                  boot.method = boot.method, clvar = clvar, ...), file = nullfile())))
+                  boot.method = boot.method, clvar = clvar, ...), file = nullfile()))
 
   # bootstrapped estimates
   boot.results = boot_out$t
   colnames(boot.results) = names(boot_out$t0)
+
+  if (all(is.na(boot.results))){
+    stop("\nBootstrapping failed. Run resi_pe for point estimates")
+  }
 
   alpha.order = sort(c(alpha/2, 1-alpha/2))
 
@@ -326,7 +339,7 @@ resi.glm = function(model.full, model.reduced = NULL, data, anova = TRUE,
 
 #' @describeIn resi RESI point and interval estimation for lm models
 #' @export
-resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+resi.lm = function(model.full, model.reduced = NULL, data, anova = TRUE,
                     coefficients = TRUE, overall = TRUE, nboot = 1000,
                     boot.method = "nonparam", vcovfunc = sandwich::vcovHC,
                     alpha = 0.05, store.boot = FALSE, Anova.args = list(),
@@ -344,7 +357,7 @@ resi.lm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
 #' @describeIn resi RESI point and interval estimation for nls models
 #' @export
-resi.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE,
+resi.nls = function(model.full, model.reduced = NULL, data, coefficients = TRUE,
                      overall = TRUE, nboot = 1000, boot.method = "nonparam",
                      anova = FALSE, vcovfunc = vcovnls, alpha = 0.05,
                      store.boot = FALSE, vcov.args = list(), unbiased = TRUE,
@@ -376,7 +389,7 @@ resi.nls <- function(model.full, model.reduced = NULL, data, coefficients = TRUE
 
 #' @describeIn resi RESI point and interval estimation for survreg models
 #' @export
-resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+resi.survreg = function(model.full, model.reduced = NULL, data, anova = TRUE,
                          coefficients = TRUE, overall = TRUE, nboot = 1000,
                          vcovfunc = vcov, alpha = 0.05, store.boot = FALSE,
                          Anova.args = list(), unbiased = TRUE,
@@ -402,7 +415,7 @@ resi.survreg <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
 #' @describeIn resi RESI point and interval estimation for coxph models
 #' @export
-resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+resi.coxph = function(model.full, model.reduced = NULL, data, anova = TRUE,
                        coefficients = TRUE, overall = TRUE, nboot = 1000,
                        vcovfunc = vcov, alpha = 0.05, store.boot = FALSE,
                        Anova.args = list(), unbiased = TRUE,
@@ -432,7 +445,7 @@ resi.coxph <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
 #' @describeIn resi RESI point and interval estimation for hurdle models
 #' @export
-resi.hurdle <- function(model.full, model.reduced = NULL, data, coefficients = TRUE,
+resi.hurdle = function(model.full, model.reduced = NULL, data, coefficients = TRUE,
                         overall = TRUE, nboot = 1000, vcovfunc = sandwich::sandwich,
                         anova = FALSE, alpha = 0.05, store.boot = FALSE,
                         vcov.args = list(), unbiased = TRUE,
@@ -452,11 +465,11 @@ resi.hurdle <- function(model.full, model.reduced = NULL, data, coefficients = T
 
 #' @describeIn resi RESI point and interval estimation for zeroinfl models
 #' @export
-resi.zeroinfl <- resi.hurdle
+resi.zeroinfl = resi.hurdle
 
 #' @describeIn resi RESI point and interval estimation for GEE models
 #' @export
-resi.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+resi.geeglm = function(model.full, model.reduced = NULL, data, anova = TRUE,
                         coefficients = TRUE, overall = TRUE, nboot = 1000,
                         alpha = 0.05, store.boot = FALSE,
                         unbiased = TRUE, parallel = c("no", "multicore", "snow"),
@@ -503,7 +516,7 @@ resi.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
  #' @describeIn resi RESI point and interval estimation for GEE models
 #' @export
-resi.gee <- function(model.full, data, nboot = 1000, alpha = 0.05,
+resi.gee = function(model.full, data, nboot = 1000, alpha = 0.05,
                      store.boot = FALSE, unbiased = TRUE,
                      parallel = c("no", "multicore", "snow"),
                      ncpus = getOption("boot.ncpus", 1L), ...){
@@ -554,10 +567,10 @@ resi.gee <- function(model.full, data, nboot = 1000, alpha = 0.05,
 #' @describeIn resi RESI point and interval estimation for LME (nlme) models
 #' @importFrom nlme getGroups
 #' @export
-resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSandwich::vcovCR,
+resi.lme = function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSandwich::vcovCR,
                      vcov.args = list(), ...){
   warning("\nConfidence Interval procedure not developed for lme, returning point estimates only")
-  output <- list(alpha = alpha, nboot = 0)
+  output = list(alpha = alpha, nboot = 0)
   # RESI point estimates
   output = c(output, resi_pe(model.full = model.full, vcovfunc = vcovfunc, vcov.args = vcov.args))
   data = model.full$data
@@ -586,10 +599,10 @@ resi.lme <- function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSand
 
 #' @describeIn resi RESI point and interval estimation for lmerMod models
 #' @export
-resi.lmerMod <- function(model.full, alpha = 0.05, nboot = 1000,
+resi.lmerMod = function(model.full, alpha = 0.05, nboot = 1000,
                          vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...){
   warning("\nConfidence Interval procedure not developed for lmerMod, returning point estimates only")
-  output <- list(alpha = alpha, nboot = 0)
+  output = list(alpha = alpha, nboot = 0)
   output = c(output, resi_pe(model.full, vcovfunc = vcovfunc, vcov.args = vcov.args)) # RESI point estimates
   data = model.full@frame
   # id variable name
