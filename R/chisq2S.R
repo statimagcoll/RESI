@@ -27,7 +27,7 @@
 #'
 #' @export
 chisq2S <- function(chisq, df, n){
-  if (chisq < 0){
+  if (any(chisq < 0)){
     stop("\nChi-square statistic must be non-negative")
   }
   S = (chisq - df)/n

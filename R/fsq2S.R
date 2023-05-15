@@ -13,7 +13,7 @@
 #' # This corresponds to a RESI of 0.5477226
 #' @export
 fsq2S <- function(fsq){
-  if (fsq < 0){
+  if (any(fsq < 0)){
     stop("\nfsq must be non-negative")
   }
   sqrt(fsq)

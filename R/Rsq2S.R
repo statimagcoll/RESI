@@ -13,13 +13,16 @@
 #' # this corresponds to a RESI of 0.333
 #' @export
 Rsq2S <- function(Rsq){
-  if (Rsq < 0 | Rsq > 1){
+  if (any(Rsq < 0 | Rsq > 1)){
     stop("\nRsq must be between 0 and 1")
   }
-  if (Rsq == 1){
-    S = Inf
-  } else{
-    S = sqrt((-Rsq)/(Rsq-1))
+  S = c()
+  for (i in 1:length(Rsq)){
+    if (Rsq[i] == 1){
+      S[i] = Inf
+    } else{
+      S[i] = sqrt((-Rsq[i])/(Rsq[i]-1))
+    }
   }
   return(S)
 }

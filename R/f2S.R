@@ -26,7 +26,7 @@
 #' f2S(fs, df = dfs, rdf = mod$df.residual, n = nrow(RESI::insurance))
 #' @export
 f2S <- function(f, df, rdf, n){
-  if (f < 0){
+  if (any(f < 0)){
     stop("\nF statistic must be non-negative")
   }
   S = (f*df*(rdf-2)/rdf - df)/n
