@@ -88,7 +88,7 @@ resi(model.full, ...)
   nboot = 1000,
   boot.method = "nonparam",
   anova = FALSE,
-  vcovfunc = vcovnls,
+  vcovfunc = regtools::nlshc,
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
@@ -202,6 +202,7 @@ resi(model.full, ...)
   model.full,
   alpha = 0.05,
   nboot = 1000,
+  anova = TRUE,
   vcovfunc = clubSandwich::vcovCR,
   vcov.args = list(),
   ...
@@ -211,6 +212,7 @@ resi(model.full, ...)
   model.full,
   alpha = 0.05,
   nboot = 1000,
+  anova = TRUE,
   vcovfunc = clubSandwich::vcovCR,
   vcov.args = list(),
   ...
@@ -284,8 +286,7 @@ may be appealing because its absolute value will be equal to the RESI based on
 the F or Chi-square statistic. The RESI based on the Chi-Square and F statistics
 is always greater than or equal to 0. The type of statistic
 used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
-\code{\link{t2S}}, \code{\link{z2S}}, \code{\link{t2S_alt}}, and
-\code{\link{z2S_alt}} for more details on the formulas.
+\code{\link{t2S}}, and \code{\link{z2S}} for more details on the formulas.
 
 For GEE (\code{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
 per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
