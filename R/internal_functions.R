@@ -33,8 +33,9 @@ resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",
      else{
       # for clustered data, dat is unique ids and inds is which of the ids
       boot.data = mod.dat[unlist(lapply(inds, function(x) which(x == mod.dat[, clvar]))), ]
-      boot.data$bootid = rep(1:length(unique(mod.dat[, clvar])),
-                unlist(lapply(inds, function(x) length(which(x==mod.dat[,clvar])))))
+      bootid = rep(1:length(unique(mod.dat[, clvar])),
+                    unlist(lapply(inds, function(x) length(which(x==mod.dat[,clvar])))))
+      boot.data$bootid = bootid
 
       mod.full = try(update(mod.full, data = boot.data, id = bootid), silent = T)
       if (!(is.null(mod.reduced)) & overall){

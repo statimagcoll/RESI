@@ -44,8 +44,9 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   cat("\nNotes:")
   if (x$naive.var) cat("\n1. The RESI was calculated using the naive covariance estimator.")
   else  cat("\n1. The RESI was calculated using a robust covariance estimator.")
-  if (x$boot.method == "nonparam") cat("\n2. Confidence intervals (CIs) constructed using", x$nboot,"non-parametric bootstraps. \n")
-  if (x$boot.method == "bayes") cat("\n2. Credible intervals constructed using", x$nboot,"Bayesian bootstraps. \n")
+  if (!(is.null(x$nboot))){
+    if (x$boot.method == "nonparam") cat("\n2. Confidence intervals (CIs) constructed using", x$nboot,"non-parametric bootstraps. \n")
+    if (x$boot.method == "bayes") cat("\n2. Credible intervals constructed using", x$nboot,"Bayesian bootstraps. \n")}
   # if(nzchar(mess <- naprint(x$na.action))) cat("  (",mess, ")\n", sep = "")
   # report number of failed bootstraps for nls model
   if (!(is.null(x$nfail))) cat("3. The bootstrap was successful in", x$nboot - x$nfail, "out of", x$nboot, "attempts. \n" )

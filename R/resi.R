@@ -49,8 +49,7 @@
 #' the F or Chi-square statistic. The RESI based on the Chi-Square and F statistics
 #' is always greater than or equal to 0. The type of statistic
 #' used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
-#' \code{\link{t2S}}, \code{\link{z2S}}, \code{\link{t2S_alt}}, and
-#' \code{\link{z2S_alt}} for more details on the formulas.
+#' \code{\link{t2S}}, and \code{\link{z2S}} for more details on the formulas.
 #'
 #' For GEE (\code{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
 #' per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
@@ -159,7 +158,7 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # check for supported model type
   if(!(any(class(model.full) %in%
-    sapply(as.character(methods(RESI::resi)), function(x) substr(x, 6, nchar(x)))))){
+    sapply(as.character(utils::methods(RESI::resi)), function(x) substr(x, 6, nchar(x)))))){
     warning("Model type not implemented in RESI package, attempting default")
   }
   dots = list(...)
@@ -359,7 +358,7 @@ resi.lm = function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @export
 resi.nls = function(model.full, model.reduced = NULL, data, coefficients = TRUE,
                      overall = TRUE, nboot = 1000, boot.method = "nonparam",
-                     anova = FALSE, vcovfunc = vcovnls, alpha = 0.05,
+                     anova = FALSE, vcovfunc = regtools::nlshc, alpha = 0.05,
                      store.boot = FALSE, vcov.args = list(), unbiased = TRUE,
                      parallel = c("no", "multicore", "snow"), ncpus = getOption("boot.ncpus", 1L),
                      ...){
@@ -368,6 +367,10 @@ resi.nls = function(model.full, model.reduced = NULL, data, coefficients = TRUE,
 
   if (missing(data)){
     stop("\nData argument is required for nls model")
+  }
+  if (identical(vcovfunc, sandwich::vcovHC)){
+    vcovfunc = regtools::nlshc
+    warning("Sandwich vcov function not applicable for nls model type, vcovfunc set to regtools::nlshc")
   }
 
   output = resi.default(model.full = model.full, model.reduced = model.reduced,
@@ -399,6 +402,9 @@ resi.survreg = function(model.full, model.reduced = NULL, data, anova = TRUE,
   if (missing(data)){
     stop("\nData argument is required for model type")
   }
+  if (!identical(vcovfunc, vcov)){
+    warning("vcovfunc argument ignored for survreg objects")
+  }
   if ("vcov.args" %in% names(dots)){
     warning("vcov.args ignored for model type")
   }
@@ -408,7 +414,7 @@ resi.survreg = function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
                anova = anova, coefficients = coefficients, overall = overall,
-               nboot = nboot, vcovfunc = vcovfunc, store.boot = store.boot,
+               nboot = nboot, vcovfunc = vcov, store.boot = store.boot,
                Anova.args = Anova.args, unbiased = unbiased, alpha = alpha,
                boot.method = "nonparam", parallel = parallel, ncpus = ncpus, ...)
 }
@@ -425,6 +431,9 @@ resi.coxph = function(model.full, model.reduced = NULL, data, anova = TRUE,
   if (missing(data)){
     stop("\nData argument is required for model type")
   }
+  if (!identical(vcovfunc, vcov)){
+    warning("vcovfunc argument ignored for coxph objects")
+  }
   if ("vcov.args" %in% names(dots)){
     warning("vcov.args ignored for model type")
   }
@@ -436,7 +445,7 @@ resi.coxph = function(model.full, model.reduced = NULL, data, anova = TRUE,
   }
   resi.default(model.full = model.full, model.reduced = NULL, data = data,
                anova = anova, coefficients = coefficients, overall = overall,
-               nboot = nboot, vcovfunc = vcovfunc, store.boot = store.boot,
+               nboot = nboot, vcovfunc = vcov, store.boot = store.boot,
                Anova.args = Anova.args, unbiased = unbiased, alpha = alpha,
                boot.method = "nonparam", parallel = parallel, ncpus = ncpus,
                skip.red = TRUE, ...)
@@ -494,9 +503,9 @@ resi.geeglm = function(model.full, model.reduced = NULL, data, anova = TRUE,
   # bootstrapping
   output = resi.default(model.full = model.full, model.reduced = model.reduced,
                         data = data, anova = anova, coefficients = coefficients,
-                        overall = overall, nboot = nboot, vcovfunc = vcovfunc,
-                        store.boot = TRUE, Anova.args = Anova.args,
-                        vcov.args = vcov.args, unbiased = unbiased, alpha = alpha,
+                        overall = overall, nboot = nboot,
+                        store.boot = TRUE,
+                        unbiased = unbiased, alpha = alpha,
                         parallel = parallel, ncpus = ncpus, boot.method = "nonparam",
                         cluster = TRUE, clvar = id_var, mod.dat = data, long = TRUE, ...)
 
@@ -542,8 +551,8 @@ resi.gee = function(model.full, data, nboot = 1000, alpha = 0.05,
 
   # bootstrapping
   output = resi.default(model.full = model.full, model.reduced = NULL, data = data,
-                        coefficients = TRUE, nboot = nboot, vcovfunc = vcovfunc,
-                        store.boot = TRUE, anova = FALSE, vcov.args = vcov.args,
+                        coefficients = TRUE, nboot = nboot,
+                        store.boot = TRUE, anova = FALSE,
                         unbiased = unbiased, alpha = alpha, parallel = parallel,
                         ncpus = ncpus, boot.method = "nonparam", cluster = TRUE,
                         clvar = id_var, mod.dat = data, skip.red = TRUE, long = TRUE,
@@ -567,13 +576,14 @@ resi.gee = function(model.full, data, nboot = 1000, alpha = 0.05,
 #' @describeIn resi RESI point and interval estimation for LME (nlme) models
 #' @importFrom nlme getGroups
 #' @export
-resi.lme = function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSandwich::vcovCR,
+resi.lme = function(model.full, alpha = 0.05, nboot = 1000, anova = TRUE, vcovfunc = clubSandwich::vcovCR,
                      vcov.args = list(), ...){
   warning("\nConfidence Interval procedure not developed for lme, returning point estimates only")
   output = list(alpha = alpha, nboot = 0)
   # RESI point estimates
-  output = c(output, resi_pe(model.full = model.full, vcovfunc = vcovfunc, vcov.args = vcov.args))
-  data = model.full$data
+  output = c(output, resi_pe(model.full = model.full, vcovfunc = vcovfunc, vcov.args = vcov.args,
+                             anova = anova, ...))
+  # data = model.full$data
   # id variable name
   # id_var = attr(nlme::getGroups(model.full), "label")
   # # bootstrap
@@ -599,14 +609,14 @@ resi.lme = function(model.full, alpha = 0.05, nboot = 1000, vcovfunc = clubSandw
 
 #' @describeIn resi RESI point and interval estimation for lmerMod models
 #' @export
-resi.lmerMod = function(model.full, alpha = 0.05, nboot = 1000,
+resi.lmerMod = function(model.full, alpha = 0.05, nboot = 1000, anova = TRUE,
                          vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...){
   warning("\nConfidence Interval procedure not developed for lmerMod, returning point estimates only")
   output = list(alpha = alpha, nboot = 0)
-  output = c(output, resi_pe(model.full, vcovfunc = vcovfunc, vcov.args = vcov.args)) # RESI point estimates
-  data = model.full@frame
-  # id variable name
-  id_var = names(model.full@flist)
+  output = c(output, resi_pe(model.full, vcovfunc = vcovfunc, vcov.args = vcov.args, anova = anova, ...)) # RESI point estimates
+  # data = model.full@frame
+  # # id variable name
+  # id_var = names(model.full@flist)
 
   # bootstrap (non-param for now)
   # output.boot = as.matrix(output$coefficients[, 'RESI'])

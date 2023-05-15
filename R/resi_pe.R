@@ -22,6 +22,7 @@
 #' @importFrom lmtest waldtest
 #' @importFrom sandwich vcovHC
 #' @importFrom stats coef df.residual formula glm hatvalues pf predict quantile residuals update vcov
+#' @importFrom utils methods
 #' @export
 #' @details The Robust Effect Size Index (RESI) is an effect size measure based on M-estimators.
 #' This function is called by \code{\link{resi}} a specified number of times to
@@ -46,8 +47,7 @@
 #' the F or Chi-square statistic. The RESI based on the Chi-Square and F statistics
 #' is always greater than or equal to 0. The type of statistic
 #' used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
-#' \code{\link{t2S}}, \code{\link{z2S}}, \code{\link{t2S_alt}}, and
-#' \code{\link{z2S_alt}} for more details on the formulas.
+#' \code{\link{t2S}}, and \code{\link{z2S}} for more details on the formulas.
 #'
 #' For GEE (\code{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
 #' per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
@@ -85,7 +85,7 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # check for supported model type
   if(!(any(class(model.full) %in%
-           sapply(as.character(methods(RESI::resi_pe)), function(x) substr(x, 9, nchar(x)))))){
+           sapply(as.character(utils::methods(RESI::resi_pe)), function(x) substr(x, 9, nchar(x)))))){
     warning("Model type not implemented in RESI package, attempting default")
   }
 
@@ -236,6 +236,7 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
                                               vcov. = vcovmat), Anova.args))),
                error = function(e){
                  stop("car::Anova failed. Try rerunning with anova = FALSE")})
+      anova.tab = anova.tab[which(rownames(anova.tab) != "Residuals"),]
       anova.tab[,"RESI"] = f2S(anova.tab[,"F"], anova.tab[,"Df"], res.df, nrow(data))
     } else {
       tryCatch(suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full,
@@ -243,10 +244,10 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
                                              vcov. = vcovmat), Anova.args))),
                error = function(e){
           stop("car::Anova failed. Try rerunning with anova = FALSE")})
+      anova.tab = anova.tab[which(rownames(anova.tab) != "Residuals"),]
       anova.tab[,"RESI"] = chisq2S(anova.tab[,"Chisq"], anova.tab[,"Df"], nrow(data))
     }
 
-    anova.tab = anova.tab[which(rownames(anova.tab) != "Residuals"),]
     output$anova = anova.tab
     names.est = names(output$estimates)
     output$estimates = c(output$estimates, anova.tab$RESI)
@@ -261,6 +262,8 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
   else{
     output$naive.var = FALSE
   }
+
+  class(output) = c("resi", "list")
 
   return(output)
 }
@@ -290,7 +293,7 @@ resi_pe.lm = function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @describeIn resi_pe RESI point estimation for nonlinear least squares models
 #' @export
 resi_pe.nls = function(model.full, model.reduced = NULL, data, coefficients = TRUE,
-                       anova = FALSE, vcovfunc = vcovnls, vcov.args = list(),
+                       anova = FALSE, vcovfunc = regtools::nlshc, vcov.args = list(),
                        unbiased = TRUE, overall = TRUE, ...){
   if (missing(data) | is.null(data)){
     stop("\nData argument is required for nls model")
@@ -315,8 +318,6 @@ resi_pe.nls = function(model.full, model.reduced = NULL, data, coefficients = TR
   return(output)
 }
 
-
-# change warning message to not print if left as default for this and coxph
 #' @describeIn resi_pe RESI point estimation for survreg
 #' @export
 resi_pe.survreg = function(model.full, model.reduced = NULL, data, anova = TRUE,
@@ -426,19 +427,12 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   n_i = table(model.full$id)
   n_i = rep(n_i, times = n_i)
   # weight in independent model
-  data$w = 1 / n_i
+  w = 1 / n_i
+  data$w = w
   # sample size
   N = length(unique(model.full$id))
   # total num of observations
   tot_obs = nrow(data)
-
-  # num of observations from each subject
-  n_i = table(model.full$id)
-  n_i = rep(n_i, times = n_i)
-  # weight in independent model
-  data$w = 1 / n_i
-
-
 
   # model form
   form = formula(model.full)
@@ -514,23 +508,13 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
                                  coefficients.tab[,"Pr(>|z|)"],
                                  row.names = rownames(coefficients.tab))
     colnames(coefficients.df) = colnames(coefficients.tab)
-    if (unbiased){
-      coefficients.df[,"L-RESI"] = z2S(coefficients.df[,"z value"], N)
-    } else{
-      coefficients.df[,"L-RESI"] = suppressWarnings(z2S_alt(coefficients.df[,"z value"],
-                                                            N))
-    }
+    coefficients.df[,"L-RESI"] = z2S(coefficients.df[,"z value"], N, unbiased)
 
     # CS RESI
     # M: use independence mod
     coefficients.tabcs <- lmtest::coeftest(mod_ind, vcov. = cov_ind)
     z_cs = coefficients.tabcs[,"z value"]
-    if (unbiased){
-      coefficients.df[,"CS-RESI"] = z2S(z_cs, N)
-    } else{
-      coefficients.df[,"CS-RESI"] = suppressWarnings(z2S_alt(z_cs,
-                                                             N))
-    }
+    coefficients.df[,"CS-RESI"] = z2S(z_cs, N, unbiased)
 
     output$coefficients = coefficients.df
     output$estimates = c(output$estimates, coefficients.df$`L-RESI`,
@@ -560,6 +544,7 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   }
 
   output$naive.var = FALSE
+  class(output) = c("resi", "list")
   return(output)
 }
 
@@ -575,7 +560,8 @@ resi_pe.gee <- function(model.full, data, unbiased = TRUE, ...){
   n_i = table(model.full$id)
   n_i = rep(n_i, times = n_i)
   # weight in independent model
-  data$w = 1 / n_i
+  w = 1 / n_i
+  data$w = w
 
   # independence model
   # data$new_id = 1:nrow(data)
@@ -610,29 +596,21 @@ resi_pe.gee <- function(model.full, data, unbiased = TRUE, ...){
                                coefficients.tab[,'Robust z'],
                                row.names = rownames(coefficients.tab))
   colnames(coefficients.df) = c('Estimate', 'Std. Error', 'z value')
-  if (unbiased){
-    coefficients.df[,'L-RESI'] = z2S(coefficients.df[,'z value'], N)
-  } else{
-    coefficients.df[,'L-RESI'] = suppressWarnings(z2S_alt(coefficients.df[,'z value'],
-                                                          N))
-  }
+  coefficients.df[,'L-RESI'] = z2S(coefficients.df[,'z value'], N, unbiased)
 
   # CS RESI
   # M: use new mod with substituted variance
   coefficients.tabcs = summary(mod_ind)$coefficients
   z_cs = coefficients.tabcs[,'Robust z']
-  if (unbiased){
-    coefficients.df[,'CS-RESI'] = z2S(z_cs, N)
-  } else{
-    coefficients.df[,'CS-RESI'] = suppressWarnings(z2S_alt(z_cs,
-                                                           N))
-  }
+  coefficients.df[,'CS-RESI'] = z2S(z_cs, N, unbiased)
+
   output$coefficients = coefficients.df
   output$estimates = c(coefficients.df$`L-RESI`, coefficients.df[,"CS-RESI"])
   names.est = rep(rownames(coefficients.df),2)
   names(output$estimates) = names.est
 
   output$naive.var = FALSE
+  class(output) = c("resi", "list")
   return(output)
 }
 
@@ -682,6 +660,7 @@ resi_pe.lme <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::vcovC
   else{
     output$naive.var = FALSE
   }
+  class(output) = c("resi", "list")
   return(output)
 }
 
@@ -734,5 +713,6 @@ resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::v
     class(output$anova) = c("anova_resi", class(output$anova))
   }
   output$model.full = list(call = model.full@call, formula = formula(model.full))
+  class(output) = c("resi", "list")
   return(output)
 }
