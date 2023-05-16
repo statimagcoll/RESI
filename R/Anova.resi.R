@@ -36,10 +36,11 @@ Anova.resi <- function(mod, alpha = NULL, ...){
     }
     else{
       output = mod$anova[,1:(which(colnames(mod$anova) == 'RESI'))]
-      CIs = apply(mod$boot.results[,(ncol(mod$boot.results)-
+      boot.results = mod$boot.results$t
+      CIs = apply(boot.results[,(ncol(boot.results)-
                                           nrow(mod$anova[which(rownames(mod$anova)
                                                                   != "Residuals"),])+1):
-                                        ncol(mod$boot.results)], 2,  quantile,
+                                        ncol(boot.results)], 2,  quantile,
                   probs = sort(c(alpha/2, 1-alpha/2)), na.rm = TRUE)
       CIs = t(CIs)
       output[1:nrow(CIs), c(paste(alpha/2*100, '%', sep=''),
@@ -88,9 +89,10 @@ anova.resi <- function(object, alpha = NULL, ...){
     }
     else{
       output = object$anova[,1:(which(colnames(object$anova) == "RESI"))]
-      CIs = apply(object$boot.results[,(ncol(object$boot.results)-
+      boot.results = object$boot.results$t
+      CIs = apply(boot.results[,(ncol(boot.results)-
                                           nrow(object$anova)+1):
-                                        ncol(object$boot.results)], 2,
+                                        ncol(boot.results)], 2,
                   quantile, probs = sort(c(alpha/2, 1-alpha/2)), na.rm = TRUE)
       CIs = t(CIs)
       output[1:nrow(CIs), c(paste(alpha/2*100, "%", sep=""),

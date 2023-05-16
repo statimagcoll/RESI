@@ -309,7 +309,8 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
   }
 
   if(store.boot){
-    output$boot.results = boot.results
+    #output$boot.results = boot.results
+    output$boot.results = boot_out
   }
   class(output) = "resi"
   return(output)
@@ -381,7 +382,7 @@ resi.nls = function(model.full, model.reduced = NULL, data, coefficients = TRUE,
                         ncpus = ncpus, boot.method = boot.method, skip.red = TRUE, ...)
 
   # number of bootstrap replicates with failed updating
-  output$nfail = length(which(is.na(output$boot.results[,1])))
+  output$nfail = length(which(is.na(output$boot.results$t[,1])))
 
   if (!store.boot){
     output = output[names(output) != "boot.results"]
@@ -511,7 +512,7 @@ resi.geeglm = function(model.full, model.reduced = NULL, data, anova = TRUE,
 
 
   # number of bootstrap replicates with failed updating
-  output$nfail = length(which(is.na(output$boot.results[,1])))
+  output$nfail = length(which(is.na(output$boot.results$t[,1])))
 
   if (!store.boot){
     output = output[names(output) != "boot.results"]
@@ -560,7 +561,7 @@ resi.gee = function(model.full, data, nboot = 1000, alpha = 0.05,
 
 
   # number of bootstrap replicates with failed updating
-  output$nfail = length(which(is.na(output$boot.results[,1])))
+  output$nfail = length(which(is.na(output$boot.results$t[,1])))
 
   if (!store.boot){
     output = output[names(output) != "boot.results"]

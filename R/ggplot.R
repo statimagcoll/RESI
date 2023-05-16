@@ -20,7 +20,7 @@ ggplot.resi = function(x, alpha = NULL, error.bars = TRUE, ...){
   #browser()
   dots = list(...)
 
-  if (!is.null(x$nboot)){
+  if (!is.null(x$alpha)){
     if (is.null(alpha)){
       alpha = x$alpha[1]
     }
@@ -33,7 +33,7 @@ ggplot.resi = function(x, alpha = NULL, error.bars = TRUE, ...){
         if (is.null(x$boot.results)){
           stop("\nSpecified alpha not found in the resi object")
         }
-        CIs = apply(x$boot.results[,2:(1+nrow(x$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+        CIs = apply(x$boot.results$t[,2:(1+nrow(x$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
         CIs = t(CIs)
         x$coefficients[1:nrow(CIs), c(paste(alpha/2*100, "%", sep=""), paste((1-rev(alpha)/2)*100, "%", sep=""))] = CIs
       }
@@ -55,9 +55,9 @@ ggplot.resi = function(x, alpha = NULL, error.bars = TRUE, ...){
     scale_y_continuous(name = NULL, breaks = 1:length(vnames), labels = rev(vnames)) +
     geom_vline(xintercept = 0, linetype="dotted") +
     xlab("RESI Estimate") +
-    ggtitle(ifelse(is.null(x$nboot), "Coefficient RESI Estimates",
+    ggtitle(ifelse(is.null(x$alpha), "Coefficient RESI Estimates",
                    paste("Coefficient RESI Estimates and ", (1-alpha)*100, "%", " CIs", sep="")))
-  if (!is.null(x$nboot)){
+  if (!is.null(x$alpha)){
     p = p + sapply(length(vnames):1, function(i) geom_segment(data = dat[-1*(i-length(vnames)) + 1,],
                                                               aes(x = get(ll),
                                                                   xend = get(ul),
@@ -121,7 +121,7 @@ ggplot.anova_resi = function(x, alpha = NULL, error.bars = TRUE, ...){
                    paste("ANOVA RESI Estimates and ", (1-alpha)*100, "%", " CIs", sep="")))
 
   if (length(cols) != 0){
-    sapply(length(vnames):1, function(i) geom_segment(data = dat[-1*(i-length(vnames)) + 1,],
+    p = p + sapply(length(vnames):1, function(i) geom_segment(data = dat[-1*(i-length(vnames)) + 1,],
                                                       aes(x = get(ll),
                                                           xend = get(ul),
                                                           y = ggpos, yend = ggpos,

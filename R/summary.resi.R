@@ -42,7 +42,8 @@ summary.resi <- function(object, alpha = NULL, ...){
     }
     else{
       output$coefficients = object$coefficients[,1:(which(colnames(object$coefficients) == "RESI"))]
-      CIs = apply(object$boot.results[,2:(1+nrow(object$coefficients))], 2,
+      boot.results = object$boot.results$t
+      CIs = apply(boot.results[,2:(1+nrow(object$coefficients))], 2,
                   quantile, probs = sort(c(alpha/2, 1-alpha/2)), na.rm = TRUE)
       CIs = t(CIs)
       output$coefficients[1:nrow(CIs), c(paste(alpha/2*100, "%", sep=""),

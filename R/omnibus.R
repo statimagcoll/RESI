@@ -45,7 +45,8 @@ omnibus <- function(object, alpha = NULL, ...){
     }
     else{
       output$overall = object$overall[,1:(which(colnames(object$overall) == "RESI"))]
-      CIs = quantile(object$boot.results[,1], probs = sort(c(alpha/2, 1-alpha/2)),
+      boot.results = object$boot.results$t
+      CIs = quantile(boot.results[,1], probs = sort(c(alpha/2, 1-alpha/2)),
                      na.rm = TRUE)
       output$overall[nrow(object$overall), c(paste(alpha/2*100, "%", sep=""),
                                          paste((1-rev(alpha)/2)*100, "%", sep=""))] = CIs

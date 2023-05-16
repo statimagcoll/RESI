@@ -31,7 +31,7 @@ plot.resi = function(x, alpha = NULL, ycex.axis = NULL, yaxis.args = list(),
                      automar = TRUE, ...){
   dots = list(...)
 
-  if (!(is.null(x$nboot))){
+  if (!(is.null(x$alpha))){
     if (is.null(alpha)){
       alpha = x$alpha[1]
     }
@@ -44,7 +44,7 @@ plot.resi = function(x, alpha = NULL, ycex.axis = NULL, yaxis.args = list(),
         if (is.null(x$boot.results)){
           stop("\nSpecified alpha not found in the resi object")
         }
-        CIs = apply(x$boot.results[,2:(1+nrow(x$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+        CIs = apply(x$boot.results$t[,2:(1+nrow(x$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
         CIs = t(CIs)
         x$coefficients[1:nrow(CIs), c(paste(alpha/2*100, "%", sep=""), paste((1-rev(alpha)/2)*100, "%", sep=""))] = CIs
       }
@@ -82,7 +82,7 @@ plot.resi = function(x, alpha = NULL, ycex.axis = NULL, yaxis.args = list(),
        xlim = c(min(0, min(x$coefficients[,ll])), max(x$coefficients[,ul])),
        xlab = "RESI Estimate", yaxt = "n", ylab = "",
        main = paste("Coefficient RESI Estimates and ", (1-alpha)*100, "%", " CIs", sep=""),...)
-  if (!(is.null(x$nboot))){
+  if (!(is.null(x$alpha))){
     for (i in length(vnames):1){
       lines(x = c(x$coefficients[-1*(i-length(vnames)) + 1,ll],
                   x$coefficients[-1*(i-length(vnames)) + 1,ul]), y = c(i,i),
