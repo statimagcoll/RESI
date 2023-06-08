@@ -14,7 +14,7 @@
 #'
 #' \eqn{S = (t * \sqrt(2) * \Gamma(rdf/2)) / (\sqrt(n * rdf) * \Gamma((rdf - 1)/2))}
 #'
-#' The formula for the alternative esti mator is derived by squaring the t statistic
+#' The formula for the alternative estimator is derived by squaring the t statistic
 #' and using the \code{\link{f2S}} formula. This estimator may be appealing for its
 #' intuitive relationship to the F statistic; the absolute value of RESI estimates
 #' using this formula will be equal to a RESI estimate using an F statistic for

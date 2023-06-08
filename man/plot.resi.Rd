@@ -34,7 +34,7 @@ This function uses base graphics to plot robust effect size (RESI) estimates and
 from `resi`, `summary_resi`, and `anova_resi` objects.
 }
 \details{
-This function creaes a forest-like plot with RESI estimates for each variable or factor.
+This function creates a forest-like plot with RESI estimates for each variable or factor.
 The size of the left margin will be automatically adjusted (and returned to original after plotting)
 unless `automar = FALSE`. Additional graphics parameters will be passed to the main
 plot function, the confidence intervals. Arguments specifically for the y-axis (variable names)

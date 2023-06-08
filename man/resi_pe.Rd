@@ -181,7 +181,7 @@ resi_pe(model.full, ...)
 
 \item{unbiased}{Logical, whether to use the unbiased or alternative T/Z statistic to RESI conversion. By default, `TRUE`. See details.}
 
-\item{waldtype}{Numeric, indicates which function to use for overall Waldtest. 0 (default) = lmtest::waldtest Chi-square, 1 = lmtest::waldtest F, 2 = aod::wald.test}
+\item{waldtype}{Numeric, indicates which function to use for overall Wald test. 0 (default) = lmtest::waldtest Chi-square, 1 = lmtest::waldtest F, 2 = aod::wald.test}
 }
 \value{
 Returns a list containing RESI point estimates

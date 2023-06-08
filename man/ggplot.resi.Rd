@@ -4,16 +4,20 @@
 \alias{ggplot.resi}
 \title{Plotting RESI Estimates and CIs}
 \usage{
-\method{ggplot}{resi}(x, alpha = NULL, error.bars = TRUE, ...)
+\method{ggplot}{resi}(data, mapping, alpha = NULL, error.bars = TRUE, ..., environment)
 }
 \arguments{
-\item{x}{Object of `resi`, `summary_resi`, or `anova_resi` class}
+\item{data}{Object of `resi`, `summary_resi`, or `anova_resi` class}
+
+\item{mapping}{Ignored, included for consistency with `ggplot` generic}
 
 \item{alpha}{Numeric, desired alpha level for confidence intervals}
 
 \item{error.bars}{Logical, whether to include end caps on the confidence intervals. Default = `TRUE`}
 
 \item{...}{Ignored}
+
+\item{environment}{Ignored, included for consistency with `ggplot` generic}
 }
 \value{
 Returns a ggplot of RESI point estimates

@@ -6,8 +6,8 @@
 ## R CMD check results
 There were no ERRORs, WARNINGs, or NOTEs.
 
-## CRAN Submission 1.1.1
-This update changes "object" to "mod" in Anova.resi for S3 method consistency with car::Anova, based on warning that was was given by CRAN's package check and makes a minor change to resi.geeglm.
+## CRAN Submission 1.2.0
+This update reworks the package to address initial comments received after submitting a manuscript regarding the package to the *Journal of Statistical Software.* The main functions, `resi` and `resi_pe` have been reworked to minimize code duplication. The bootstrapping is now handled via the `boot` package, with an added internal function `resi_stat` to compute the estimates. `t2S_alt` and `t2S` were collapsed into one function (similarly for `z2S` and `z2S_alt`). An `omnibus` function was added to extract the overall Wald test from a `resi` object.  The plotting methods have been improved and `ggplot` methods have been added. The methods for `gee` and `geeglm` were updated based on ongoing theoretical work. A bug that was causing an error in `resi` on models containing only one predictor was resolved.
 
 Words flagged by spell_check are not misspelled.
 
@@ -15,6 +15,22 @@ Words flagged by spell_check are not misspelled.
 There are currently no downstream dependencies for this package.
 
 ## Previous cran-comments
+
+## Test Environments
+* local R installation, version 4.2.2
+* rhub::check_for_cran()
+* win-builder
+
+## R CMD check results
+There were no ERRORs, WARNINGs, or NOTEs.
+
+## CRAN Submission 1.1.1
+This update changes "object" to "mod" in Anova.resi for S3 method consistency with car::Anova, based on warning that was was given by CRAN's package check and makes a minor change to resi.geeglm.
+
+Words flagged by spell_check are not misspelled.
+
+## Downstream dependencies
+There are currently no downstream dependencies for this package.
 
 ## Test Environments
 * local R installation, version 4.2.2

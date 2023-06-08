@@ -14,7 +14,7 @@
 #' @param Anova.args List, additional arguments to be passed to Anova function.
 #' @param vcov.args List, additional arguments to be passed to vcovfunc.
 #' @param unbiased Logical, whether to use the unbiased or alternative T/Z statistic to RESI conversion. By default, `TRUE`. See details.
-#' @param waldtype Numeric, indicates which function to use for overall Waldtest. 0 (default) = lmtest::waldtest Chi-square, 1 = lmtest::waldtest F, 2 = aod::wald.test
+#' @param waldtype Numeric, indicates which function to use for overall Wald test. 0 (default) = lmtest::waldtest Chi-square, 1 = lmtest::waldtest F, 2 = aod::wald.test
 #' @param ... Ignored.
 #' @importFrom aod wald.test
 #' @importFrom regtools nlshc
@@ -459,25 +459,11 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   } else{
     form.reduced = formula(model.reduced)
   }
-  # # reduced independence model
-  # mod_indg_reduced = suppressWarnings(glm(formula = form.reduced, family = model.reduced$family, data = data,
-  #                                 weights = w, contrasts = model.reduced$contrasts))
-  # mod_indg_reduced$residuals = mod_indg_reduced$residuals / sqrt(mod_indg_reduced$weights)
-  # # the var-cov matrix estimate from the independence model
-  # # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
-  # cov_ind_reduced = sandwich::vcovHC(mod_indg_reduced, type = "HC0")
-  # # make copy of model.reduced, replace vbeta with independence
-  # mod_ind_reduced = model.reduced
-  # mod_ind_reduced$geese$vbeta = cov_ind_reduced
-
 
   # overall
   # longitudinal
   overall.tab = anova(model.full, model.reduced)
   overall.tab[,"L-RESI"] = chisq2S(overall.tab[,"X2"], overall.tab[,"Df"], N)
-  # # cross-sectional (independence models) (not working for now)
-  # overallcs = anova(mod_ind, mod_ind_reduced)
-  # overall.tab[,'CS-RESI'] = chisq2S(overallcs[,'X2'], overallcs[,'Df'], N)
 
   output$model.reduced = list(call = model.reduced$call, formula = form.reduced)
   output$estimates = c(overall.tab[,"L-RESI"])
@@ -485,16 +471,6 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   names.est = c("Overall-L")
   names(output$estimates) = names.est
   }
-
-  # stats = overall.tab["chi2"]
-  # overall.df = overall.tab["df"]
-  # res.df = nrow(data) - overall.df
-  # overall.resi.hat = chisq2S(stats, overall.df, model.full$n)
-  # overall.tab['RESI'] = overall.resi.hat
-  # overall.tab = as.data.frame(t(overall.tab))
-  # rownames(overall.tab) = "Wald Test"
-
-
 
   # longitudinal RESI
   # coefficients (z statistics)
@@ -563,13 +539,6 @@ resi_pe.gee <- function(model.full, data, unbiased = TRUE, ...){
   w = 1 / n_i
   data$w = w
 
-  # independence model
-  # data$new_id = 1:nrow(data)
-  # suppressMessages(capture.output(mod_ind <- update(model.full, id = new_id, data = data),
-  #                                           file =  nullfile()))
-  # # adjust covariance
-  # mod_ind$robust.variance = mod_ind$robust.variance * tot_obs/N
-  # to match geeglm
   mod_indg = suppressWarnings(glm(formula = formula(model.full), family = model.full$family, data = data,
                                   contrasts = model.full$contrasts, weights = w))
   mod_indg$residuals = mod_indg$residuals / sqrt(mod_indg$weights)
@@ -599,7 +568,6 @@ resi_pe.gee <- function(model.full, data, unbiased = TRUE, ...){
   coefficients.df[,'L-RESI'] = z2S(coefficients.df[,'z value'], N, unbiased)
 
   # CS RESI
-  # M: use new mod with substituted variance
   coefficients.tabcs = summary(mod_ind)$coefficients
   z_cs = coefficients.tabcs[,'Robust z']
   coefficients.df[,'CS-RESI'] = z2S(z_cs, N, unbiased)

@@ -8,7 +8,7 @@
 #' @param yaxis.args List, other arguments to be passed to \code{\link{axis}} for the y-axis
 #' @param automar Logical, whether to automatically adjust the plotting margins to accommodate variable names. Default = `TRUE`
 #' @param ... Other graphical parameters passed to \code{\link{plot}} and \code{\link{lines}}
-#' @details This function creaes a forest-like plot with RESI estimates for each variable or factor.
+#' @details This function creates a forest-like plot with RESI estimates for each variable or factor.
 #' The size of the left margin will be automatically adjusted (and returned to original after plotting)
 #' unless `automar = FALSE`. Additional graphics parameters will be passed to the main
 #' plot function, the confidence intervals. Arguments specifically for the y-axis (variable names)
