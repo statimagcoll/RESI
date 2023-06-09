@@ -1,7 +1,7 @@
 #' Covert Cohen's \emph{d} to |S|
 #'
 #' Converts Cohen's \emph{d} robust effect size index (S) using the formula from
-#' Vandekar, Rao, & Blume (2020).
+#' Vandekar, Tao, & Blume (2020).
 #' @param d Numeric, value of Cohen's \emph{d}.
 #' @param pi Numeric, the sampling proportions.
 #' @return Returns an estimate the robust effect size index
@@ -24,5 +24,8 @@
 #' # This corresponds to a RESI of 0.25.
 #' @export
 d2S <- function(d, pi = 0.5){
+  if (pi < 0 | pi > 1){
+    stop("\npi must be between 0 and 1")
+  }
   abs(d)/sqrt(1/pi + 1/(1-pi))
 }

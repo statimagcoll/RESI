@@ -1,3 +1,22 @@
+## RESI 1.2.0
+
+* Implemented `boot` package for bootstrapping
+  + `boot.results` element of `resi` object contains full `boot` object
+  + Allows parallelization
+* Updated `geeglm`/`gee` methods
+* Revamped `plot.resi` function
+* Added `ggplot` methods
+* Added `omnibus` function to extract overall Wald test from `resi` object
+* Combined `t2S` and `t2S_alt` into `t2S` and `z2S` and `z2S_alt` into `z2S`
+* Substantially reduced code duplication between methods
+* Expanded error checking and messaging
+* Fixed error in `resi` when using a model with only one predictor
+* Various typo fixes and cleaned up documentation
+
+## RESI 1.1.1
+
+* Minor argument consistency fix
+
 ## RESI 1.1.0
 
 * Expanded longitudinal methods

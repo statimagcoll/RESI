@@ -1,7 +1,7 @@
 #' Convert S to Cohen's d
 #'
 #' Converts the robust effect size index (S) to Cohen's d using the formula from
-#' Vandekar, Rao, & Blume (2020).
+#' Vandekar, Tao, & Blume (2020).
 #' @param S Numeric, the robust effect size index.
 #' @param pi Numeric, the sampling proportions.
 #' @return Returns an estimate of Cohen's \emph{d} based on the RESI.
@@ -33,5 +33,8 @@
 #'
 #' @export
 S2d = function(S, pi=0.5){
+  if (pi < 0 | pi > 1){
+    stop("\npi must be between 0 and 1")
+  }
   abs(S * sqrt(1/pi + 1/(1-pi)))
 }

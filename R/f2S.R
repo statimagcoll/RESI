@@ -1,6 +1,6 @@
 #' Compute the robust effect size index estimate from F-statistic
 #'
-#' This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
+#' This function computes the robust effect size index from Vandekar, Tao, & Blume (2020).
 #' Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
 #' @param f The F statistic for the parameter of interest.
 #' @param df Number of degrees of freedom of the F statistic.
@@ -26,6 +26,9 @@
 #' f2S(fs, df = dfs, rdf = mod$df.residual, n = nrow(RESI::insurance))
 #' @export
 f2S <- function(f, df, rdf, n){
+  if (any(f < 0)){
+    stop("\nF statistic must be non-negative")
+  }
   S = (f*df*(rdf-2)/rdf - df)/n
   sqrt(ifelse(S<0, 0, S))
 }

@@ -16,7 +16,7 @@ Returns an estimate the robust effect size index
 }
 \description{
 Converts Cohen's \emph{d} robust effect size index (S) using the formula from
-Vandekar, Rao, & Blume (2020).
+Vandekar, Tao, & Blume (2020).
 }
 \details{
 The pi parameter comes from the fact that Cohen's d doesn't account

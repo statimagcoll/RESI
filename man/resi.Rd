@@ -24,13 +24,19 @@ resi(model.full, ...)
   data,
   anova = TRUE,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
+  boot.method = "nonparam",
   vcovfunc = sandwich::vcovHC,
   alpha = 0.05,
   store.boot = FALSE,
   Anova.args = list(),
   vcov.args = list(),
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
+  long = FALSE,
+  clvar = NULL,
   ...
 )
 
@@ -40,6 +46,7 @@ resi(model.full, ...)
   data,
   anova = TRUE,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   vcovfunc = sandwich::vcovHC,
   alpha = 0.05,
@@ -47,6 +54,8 @@ resi(model.full, ...)
   Anova.args = list(),
   vcov.args = list(),
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
   ...
 )
 
@@ -56,6 +65,7 @@ resi(model.full, ...)
   data,
   anova = TRUE,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   boot.method = "nonparam",
   vcovfunc = sandwich::vcovHC,
@@ -64,6 +74,8 @@ resi(model.full, ...)
   Anova.args = list(),
   vcov.args = list(),
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
   ...
 )
 
@@ -72,13 +84,17 @@ resi(model.full, ...)
   model.reduced = NULL,
   data,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   boot.method = "nonparam",
-  vcovfunc = vcovnls,
+  anova = FALSE,
+  vcovfunc = regtools::nlshc,
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
   ...
 )
 
@@ -88,12 +104,15 @@ resi(model.full, ...)
   data,
   anova = TRUE,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   vcovfunc = vcov,
   alpha = 0.05,
   store.boot = FALSE,
   Anova.args = list(),
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
   ...
 )
 
@@ -103,12 +122,15 @@ resi(model.full, ...)
   data,
   anova = TRUE,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   vcovfunc = vcov,
   alpha = 0.05,
   store.boot = FALSE,
   Anova.args = list(),
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
   ...
 )
 
@@ -117,12 +139,16 @@ resi(model.full, ...)
   model.reduced = NULL,
   data,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   vcovfunc = sandwich::sandwich,
+  anova = FALSE,
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
   ...
 )
 
@@ -131,24 +157,32 @@ resi(model.full, ...)
   model.reduced = NULL,
   data,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   vcovfunc = sandwich::sandwich,
+  anova = FALSE,
   alpha = 0.05,
   store.boot = FALSE,
   vcov.args = list(),
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
   ...
 )
 
 \method{resi}{geeglm}(
   model.full,
+  model.reduced = NULL,
   data,
   anova = TRUE,
   coefficients = TRUE,
+  overall = TRUE,
   nboot = 1000,
   alpha = 0.05,
   store.boot = FALSE,
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
   ...
 )
 
@@ -159,6 +193,8 @@ resi(model.full, ...)
   alpha = 0.05,
   store.boot = FALSE,
   unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
   ...
 )
 
@@ -166,6 +202,7 @@ resi(model.full, ...)
   model.full,
   alpha = 0.05,
   nboot = 1000,
+  anova = TRUE,
   vcovfunc = clubSandwich::vcovCR,
   vcov.args = list(),
   ...
@@ -175,6 +212,7 @@ resi(model.full, ...)
   model.full,
   alpha = 0.05,
   nboot = 1000,
+  anova = TRUE,
   vcovfunc = clubSandwich::vcovCR,
   vcov.args = list(),
   ...
@@ -193,7 +231,11 @@ resi(model.full, ...)
 
 \item{coefficients}{Logical, whether to produce a coefficients (summary) table with the RESI columns added. By default = `TRUE`.}
 
+\item{overall}{Logical, whether to produce an overall Wald test comparing full to reduced model with RESI columns added. By default = `TRUE`.}
+
 \item{nboot}{Numeric, the number of bootstrap replicates. By default, 1000.}
+
+\item{boot.method}{String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.}
 
 \item{vcovfunc}{The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).}
 
@@ -207,14 +249,20 @@ resi(model.full, ...)
 
 \item{unbiased}{Logical, whether to use the unbiased or alternative T/Z statistic to RESI conversion. By default, `TRUE`. See details.}
 
-\item{boot.method}{String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.}
+\item{parallel}{See documentation for \code{\link{boot}}.}
+
+\item{ncpus}{See documentation for \code{\link{boot}}.}
+
+\item{long}{Logical, whether the data is longitudinal/clustered. By default, `FALSE`.}
+
+\item{clvar}{Character, the name of the cluster/id variable if data is clustered. By default, `NULL`.}
 }
 \value{
 Returns a list that includes function arguments, RESI point estimates,
 and confidence intervals in coefficients/anova-style tables
 }
 \description{
-This function will estimate the robust effect size (RESI) from Vandekar, Rao, & Blume (2020) and its confidence interval in various ways for a fitted model object. The overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in coefficients-style table. RESI is (optionally) estimated for each variable/interaction in an Anova-style table for models with existing Anova methods. CIs can be calculated using either non-parametric or Bayesian bootstrapping.
+This function will estimate the robust effect size (RESI) from Vandekar, Tao, & Blume (2020) and its confidence interval in various ways for a fitted model object. The overall RESI is estimated via a Wald test. RESI is (optionally) estimated for each factor in coefficients-style table. RESI is (optionally) estimated for each variable/interaction in an Anova-style table for models with existing Anova methods. CIs can be calculated using either non-parametric or Bayesian bootstrapping.
 }
 \details{
 The RESI, denoted as S, is applicable across many model types. It is a unitless
@@ -238,8 +286,7 @@ may be appealing because its absolute value will be equal to the RESI based on
 the F or Chi-square statistic. The RESI based on the Chi-Square and F statistics
 is always greater than or equal to 0. The type of statistic
 used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
-\code{\link{t2S}}, \code{\link{z2S}}, \code{\link{t2S_alt}}, and
-\code{\link{z2S_alt}} for more details on the formulas.
+\code{\link{t2S}}, and \code{\link{z2S}} for more details on the formulas.
 
 For GEE (\code{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
 per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
@@ -295,51 +342,58 @@ and then try rerunning \code{resi}.
 mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
 
 # run resi on fitted model with desired number of bootstrap replicates
-resi(mod, nboot = 50)
+# store bootstrap results for calculating different CIs later
+resi_obj = resi(mod, nboot = 50, store.boot = TRUE)
+# print output
+resi_obj
 
 # fit a reduced model for comparison
-mod.red = lm(charges ~ bmi, data = RESI::insurance)
+mod_red = lm(charges ~ bmi, data = RESI::insurance)
 
 # running resi and including the reduced model will provide almost the exact same
 # output as not including a reduced model. The difference is that the "overall"
 # portion of the output will compare the full model to the reduced model.
 # The "summary" and "anova" RESI estimates will be the same. (The bootstrapped
 # confidence intervals may differ.)
-resi(model.full = mod, model.reduced = mod.red, nboot = 10)
+resi(model.full = mod, model.reduced = mod_red, nboot = 10)
 
-# for some model types and formula structures, data argument is required
-library(splines)
-# fit logistic regression model with splines
-mod = glm(smoker ~ ns(age, df = 3) + region, data = RESI::insurance, family = "binomial")
-
-# store bootstrap results for calculating different CIs later
-# specify additional arguments to the variance-covariance function via vcov.args
-resi.obj = resi(mod, data = RESI::insurance, store.boot = TRUE, alpha = 0.01,
-vcov.args = list(type = "HC0"), nboot = 25)
-summary(resi.obj, alpha = c(0.1))
-car::Anova(resi.obj, alpha = 0.1)
+# used stored bootstrap results to get a different alpha-level confidence interval
+summary(resi_obj, alpha = c(0.01, 0.1))
+car::Anova(resi_obj, alpha = c(0.01, 0.1))
 
 # the result of resi, as well as the summary or Anova of a `resi` object can be plotted
 # if the resi object was created with the store.boot = `TRUE` option, any alpha
 # can be specified
-plot(resi.obj, alpha = 0.05)
+plot(resi_obj, alpha = 0.01)
 # if the variable names on the y-axis are too long, you can reduce their size with
 # the ycex.axis argument (or use regular common solutions like changing the margins)
-plot(resi.obj, alpha = 0.05, ycex.axis = 0.5)
+plot(resi_obj, alpha = 0.01, ycex.axis = 0.5)
+
+# for some model types and formula structures, data argument is required
+if(requireNamespace("splines")){
+  # fit logistic regression model with splines
+  mod = glm(smoker ~ splines::ns(age, df = 3) + region, data = RESI::insurance,
+    family = "binomial")
+
+  # specify additional arguments to the variance-covariance function via vcov.args
+  resi_obj = resi(mod, data = RESI::insurance, alpha = 0.01,
+    vcov.args = list(type = "HC0"), nboot = 25)
+  summary(resi_obj)
+  car::Anova(resi_obj)}
+
 
 ## RESI on a survival model with alternate Z2S
-# load survival library
-library(survival)
+if(requireNamespace("survival")){
+  # fit coxph model on example data from survival package
+  # Note: for survival models, you need to specify robust variance in the model
+  # creation. resi will ignore the vcovfunc argument for this reason.
+  mod.coxph =  survival::coxph(survival::Surv(time, status) ~ age + sex + wt.loss,
+   data=survival::lung, robust = TRUE)
 
-# fit coxph model on example data from survival package
-# Note: for survival models, you need to specify robust variance in the model
-# creation. resi will ignore the vcovfunc argument for this reason.
-mod.coxph =  coxph(Surv(time, status) ~ age + sex + wt.loss, data=lung, robust = TRUE)
-
-# run resi on the model
-# to use the alternative Z to RESI formula (which is equal in absolute value to the
-# chi-square to RESI (S) formula), specify unbiased = FALSE.
-resi(mod.coxph, data = lung, unbiased = FALSE, nboot = 10)
+  # run resi on the model
+  # to use the alternative Z to RESI formula (which is equal in absolute value to the
+  # chi-square to RESI (S) formula), specify unbiased = FALSE.
+  resi(mod.coxph, data = survival::lung, unbiased = FALSE, nboot = 10)}
 
 }
 \references{
