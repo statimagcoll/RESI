@@ -52,7 +52,7 @@ ggplot.resi = function(data, mapping, alpha = NULL, error.bars = TRUE, ...,
   dat$ggpos = ggpos
   dat = dat[order(dat$ggpos),]
   RESI = dat$RESI
-  p = ggplot(dat, aes(data = RESI, y = ggpos)) +
+  p = ggplot(dat, aes(x = RESI, y = ggpos)) +
     geom_point() +
     scale_y_continuous(name = NULL, breaks = 1:length(vnames), labels = rev(vnames)) +
     geom_vline(xintercept = 0, linetype="dotted") +
