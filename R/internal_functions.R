@@ -32,9 +32,9 @@ resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",
     }
      else{
       # for clustered data, dat is unique ids and inds is which of the ids
-      boot.data = mod.dat[unlist(lapply(inds, function(x) which(x == mod.dat[, clvar]))), ]
+      boot.data = mod.dat[unlist(lapply(dat[inds], function(x) which(x == mod.dat[, clvar]))), ]
       bootid = rep(1:length(unique(mod.dat[, clvar])),
-                    unlist(lapply(inds, function(x) length(which(x==mod.dat[,clvar])))))
+                    unlist(lapply(dat[inds], function(x) length(which(x==mod.dat[,clvar])))))
       boot.data$bootid = bootid
 
       mod.full = try(update(mod.full, data = boot.data, id = bootid), silent = T)
@@ -58,7 +58,7 @@ resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",
       mod.reduced = try(update(mod.reduced, data = boot.data, weights = g), silent = T)}
   }
 
-  if(!(inherits(mod.full, "try-error") | (inherits(mod.reduced, "try-error") ))){
+  if(!(inherits(mod.full, "try-error") | (inherits(mod.reduced, "try-error") & overall))){
     out = try(resi_pe(mod.full, model.reduced = mod.reduced, data = boot.data, overall = overall, ...)$estimates, silent = T)
     if(inherits(out, "try-error")){
       out = NA
