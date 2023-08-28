@@ -58,8 +58,8 @@ resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",
       mod.reduced = try(update(mod.reduced, data = boot.data, weights = g), silent = T)}
   }
 
-  if(!(inherits(mod.full, "try-error") | (inherits(mod.reduced, "try-error") & overall))){
-    out = try(resi_pe(mod.full, model.reduced = mod.reduced, data = boot.data, ...)$estimates, silent = T)
+  if(!(inherits(mod.full, "try-error") | (inherits(mod.reduced, "try-error") ))){
+    out = try(resi_pe(mod.full, model.reduced = mod.reduced, data = boot.data, overall = overall, ...)$estimates, silent = T)
     if(inherits(out, "try-error")){
       out = NA
     }
