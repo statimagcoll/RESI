@@ -534,9 +534,7 @@ resi_pe.gee <- function(model.full, data, unbiased = TRUE, ...){
 
   # num of observations from each subject
   n_i = table(model.full$id)
-  n_i = rep(n_i, times = n_i)
-  # weight in independent model
-  w = 1 / n_i
+  w = 1/n_i[match(model.full$id, names(n_i))]
   data$w = w
 
   mod_indg = suppressWarnings(glm(formula = formula(model.full), family = model.full$family, data = data,
@@ -635,47 +633,72 @@ resi_pe.lme <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::vcovC
 #' @describeIn resi_pe RESI point estimation for lmerMod object
 #' @export
 resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::vcovCR,
-                            Anova.args = list(), vcov.args = list(), ...){
-  x = as.matrix(summary(model.full)$coefficients)
+                            Anova.args = list(), vcov.args = list(), unbiased=TRUE, ...){
   #sample size
+  # assumes one random effect term
   N = summary(model.full)$ngrps
+  rfxNames = names(N)
 
-  # robust se
-  if (identical(vcovfunc, stats::vcov)) {
-    coefficients.tab = cbind(x, 'Wald' = x[, 't value']^2, RESI = RESI::chisq2S(x[, 't value']^2, 1, N))
-    output = list(estimates = coefficients.tab[,"RESI"], coefficients = coefficients.tab, naive.var = TRUE)
-    vcovfunc2 = vcovfunc
-  } else {
-    if (length(vcov.args) == 0){
-      if (identical(vcovfunc, clubSandwich::vcovCR)){
-        vcov.args = c(formals(vcovfunc)[1], list(type = "CR3"))
-      }} else{
+  indForm = as.formula(paste(all.vars(formula(model.full))[1], '~', gsub("\\+ *\\(.*\\|.*\\)", "", as.character(formula(model.full))[3]) ) )
+  data = attr(model.full, 'frame')
+  n_i = table(data[,rfxNames])
+  w = data$w = 1/n_i[match(data[,rfxNames], names(n_i))]
+  mod_ind = glm(indForm, data=data, family = gaussian(), weights=w)
+  # Have to reweight residuals for CS-RESI
+  mod_ind$residuals = mod_ind$residuals / sqrt(mod_ind$weights)
+
+  # naive SE
+  coefficients = anova = TRUE
+  if(coefficients){
+    if (identical(vcovfunc, stats::vcov)) {
+      # uses vcov function
+      coefficients.df <- as.data.frame(summary(model.full)$coefficients)
+      # using z because I don't know what df would be for CS-RESI
+      coefficients.df = cbind(coefficients.df,
+                              "L-RESI" = RESI::z2S(x[, 't value'], N, unbiased=unbiased),
+                              'CS-RESI'= RESI::z2S(x[, 'Estimate']/summary(mod_ind)$coefficients[,'Std. Error'], N, unbiased=unbiased) )
+      output = list(estimates = c(coefficients.df[,"RESI-L"], coefficients.df[,'RESI-CS']), coefficients = coefficients.df, naive.var = TRUE)
+      # robust SE
+    } else {
+      if (length(vcov.args) == 0){
         if (identical(vcovfunc, clubSandwich::vcovCR)){
-          if (!("type" %in% names(vcov.args))){
-            vcov.args = c(vcov.args, list(type = "CR3"))}}
-        vcov.args = c(formals(vcovfunc)[1], vcov.args)}
+          vcov.args = c(formals(vcovfunc)[1], list(type = "CR3"))
+        }} else{
+          if (identical(vcovfunc, clubSandwich::vcovCR)){
+            if (!("type" %in% names(vcov.args))){
+              vcov.args = c(vcov.args, list(type = "CR3"))}}
+          vcov.args = c(formals(vcovfunc)[1], vcov.args)
+        }
 
-    vcovfunc2 <- function(x) {
-      vcov.args[[1]] = x
-      do.call(vcovfunc, vcov.args)}
-    robust_var = diag(vcovfunc2(model.full))
-    robust_se = sqrt(robust_var)
-    coefficients.tab = cbind(x, 'Robust.SE' = robust_se,
-                             'Robust Wald' = (x[, 'Estimate']^2/robust_var),
-                             RESI = RESI::chisq2S(x[, 'Estimate']^2/robust_var, 1, N))
-    # model full is not the same process as others, so print method is missing the call
-    output = list(estimates = coefficients.tab[,"RESI"], coefficients = coefficients.tab,
-                  naive.var = FALSE)
+      vcovfunc2 <- function(x) {
+        vcov.args[[1]] = x
+        do.call(vcovfunc, vcov.args)}
+      vcovfuncInd <- function(x){
+        vcovInd.args = list(x)
+        vcovInd.args['type'] = gsub("CR", 'HC', vcov.args[['type']] )
+        do.call(vcovHC, vcovInd.args)
+      }
+      coefficients.df = as.data.frame(clubSandwich::coef_test(model.full, vcovfunc2(model.full)))
+      coefficients.df = cbind(coefficients.df,
+                              "L-RESI" = RESI::z2S(coefficients.df[, 'tstat'], N, unbiased=unbiased),
+                              'CS-RESI'= RESI::z2S(coefficients.df[, 'beta']/lmtest::coeftest(mod_ind, vcov. = vcovfuncInd(mod_ind) )[,'Std. Error'], N, unbiased=unbiased) )
+      output = list(estimates = c(coefficients.df[,"L-RESI"], coefficients.df[,"CS-RESI"]), coefficients = coefficients.df,
+                    naive.var = FALSE)
+    }
+    names(output$estimates) = rep(rownames(coefficients.df), 2)
   }
-  names(output$estimates) = rownames(coefficients.tab)
-  # Anova table (Chi sq statistics)
+
   if (anova){
     suppressMessages(anova.tab <- do.call(car::Anova,
                                           c(list(mod = model.full, vcov. = vcovfunc2), Anova.args)))
-    anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], N)
+    # uses coefficient estimates from the CS model. Technically not the most efficient estimator.
+    suppressMessages(CSanova.tab <- do.call(car::Anova,
+                                            c(list(mod = mod_ind, vcov. = vcovfuncInd), Anova.args, list('test.statistic'='Wald') )))
+    anova.tab[,'L-RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], N)
+    anova.tab[,'CS-RESI'] = chisq2S(CSanova.tab[,'Chisq'], anova.tab[,'Df'], N)
     names.est = names(output$estimates)
-    output$estimates = c(output$estimates, anova.tab$RESI)
-    names.est = c(names.est, rownames(anova.tab))
+    output$estimates = c(output$estimates, anova.tab[,'L-RESI'], anova.tab[,'CS-RESI'])
+    names.est = c(names.est, rep(rownames(anova.tab), 2))
     names(output$estimates) = names.est
     output$anova = anova.tab
     class(output$anova) = c("anova_resi", class(output$anova))

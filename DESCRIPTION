@@ -37,6 +37,7 @@ Imports:
     car,
     clubSandwich,
     ggplot2,
+    lmerTest,
     lmtest,
     nlme,
     regtools,
