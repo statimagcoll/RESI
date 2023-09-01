@@ -632,7 +632,8 @@ resi_pe.lme <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::vcovC
 
 #' @describeIn resi_pe RESI point estimation for lmerMod object
 #' @export
-resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::vcovCR,
+resi_pe.lmerMod <- function(model.full, vcovfunc = clubSandwich::vcovCR, anova = TRUE,
+                            coefficients = TRUE, overall = TRUE,
                             Anova.args = list(), vcov.args = list(), unbiased=TRUE, ...){
   #sample size
   # assumes one random effect term
@@ -648,7 +649,6 @@ resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::v
   mod_ind$residuals = mod_ind$residuals / sqrt(mod_ind$weights)
 
   # naive SE
-  coefficients = anova = TRUE
   if(coefficients){
     if (identical(vcovfunc, stats::vcov)) {
       # uses vcov function
@@ -659,6 +659,7 @@ resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::v
                               'CS-RESI'= RESI::z2S(x[, 'Estimate']/summary(mod_ind)$coefficients[,'Std. Error'], N, unbiased=unbiased) )
       output = list(estimates = c(coefficients.df[,"RESI-L"], coefficients.df[,'RESI-CS']), coefficients = coefficients.df, naive.var = TRUE)
       # robust SE
+      vcovfunc2 = vcovfuncInd = vcovfunc
     } else {
       if (length(vcov.args) == 0){
         if (identical(vcovfunc, clubSandwich::vcovCR)){
@@ -674,11 +675,11 @@ resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::v
         vcov.args[[1]] = x
         do.call(vcovfunc, vcov.args)}
       vcovfuncInd <- function(x){
-        vcovInd.args = list(x)
+        vcovInd.args = list(x=x)
         vcovInd.args['type'] = gsub("CR", 'HC', vcov.args[['type']] )
         do.call(vcovHC, vcovInd.args)
       }
-      coefficients.df = as.data.frame(clubSandwich::coef_test(model.full, vcovfunc2(model.full)))
+      coefficients.df = as.data.frame(clubSandwich::coef_test(model.full, vcovfunc2(model.full))[,-1])
       coefficients.df = cbind(coefficients.df,
                               "L-RESI" = RESI::z2S(coefficients.df[, 'tstat'], N, unbiased=unbiased),
                               'CS-RESI'= RESI::z2S(coefficients.df[, 'beta']/lmtest::coeftest(mod_ind, vcov. = vcovfuncInd(mod_ind) )[,'Std. Error'], N, unbiased=unbiased) )

@@ -220,10 +220,10 @@ test_that("resi produces the correct estimates", {
                c(-0.007006305,-0.121182453,0.003769394,0.119402133,-0.069223594),
                tolerance = 1e-07)
   }
-  expect_equal(unname(suppressWarnings(resi(mod.lme, nboot = 10)$coefficients[,'RESI'])),
+  expect_equal(unname(suppressWarnings(resi(mod.lme, nboot = 10)$coefficients[,'L-RESI'])),
                c(3.659090, 1.739166, 0.512371), tolerance = 1e-07)
   if(requireNamespace("lme4")){
-  expect_equal(unname(suppressWarnings(resi(mod.lmerMod, nboot = 10)$coefficients[,'RESI'])),
+  expect_equal(unname(suppressWarnings(resi(mod.lmerMod, nboot = 10)$coefficients[,'L-RESI'])),
                c(8.434942, 1.533073), tolerance = 1e-07)}
 })
 

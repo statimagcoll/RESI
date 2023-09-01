@@ -149,7 +149,7 @@ resi = function(model.full, ...){
 #' @export
 resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
                          coefficients = TRUE, overall = TRUE, nboot = 1000,
-                         boot.method = "nonparam", vcovfunc = sandwich::vcovHC,
+                         boot.method = "nonparam", vcovfunc=sandwich::vcovHC,
                          alpha = 0.05, store.boot = FALSE, Anova.args = list(),
                          vcov.args = list(), unbiased = TRUE,
                          parallel = c("no", "multicore", "snow"),
@@ -169,8 +169,8 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
       message("Updating model fit failed. Try running with providing data argument")})
   }
   else{
-    if (!(is.null(model.full$na.action))){
-      data = data[which(!(1:nrow(data)%in% model.full$na.action)),]
+    if (!(is.null(na.action(model.full)) )){
+      data = data[which(!(1:nrow(data)%in% na.action(model.full))),]
     }
     data = as.data.frame(data)
   }
@@ -179,9 +179,11 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
     if(!("skip.red" %in% names(dots))){
       form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
       if (!(form.reduced == formula(model.full))){
-        if(!(is.null(model.full$model)) & !long){
-          model.reduced = try(update(model.full, formula = form.reduced,
-                                      data = model.full$model), silent = T)
+        if(!long){
+          if(!(is.null(model.full$model))){
+            model.reduced = try(update(model.full, formula = form.reduced,
+                                       data = model.full$model), silent = T)
+          }
         } else{
           model.reduced = try(update(model.full, formula = form.reduced,
                                       data = data), silent = T)
@@ -196,7 +198,7 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
   output = list(alpha = alpha, nboot = nboot, boot.method = boot.method)
   output = c(output, resi_pe(model.full = model.full, model.reduced = model.reduced,
                              data = data, anova = anova, coefficients = coefficients,
-                             overall = overall, vcovfunc = vcovfunc,
+                             overall = overall, vcovfunc=vcovfunc,
                              Anova.args = Anova.args, vcov.args = vcov.args,
                              unbiased = unbiased, ...))
 
@@ -593,5 +595,52 @@ resi.lmerMod = function(model.full, alpha = 0.05, nboot = 1000, anova = TRUE,
   output = c(output, resi_pe(model.full, vcovfunc = vcovfunc, vcov.args = vcov.args, anova = anova, ...)) # RESI point estimates
   output$boot.method = "nonparam"
   class(output) = "resi"
+  return(output)
+}
+
+
+#' @describeIn resi RESI point and interval estimation for GEE models
+#' @export
+resi.lmerMod = function(model.full, model.reduced = NULL, data, anova = TRUE,
+                       coefficients = TRUE, overall = TRUE, nboot = 1000,
+                       alpha = 0.05, store.boot = FALSE, vcovfunc=clubSandwich::vcovCR,
+                       unbiased = TRUE, parallel = c("no", "multicore", "snow"),
+                       ncpus = getOption("boot.ncpus", 1L), ...){
+  dots = list(...)
+  if ("boot.method" %in% names(dots)){
+    stop("\nOnly nonparametric bootstrap supported for model type")
+  }
+
+  if (missing(data)){
+    data = attr(model.full, 'frame')
+    tryCatch(update(model.full, data = data), error = function(e){
+      message("Updating model fit failed. Try rerunning with providing data argument")})
+  }
+  else{
+    data = as.data.frame(data)
+  }
+
+  # id variable name
+  id = names(summary(model.full)$ngrps)
+
+  # bootstrapping
+  output = resi.default(model.full = model.full, model.reduced = model.reduced,
+                        data = data, anova = anova, coefficients = coefficients,
+                        overall = overall, nboot = nboot,
+                        store.boot = TRUE, vcovfunc = vcovfunc,
+                        unbiased = unbiased, alpha = alpha,
+                        parallel = parallel, ncpus = ncpus, boot.method = "nonparam",
+                        cluster = TRUE, clvar = id, mod.dat = data, long = TRUE, ...)
+
+  # number of bootstrap replicates with failed updating
+  output$nfail = length(which(is.na(output$boot.results$t[,1])))
+
+
+  if (!store.boot){
+    output = output[names(output) != "boot.results"]
+  }
+
+  class(output) = "resi"
+
   return(output)
 }

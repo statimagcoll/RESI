@@ -37,11 +37,16 @@ resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",
                     unlist(lapply(dat[inds], function(x) length(which(x==mod.dat[,clvar])))))
       boot.data$bootid = bootid
 
+      if(any(class(mod.full) %in% c("gee", 'geeglm'))){
       mod.full = try(update(mod.full, data = boot.data, id = bootid), silent = T)
       if (!(is.null(mod.reduced)) & overall){
         mod.reduced = try(update(mod.reduced, data = boot.data, id = bootid), silent = T)}
-    }}
-
+      } else{
+        mod.full = try(update(mod.full, data = boot.data), silent = T)
+        if (!(is.null(mod.reduced)) & overall){
+          mod.reduced = try(update(mod.reduced, data = boot.data), silent = T)}
+        }}
+  }
   else{
     # Bayesian bootstrap
     n = nrow(dat)
