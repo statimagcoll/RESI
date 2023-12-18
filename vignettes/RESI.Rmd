@@ -1,0 +1,19 @@
+---
+title: "RESI"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{RESI}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(RESI)
+```

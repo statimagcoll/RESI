@@ -21,10 +21,10 @@
 #' nboot = 10)
 #'
 #' # plot coefficients table, changing size of labels for both axes in the usual way
-#' plot(resi_obj, cex.alpha = 0.7)
+#' plot(resi_obj, cex.axis = 0.7)
 #'
 #' # plot ANOVA table, changing the size of just the y-axis
-#' plot(resi_obj, ycex.alpha = 0.8)
+#' plot(resi_obj, ycex.axis = 0.8)
 #' @importFrom graphics abline axis lines par strwidth
 #' @export
 plot.resi = function(x, alpha = NULL, ycex.axis = NULL, yaxis.args = list(),

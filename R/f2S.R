@@ -14,13 +14,16 @@
 #' the test statistic and solving for S.
 #'
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
+#'
+#' @examples
+#'
 #' # to obtain example F values, first fit a lm
 #' mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
 #'
 #' # run Anova, using a robust variance-covariance function
 #' # get the F values and Df values
-#' fs = car::Anova(mod, vcov. = sandwich::vcovHC)$F
-#' dfs = car::Anova(mod, vcov. = sandwich::vcovHC)$Df
+#' fs = car::Anova(mod, vcov. = sandwich::vcovHC)[1:5, "F"]
+#' dfs = car::Anova(mod, vcov. = sandwich::vcovHC)[1:5, "Df"]
 #'
 #' # get RESI estimates
 #' f2S(fs, df = dfs, rdf = mod$df.residual, n = nrow(RESI::insurance))
