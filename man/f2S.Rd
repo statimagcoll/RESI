@@ -17,16 +17,6 @@ f2S(f, df, rdf, n)
 }
 \value{
 Returns a scalar or vector argument of the the robust effect size index estimate.
-# to obtain example F values, first fit a lm
-mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
-
-# run Anova, using a robust variance-covariance function
-# get the F values and Df values
-fs = car::Anova(mod, vcov. = sandwich::vcovHC)$F
-dfs = car::Anova(mod, vcov. = sandwich::vcovHC)$Df
-
-# get RESI estimates
-f2S(fs, df = dfs, rdf = mod$df.residual, n = nrow(RESI::insurance))
 }
 \description{
 This function computes the robust effect size index from Vandekar, Tao, & Blume (2020).
@@ -39,4 +29,17 @@ The formula for converting an F statistic to S is:
 
 The estimator is derived by setting the statistic equal to the expected value of
 the test statistic and solving for S.
+}
+\examples{
+
+# to obtain example F values, first fit a lm
+mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
+
+# run Anova, using a robust variance-covariance function
+# get the F values and Df values
+fs = car::Anova(mod, vcov. = sandwich::vcovHC)[1:5, "F"]
+dfs = car::Anova(mod, vcov. = sandwich::vcovHC)[1:5, "Df"]
+
+# get RESI estimates
+f2S(fs, df = dfs, rdf = mod$df.residual, n = nrow(RESI::insurance))
 }
