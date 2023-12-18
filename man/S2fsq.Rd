@@ -14,7 +14,7 @@ Returns an estimate of Cohen's \emph{f}^2 based on the RESI
 }
 \description{
 Converts robust effect size index (S) to Cohen's \emph{f}^2
-(effect size for multiple regression) using the formula from Vandekar, Rao, & Blume (2020).
+(effect size for multiple regression) using the formula from Vandekar, Tao, & Blume (2020).
 }
 \details{
 The formula for the conversion is:

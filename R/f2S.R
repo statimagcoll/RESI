@@ -1,6 +1,6 @@
 #' Compute the robust effect size index estimate from F-statistic
 #'
-#' This function computes the robust effect size index from Vandekar, Rao, & Blume (2020).
+#' This function computes the robust effect size index from Vandekar, Tao, & Blume (2020).
 #' Vector arguments are accepted. If different length arguments are passed they are dealt with in the usual way of R.
 #' @param f The F statistic for the parameter of interest.
 #' @param df Number of degrees of freedom of the F statistic.
@@ -14,18 +14,24 @@
 #' the test statistic and solving for S.
 #'
 #' @return Returns a scalar or vector argument of the the robust effect size index estimate.
+#'
+#' @examples
+#'
 #' # to obtain example F values, first fit a lm
 #' mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)
 #'
 #' # run Anova, using a robust variance-covariance function
 #' # get the F values and Df values
-#' fs = car::Anova(mod, vcov. = sandwich::vcovHC)$F
-#' dfs = car::Anova(mod, vcov. = sandwich::vcovHC)$Df
+#' fs = car::Anova(mod, vcov. = sandwich::vcovHC)[1:5, "F"]
+#' dfs = car::Anova(mod, vcov. = sandwich::vcovHC)[1:5, "Df"]
 #'
 #' # get RESI estimates
 #' f2S(fs, df = dfs, rdf = mod$df.residual, n = nrow(RESI::insurance))
 #' @export
 f2S <- function(f, df, rdf, n){
+  if (any(f < 0)){
+    stop("\nF statistic must be non-negative")
+  }
   S = (f*df*(rdf-2)/rdf - df)/n
   sqrt(ifelse(S<0, 0, S))
 }
