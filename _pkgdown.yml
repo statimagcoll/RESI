@@ -1,4 +1,13 @@
 url: https://statimagcoll.github.io/RESI/
 template:
   bootstrap: 5
-
+  bootswatch: flatly
+  theme: breeze-light
+navbar:
+  structure:
+    left:  [articles, reference, tutorials, news, comingsoon]
+    right: [search, github]
+components:
+    comingsoon:
+      href: docs/comingsoon/comingsoon.md
+      aria-label: Coming Soon
