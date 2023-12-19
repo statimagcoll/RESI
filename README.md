@@ -26,6 +26,14 @@ function, the package also includes a point-estimate-only function
 measures and vice versa, print methods, plot methods, summary methods,
 and Anova/anova methods. A more detailed vignette is being written.
 
+If you would like to contribute to the package, please branch off of our
+[GitHub](https://github.com/statimagcoll/RESI) and submit a pull request
+describing the contribution. Please use the [GitHub
+Issues](https://github.com/statimagcoll/RESI/issues) page to report any
+problems and the
+[Discussions](https://github.com/statimagcoll/RESI/discussions/categories/q-a)
+page to seek additional support.
+
 ## References
 
 Vandekar S, Tao R, Blume J. A Robust Effect Size Index.
