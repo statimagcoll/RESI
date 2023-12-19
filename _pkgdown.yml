@@ -9,5 +9,5 @@ navbar:
     right: [search, github]
 components:
     comingsoon:
-      href: docs/comingsoon/comingsoon.md
+      href: https://arxiv.org/abs/2302.12345
       aria-label: Coming Soon
