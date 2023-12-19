@@ -10,6 +10,9 @@ navbar:
     right: [search, github]
   components:
     comingsoon:
-      text: Soon
+      text: Coming Soon
       href: cs.html
-
+home:
+  links:
+  - text: Suggest a feature
+    href: https://github.com/statimagcoll/RESI/discussions/27

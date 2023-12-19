@@ -7,6 +7,15 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Package Features
+# Planned Package Features
 
-* feature
+* RESI estimation and confidence intervals for `emmeans` results
+* RESI estimation and confidence intervals for `glmmTMB` models
+* RESI estimation and confidence intervals for `robustbase` models
+
+# Website Features
+
+* Software paper
+* Tutorials
+
+Please let us know what you want to see added at [our GitHub](https://github.com/statimagcoll/RESI/discussions/27).
