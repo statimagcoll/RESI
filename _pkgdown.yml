@@ -1,5 +1,6 @@
 url: https://statimagcoll.github.io/RESI/
 template:
+  assets: docs/comingsoon
   bootstrap: 5
   bootswatch: flatly
   theme: breeze-light
@@ -7,7 +8,8 @@ navbar:
   structure:
     left:  [articles, reference, tutorials, news, comingsoon]
     right: [search, github]
-components:
+  components:
     comingsoon:
-      href: https://arxiv.org/abs/2302.12345
-      aria-label: Coming Soon
+      text: Soon
+      href: cs.html
+
