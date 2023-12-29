@@ -36,12 +36,15 @@ page to seek additional support.
 
 ## References
 
-Vandekar S, Tao R, Blume J. A Robust Effect Size Index.
-<i>Psychometrika.</i> 2020 Mar;85(1):232-246. doi:
-10.1007/s11336-020-09698-2.
+Jones, M., Kang, K., & Vandekar, S. (2023). RESI: An R Package for
+Robust Effect Sizes. <i>arXiv preprint arXiv:2302.12345.</i>
 
 Kang, K., Jones, M. T., Armstrong, K., Avery, S., McHugo, M., Heckers,
 S., & Vandekar, S. Accurate Confidence and Bayesian Interval Estimation
 for Non-centrality Parameters and Effect Size Indices.
 <i>Psychometrika.</i> 2023. 10.1007/s11336-022-09899-x. Advance online
 publication. <https://doi.org/10.1007/s11336-022-09899-x>.
+
+Vandekar S, Tao R, Blume J. A Robust Effect Size Index.
+<i>Psychometrika.</i> 2020 Mar;85(1):232-246. doi:
+10.1007/s11336-020-09698-2.

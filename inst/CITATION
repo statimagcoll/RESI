@@ -1,0 +1,8 @@
+bibentry(
+  bibtype  = "Misc",
+  title    = "RESI: An R Package for Robust Effect Sizes",
+  author   = c(person("Megan", "Jones"), person("Kaidi", "Kang"), person("Simon", "Vandekar")),
+  publisher  = "arXiv",
+  year     = "2023",
+  url = "https://arxiv.org/abs/2302.12345"
+)
