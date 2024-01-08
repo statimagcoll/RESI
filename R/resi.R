@@ -209,7 +209,7 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
                   ncpus = ncpus, mod.full = model.full, mod.reduced = model.reduced,
                   anova = anova, coefficients = coefficients, overall = overall, vcovfunc = vcovfunc,
                   Anova.args = Anova.args, vcov.args = vcov.args, unbiased = unbiased,
-                  boot.method = boot.method, clvar = clvar, ...), file = nullfile()))
+                  boot.method = boot.method, clvar = clvar, nest = length(output$estimates), ...), file = nullfile()))
 
   # bootstrapped estimates
   boot.results = boot_out$t
