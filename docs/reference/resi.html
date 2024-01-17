@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">RESI</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.4</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -130,7 +130,7 @@
 <span>  nboot <span class="op">=</span> <span class="fl">1000</span>,</span>
 <span>  boot.method <span class="op">=</span> <span class="st">"nonparam"</span>,</span>
 <span>  anova <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  vcovfunc <span class="op">=</span> <span class="fu">regtools</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/regtools/man/nlshc.html" class="external-link">nlshc</a></span>,</span>
+<span>  vcovfunc <span class="op">=</span> <span class="va">r_nlshc</span>,</span>
 <span>  alpha <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>  store.boot <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  vcov.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -440,43 +440,43 @@ and then try rerunning <code>resi</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Coefficient Table </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                       Estimate Std. Error t value Pr(&gt;|t|)    RESI    2.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)         -5359.4352  2175.9439 -2.4630   0.0139 -0.0673 -0.1216</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest     -2339.4433  2395.1507 -0.9767   0.3289 -0.0267 -0.0680</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast     -3230.8512  2643.1099 -1.2224   0.2218 -0.0334 -0.0808</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest      -232.4839  2574.2823 -0.0903   0.9281 -0.0025 -0.0450</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> age                   220.3325    40.2091  5.4797   0.0000  0.1497  0.1053</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> bmi                   323.7725    58.0849  5.5741   0.0000  0.1523  0.1125</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> sexmale              1328.0215   621.7421  2.1360   0.0329  0.0584  0.0105</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest:age    34.9040    57.2364  0.6098   0.5421  0.0167 -0.0346</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast:age    83.6359    63.3258  1.3207   0.1868  0.0361 -0.0104</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest:age   -33.6290    61.4065 -0.5476   0.5840 -0.0150 -0.0704</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)         -5359.4352  2175.9439 -2.4630   0.0139 -0.0673 -0.1233</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest     -2339.4433  2395.1507 -0.9767   0.3289 -0.0267 -0.0741</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast     -3230.8512  2643.1099 -1.2224   0.2218 -0.0334 -0.0834</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest      -232.4839  2574.2823 -0.0903   0.9281 -0.0025 -0.0444</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> age                   220.3325    40.2091  5.4797   0.0000  0.1497  0.1031</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> bmi                   323.7725    58.0849  5.5741   0.0000  0.1523  0.1088</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sexmale              1328.0215   621.7421  2.1360   0.0329  0.0584  0.0008</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest:age    34.9040    57.2364  0.6098   0.5421  0.0167 -0.0354</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast:age    83.6359    63.3258  1.3207   0.1868  0.0361 -0.0110</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest:age   -33.6290    61.4065 -0.5476   0.5840 -0.0150 -0.0762</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                       97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)         -0.0210</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest      0.0223</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast      0.0072</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest      0.0439</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> age                  0.2150</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> bmi                  0.2002</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> sexmale              0.1089</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest:age  0.0577</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast:age  0.0896</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest:age  0.0313</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)         -0.0326</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest      0.0266</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast      0.0164</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest      0.0539</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> age                  0.2280</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> bmi                  0.1888</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sexmale              0.1159</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest:age  0.0629</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast:age  0.0776</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest:age  0.0253</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis of Deviance Table (Type II tests)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Response: charges</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>            Df        F Pr(&gt;F)   RESI   2.5%  97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> region      3   1.5959 0.1886 0.0365 0.0000 0.1036</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> age         1 117.7046 0.0000 0.2951 0.2538 0.3521</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> bmi         1  31.0708 0.0000 0.1498 0.1091 0.1983</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> sex         1   4.5624 0.0329 0.0515 0.0000 0.1054</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> region:age  3   1.1167 0.3412 0.0161 0.0000 0.0918</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> region      3   1.5959 0.1886 0.0365 0.0000 0.1183</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> age         1 117.7046 0.0000 0.2951 0.2490 0.3495</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> bmi         1  31.0708 0.0000 0.1498 0.1053 0.1868</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sex         1   4.5624 0.0329 0.0515 0.0000 0.1126</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> region:age  3   1.1167 0.3412 0.0161 0.0000 0.0866</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Overall RESI comparing model to intercept-only model:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Res.Df Df       F Pr(&gt;F)   RESI   2.5%  97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   1328  9 20.2486      0 0.3595 0.3318 0.4239</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   1328  9 20.2486      0 0.3595 0.3247 0.4129</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Notes:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1. The RESI was calculated using a robust covariance estimator.</span>
@@ -500,43 +500,43 @@ and then try rerunning <code>resi</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Coefficient Table </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                       Estimate Std. Error t value Pr(&gt;|t|)    RESI    2.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)         -5359.4352  2175.9439 -2.4630   0.0139 -0.0673 -0.1116</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest     -2339.4433  2395.1507 -0.9767   0.3289 -0.0267 -0.0588</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast     -3230.8512  2643.1099 -1.2224   0.2218 -0.0334 -0.0344</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest      -232.4839  2574.2823 -0.0903   0.9281 -0.0025 -0.0124</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> age                   220.3325    40.2091  5.4797   0.0000  0.1497  0.1352</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> bmi                   323.7725    58.0849  5.5741   0.0000  0.1523  0.1123</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> sexmale              1328.0215   621.7421  2.1360   0.0329  0.0584  0.0246</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest:age    34.9040    57.2364  0.6098   0.5421  0.0167 -0.0403</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast:age    83.6359    63.3258  1.3207   0.1868  0.0361 -0.0115</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest:age   -33.6290    61.4065 -0.5476   0.5840 -0.0150 -0.0365</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)         -5359.4352  2175.9439 -2.4630   0.0139 -0.0673 -0.0889</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest     -2339.4433  2395.1507 -0.9767   0.3289 -0.0267 -0.0474</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast     -3230.8512  2643.1099 -1.2224   0.2218 -0.0334 -0.0708</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest      -232.4839  2574.2823 -0.0903   0.9281 -0.0025 -0.0402</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> age                   220.3325    40.2091  5.4797   0.0000  0.1497  0.1374</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> bmi                   323.7725    58.0849  5.5741   0.0000  0.1523  0.1036</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sexmale              1328.0215   621.7421  2.1360   0.0329  0.0584  0.0109</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest:age    34.9040    57.2364  0.6098   0.5421  0.0167 -0.0206</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast:age    83.6359    63.3258  1.3207   0.1868  0.0361 -0.0075</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest:age   -33.6290    61.4065 -0.5476   0.5840 -0.0150 -0.0250</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                       97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)         -0.0436</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest      0.0288</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast      0.0203</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest      0.0203</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> age                  0.2050</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> bmi                  0.1812</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> sexmale              0.1092</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest:age  0.0424</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast:age  0.0346</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest:age  0.0029</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)         -0.0294</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest      0.0189</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast     -0.0015</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest      0.0204</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> age                  0.1744</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> bmi                  0.1847</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sexmale              0.0918</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest:age  0.0285</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast:age  0.0685</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest:age  0.0129</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis of Deviance Table (Type II tests)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Response: charges</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>            Df        F Pr(&gt;F)   RESI   2.5%  97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> region      3   1.5959 0.1886 0.0365 0.0000 0.0890</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> age         1 117.7046 0.0000 0.2951 0.2462 0.3247</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> bmi         1  31.0708 0.0000 0.1498 0.1089 0.1791</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> sex         1   4.5624 0.0329 0.0515 0.0040 0.1056</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> region:age  3   1.1167 0.3412 0.0161 0.0000 0.0731</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> region      3   1.5959 0.1886 0.0365 0.0000 0.0995</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> age         1 117.7046 0.0000 0.2951 0.2412 0.3259</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> bmi         1  31.0708 0.0000 0.1498 0.0999 0.1827</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sex         1   4.5624 0.0329 0.0515 0.0000 0.0876</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> region:age  3   1.1167 0.3412 0.0161 0.0000 0.0695</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Overall RESI comparing full model to reduced model:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Res.Df Df       F Pr(&gt;F)   RESI   2.5%  97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   1328  8 15.9113      0 0.2983 0.2552 0.3395</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   1328  8 15.9113      0 0.2983 0.2544 0.3544</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Notes:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1. The RESI was calculated using a robust covariance estimator.</span>
@@ -551,34 +551,34 @@ and then try rerunning <code>resi</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Coefficient Table </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                       Estimate Std. Error t value Pr(&gt;|t|)    RESI    0.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)         -5359.4352  2175.9439 -2.4630   0.0139 -0.0673 -0.1348</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest     -2339.4433  2395.1507 -0.9767   0.3289 -0.0267 -0.0726</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast     -3230.8512  2643.1099 -1.2224   0.2218 -0.0334 -0.1085</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest      -232.4839  2574.2823 -0.0903   0.9281 -0.0025 -0.0531</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> age                   220.3325    40.2091  5.4797   0.0000  0.1497  0.0931</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> bmi                   323.7725    58.0849  5.5741   0.0000  0.1523  0.1003</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> sexmale              1328.0215   621.7421  2.1360   0.0329  0.0584 -0.0045</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest:age    34.9040    57.2364  0.6098   0.5421  0.0167 -0.0445</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast:age    83.6359    63.3258  1.3207   0.1868  0.0361 -0.0402</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest:age   -33.6290    61.4065 -0.5476   0.5840 -0.0150 -0.0794</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)         -5359.4352  2175.9439 -2.4630   0.0139 -0.0673 -0.1252</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest     -2339.4433  2395.1507 -0.9767   0.3289 -0.0267 -0.0743</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast     -3230.8512  2643.1099 -1.2224   0.2218 -0.0334 -0.0898</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest      -232.4839  2574.2823 -0.0903   0.9281 -0.0025 -0.0526</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> age                   220.3325    40.2091  5.4797   0.0000  0.1497  0.1002</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> bmi                   323.7725    58.0849  5.5741   0.0000  0.1523  0.0923</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sexmale              1328.0215   621.7421  2.1360   0.0329  0.0584 -0.0148</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest:age    34.9040    57.2364  0.6098   0.5421  0.0167 -0.0379</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast:age    83.6359    63.3258  1.3207   0.1868  0.0361 -0.0187</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest:age   -33.6290    61.4065 -0.5476   0.5840 -0.0150 -0.0782</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                          5%     95%   99.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)         -0.1124 -0.0275 -0.0173</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest     -0.0590  0.0200  0.0329</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast     -0.0773  0.0013  0.0411</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest     -0.0433  0.0363  0.0519</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> age                  0.1086  0.2088  0.2178</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> bmi                  0.1196  0.1941  0.2224</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> sexmale              0.0254  0.0963  0.1136</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest:age -0.0318  0.0541  0.0697</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast:age -0.0006  0.0718  0.1061</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest:age -0.0572  0.0242  0.0345</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)         -0.1135 -0.0352 -0.0262</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest     -0.0669  0.0231  0.0327</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast     -0.0680  0.0121  0.0232</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest     -0.0358  0.0459  0.0661</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> age                  0.1085  0.2128  0.2303</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> bmi                  0.1206  0.1885  0.1989</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sexmale              0.0125  0.1066  0.1312</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionnorthwest:age -0.0272  0.0606  0.0661</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsoutheast:age -0.0094  0.0704  0.0840</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> regionsouthwest:age -0.0699  0.0216  0.0422</span>
 <span class="r-in"><span><span class="fu">car</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/car/man/Anova.html" class="external-link">Anova</a></span><span class="op">(</span><span class="va">resi_obj</span>, alpha <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.01</span>, <span class="fl">0.1</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>            Df        F  Pr(&gt;F)     RESI     0.5%       5%     95%   99.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> region      3   1.5959 0.18856 0.036480 0.000000 0.000000 0.10086 0.13350</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> age         1 117.7046 0.00000 0.295111 0.252419 0.256904 0.34921 0.35781</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> bmi         1  31.0708 0.00000 0.149798 0.096516 0.116427 0.19212 0.22067</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> sex         1   4.5624 0.03286 0.051549 0.000000 0.004842 0.09232 0.11020</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> region:age  3   1.1167 0.34115 0.016056 0.000000 0.000000 0.08521 0.10144</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>            Df        F  Pr(&gt;F)     RESI     0.5%      5%     95%   99.5%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> region      3   1.5959 0.18856 0.036480 0.000000 0.00000 0.10999 0.12833</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> age         1 117.7046 0.00000 0.295111 0.240546 0.25616 0.34552 0.35165</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> bmi         1  31.0708 0.00000 0.149798 0.088071 0.11743 0.18650 0.19697</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sex         1   4.5624 0.03286 0.051549 0.000000 0.00000 0.10301 0.12832</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> region:age  3   1.1167 0.34115 0.016056 0.000000 0.00000 0.08415 0.08954</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># the result of resi, as well as the summary or Anova of a `resi` object can be plotted</span></span></span>
 <span class="r-in"><span><span class="co"># if the resi object was created with the store.boot = `TRUE` option, any alpha</span></span></span>
@@ -601,12 +601,13 @@ and then try rerunning <code>resi</code>.</p>
 <span class="r-in"><span>    vcov.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"HC0"</span><span class="op">)</span>, nboot <span class="op">=</span> <span class="fl">25</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">resi_obj</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="fu">car</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/car/man/Anova.html" class="external-link">Anova</a></span><span class="op">(</span><span class="va">resi_obj</span><span class="op">)</span><span class="op">}</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Loading required namespace: splines</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis of Deviance Table (Type II tests)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Response: smoker</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                          Df  Chisq Pr(&gt;Chisq)     RESI 0.5%    99.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> splines::ns(age, df = 3)  3 1.4735    0.68841 0.000000    0 0.076865</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> region                    3 7.2960    0.06304 0.056663    0 0.105504</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                          Df  Chisq Pr(&gt;Chisq)     RESI     0.5%    99.5%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> splines::ns(age, df = 3)  3 1.4735    0.68841 0.000000 0.000000 0.065003</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> region                    3 7.2960    0.06304 0.056663 0.016389 0.112305</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## RESI on a survival model with alternate Z2S</span></span></span>
@@ -621,6 +622,7 @@ and then try rerunning <code>resi</code>.</p>
 <span class="r-in"><span>  <span class="co"># to use the alternative Z to RESI formula (which is equal in absolute value to the</span></span></span>
 <span class="r-in"><span>  <span class="co"># chi-square to RESI (S) formula), specify unbiased = FALSE.</span></span></span>
 <span class="r-in"><span>  <span class="fu">resi</span><span class="op">(</span><span class="va">mod.coxph</span>, data <span class="op">=</span> <span class="fu">survival</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/survival/man/lung.html" class="external-link">lung</a></span>, unbiased <span class="op">=</span> <span class="cn">FALSE</span>, nboot <span class="op">=</span> <span class="fl">10</span><span class="op">)</span><span class="op">}</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Loading required namespace: survival</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis of effect sizes based on RESI:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Confidence level =  0.05</span>
@@ -629,23 +631,23 @@ and then try rerunning <code>resi</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Coefficient Table </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         Estimate Std. Error z value Pr(&gt;|z|)    RESI    2.5%   97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> age       0.0201     0.0101  1.9915   0.0464  0.1177  0.0000  0.2497</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> sex      -0.5210     0.1670 -3.1202   0.0018 -0.2020 -0.2824 -0.1251</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> wt.loss   0.0008     0.0060  0.1264   0.8994  0.0000  0.0000  0.1141</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> age       0.0201     0.0101  1.9915   0.0464  0.1177  0.0000  0.2002</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sex      -0.5210     0.1670 -3.1202   0.0018 -0.2020 -0.2538 -0.1449</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> wt.loss   0.0008     0.0060  0.1264   0.8994  0.0000 -0.1813  0.0301</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis of Deviance Table (Type II tests)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Response: survival::Surv(time, status)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         Df  Chisq Pr(&gt;Chisq)   RESI   2.5%  97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> age      1 3.9662     0.0464 0.1177 0.0000 0.2497</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> sex      1 9.7357     0.0018 0.2020 0.1251 0.2824</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> wt.loss  1 0.0160     0.8994 0.0000 0.0000 0.1141</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> age      1 3.9662     0.0464 0.1177 0.0000 0.2002</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sex      1 9.7357     0.0018 0.2020 0.1449 0.2538</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> wt.loss  1 0.0160     0.8994 0.0000 0.0000 0.1813</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Overall RESI comparing model to intercept-only model:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      chi2 df      P   RESI   2.5% 97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 13.7717  3 0.0032 0.2244 0.1493 0.336</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      chi2 df      P   RESI   2.5%  97.5%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 13.7717  3 0.0032 0.2244 0.1166 0.3171</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Notes:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1. The RESI was calculated using a robust covariance estimator.</span>

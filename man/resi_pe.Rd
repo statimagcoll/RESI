@@ -68,7 +68,7 @@ resi_pe(model.full, ...)
   data,
   coefficients = TRUE,
   anova = FALSE,
-  vcovfunc = regtools::nlshc,
+  vcovfunc = r_nlshc,
   vcov.args = list(),
   unbiased = TRUE,
   overall = TRUE,

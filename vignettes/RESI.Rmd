@@ -12,8 +12,10 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+Sys.setenv("OMP_THREAD_LIMIT" = 1)
 ```
 
 ```{r setup}
+Sys.setenv("OMP_THREAD_LIMIT" = 1)
 library(RESI)
 ```

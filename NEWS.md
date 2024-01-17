@@ -1,4 +1,4 @@
-## RESI 1.2.1
+## RESI 1.2.4
 
 * Minor bug and documentation fixes
 * Website deployed

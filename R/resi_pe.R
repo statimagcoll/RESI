@@ -17,7 +17,6 @@
 #' @param waldtype Numeric, indicates which function to use for overall Wald test. 0 (default) = lmtest::waldtest Chi-square, 1 = lmtest::waldtest F, 2 = aod::wald.test
 #' @param ... Ignored.
 #' @importFrom aod wald.test
-#' @importFrom regtools nlshc
 #' @importFrom car Anova
 #' @importFrom lmtest waldtest
 #' @importFrom sandwich vcovHC
@@ -293,7 +292,7 @@ resi_pe.lm = function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @describeIn resi_pe RESI point estimation for nonlinear least squares models
 #' @export
 resi_pe.nls = function(model.full, model.reduced = NULL, data, coefficients = TRUE,
-                       anova = FALSE, vcovfunc = regtools::nlshc, vcov.args = list(),
+                       anova = FALSE, vcovfunc = r_nlshc, vcov.args = list(),
                        unbiased = TRUE, overall = TRUE, ...){
   if (missing(data) | is.null(data)){
     stop("\nData argument is required for nls model")
@@ -306,7 +305,7 @@ resi_pe.nls = function(model.full, model.reduced = NULL, data, coefficients = TR
   }
 
   if (identical(vcovfunc, sandwich::vcovHC)){
-    vcovfunc = regtools::nlshc
+    vcovfunc = r_nlshc
     warning("Sandwich vcov function not applicable for nls model type, vcovfunc set to regtools::nlshc")
   }
 
