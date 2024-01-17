@@ -20,7 +20,8 @@ chisq2Ssq = function(chisq, df, n){
 #' @return Returns a vector of RESI estimates for a single bootstrap replicate
 #' @noRd
 resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",
-                     cluster = FALSE, clvar = NULL, mod.dat = NULL, overall = TRUE, ...){
+                     cluster = FALSE, clvar = NULL, mod.dat = NULL, overall = TRUE,
+                     nest = NULL, ...){
   # nonparametric bootstrap
   if (boot.method == "nonparam"){
     if(!cluster){
@@ -62,6 +63,11 @@ resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",
     out = try(resi_pe(mod.full, model.reduced = mod.reduced, data = boot.data, overall = overall, ...)$estimates, silent = T)
     if(inherits(out, "try-error")){
       out = NA
+    } else{
+      # for factored variables, it's possible the model will not contain all factor levels and not represent the original model
+      if(length(out) != nest){
+        out = NA
+      }
     }
   } else{
     out = NA
@@ -69,4 +75,23 @@ resi_stat = function(dat, inds, mod.full, mod.reduced, boot.method = "nonparam",
 
   # for models with fail checking, count nboot-nrow(t0) for number of failures
   return(out)
+}
+
+# function taken from regtools::nlshc (removing dependency that was causing error)
+#' Statistic for bootstrapping RESI estimates with boot package
+#'
+#' @param nlsout nls model
+#' @param type for sandwich variance
+#' @return Returns robust covariance matrix for nls model
+#' @noRd
+r_nlshc <- function (nlsout, type = "HC")
+{
+  b <- coef(nlsout)
+  m <- nlsout$m
+  resid <- m$resid()
+  hmat <- m$gradient()
+  xhm <- hmat
+  yresidhm <- resid + hmat %*% b
+  lmout <- lm(yresidhm ~ xhm - 1)
+  sandwich::vcovHC(lmout, type)
 }

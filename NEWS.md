@@ -1,3 +1,8 @@
+## RESI 1.2.4
+
+* Minor bug and documentation fixes
+* Website deployed
+
 ## RESI 1.2.0
 
 * Implemented `boot` package for bootstrapping

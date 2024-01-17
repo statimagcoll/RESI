@@ -1,4 +1,70 @@
 ## Test Environments
+* local R installation, version 4.3.1
+* rhub::check_for_cran()
+* win-builder
+
+## R CMD check results
+There were no ERRORs, WARNINGs, or NOTEs.
+
+## CRAN Submission 1.2.4
+This is the same as submission 1.2.1/1.2.2/1.2.3 which did not pass incoming checks due to installation CPU time surpassing elapsed time. I removed the `RESIsetup.R` file because it did not solve the issue. I copied the one function we use from the `regtools` package to `internal_functions.R` and moved `regtools` to the Suggests field rather than imports, as `regtools` relies on `data.table` and may use more than 2 threads.
+
+Words flagged by spell_check are not misspelled.
+
+## Downstream dependencies
+There are currently no downstream dependencies for this package.
+
+## Previous cran-comments
+
+## Test Environments
+* local R installation, version 4.3.1
+* rhub::check_for_cran()
+* win-builder
+
+## R CMD check results
+There were no ERRORs, WARNINGs, or NOTEs.
+
+## CRAN Submission 1.2.3
+This is the same as submission 1.2.1/1.2.2 which did not pass incoming checks due to CPU time surpassing elapsed time. I have attempted to fix this by changing the function  in the `RESIsetup.R` file to `Sys.setenv("OMP_THREAD_LIMIT" = 1)` and added this line to the `RESI.Rmd` vignette as well.
+
+Words flagged by spell_check are not misspelled.
+
+## Downstream dependencies
+There are currently no downstream dependencies for this package.
+
+## Test Environments
+* local R installation, version 4.3.1
+* rhub::check_for_cran()
+* win-builder
+
+## R CMD check results
+There were no ERRORs, WARNINGs, or NOTEs.
+
+## CRAN Submission 1.2.2
+This is the same as submission 1.2.1 which did not pass incoming checks due to CPU time surpassing elapsed time. This has been addressed by adding a function in the `RESIsetup.R` file to set `Sys.setenv("OMP_THREAD_LIMIT" = 2)`.
+
+Words flagged by spell_check are not misspelled.
+
+## Downstream dependencies
+There are currently no downstream dependencies for this package.
+
+## Test Environments
+* local R installation, version 4.3.1
+* rhub::check_for_cran()
+* win-builder
+
+## R CMD check results
+There were no ERRORs, WARNINGs, or NOTEs.
+
+## CRAN Submission 1.2.1
+This update makes minor bug fixes and documentation fixes in response to reviewer comments received after submitting a manuscript regarding the package to the *Journal of Statistical Software.* The documentation for `f2S` and `plot.resi` have been edited slightly. The README has been updated with details for how to contribute to the package or report errors. A pkgdown website has been deployed.
+
+Words flagged by spell_check are not misspelled.
+
+## Downstream dependencies
+There are currently no downstream dependencies for this package.
+
+## Test Environments
 * local R installation, version 4.2.2
 * rhub::check_for_cran()
 * win-builder
@@ -13,8 +79,6 @@ Words flagged by spell_check are not misspelled.
 
 ## Downstream dependencies
 There are currently no downstream dependencies for this package.
-
-## Previous cran-comments
 
 ## Test Environments
 * local R installation, version 4.2.2

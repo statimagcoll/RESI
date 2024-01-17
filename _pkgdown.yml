@@ -1,4 +1,59 @@
 url: https://statimagcoll.github.io/RESI/
 template:
+  assets: docs/comingsoon
   bootstrap: 5
+  bootswatch: flatly
+  theme: breeze-light
+navbar:
+  structure:
+    left:
+    - articles
+    - reference
+    - tutorials
+    - news
+    - comingsoon
+    right:
+    - search
+    - github
+  components:
+    comingsoon:
+      text: Coming Soon
+      href: cs.html
+reference:
+- title: Model-based functions
+  desc: Use these functions on fitted models to obtain RESI estimates and confidence
+    intervals.
+- contents:
+  - resi
+  - resi_pe
+- title: Conversion functions
+  desc: Manual functions for converting test statistics to RESI estimates and converting
+    RESI estimates to and from other effect size measures.
+- contents:
+  - chisq2S
+  - d2S
+  - f2S
+  - fsq2S
+  - Rsq2S
+  - S2d
+  - S2fsq
+  - S2Rsq
+  - t2S
+  - z2S
+- title: Additional functions
+  desc: Functions for summarizing and visualization.
+- contents:
+  - anova.resi
+  - ggplot.resi
+  - omnibus
+  - plot.resi
+  - summary.resi
+- title: Datasets
+- contents:
+  - depression
+  - insurance
+home:
+  links:
+  - text: Suggest a feature
+    href: https://github.com/statimagcoll/RESI/discussions/27
 

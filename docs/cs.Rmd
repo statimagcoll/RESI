@@ -1,0 +1,21 @@
+---
+title: "Features Coming Soon"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Planned Package Features
+
+* RESI estimation and confidence intervals for `emmeans` results
+* RESI estimation and confidence intervals for `glmmTMB` models
+* RESI estimation and confidence intervals for `robustbase` models
+
+# Website Features
+
+* Software paper
+* Tutorials
+
+Please let us know what you want to see added at [our GitHub](https://github.com/statimagcoll/RESI/discussions/27).

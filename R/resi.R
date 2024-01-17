@@ -209,7 +209,7 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
                   ncpus = ncpus, mod.full = model.full, mod.reduced = model.reduced,
                   anova = anova, coefficients = coefficients, overall = overall, vcovfunc = vcovfunc,
                   Anova.args = Anova.args, vcov.args = vcov.args, unbiased = unbiased,
-                  boot.method = boot.method, clvar = clvar, ...), file = nullfile()))
+                  boot.method = boot.method, clvar = clvar, nest = length(output$estimates), ...), file = nullfile()))
 
   # bootstrapped estimates
   boot.results = boot_out$t
@@ -361,7 +361,7 @@ resi.lm = function(model.full, model.reduced = NULL, data, anova = TRUE,
 #' @export
 resi.nls = function(model.full, model.reduced = NULL, data, coefficients = TRUE,
                      overall = TRUE, nboot = 1000, boot.method = "nonparam",
-                     anova = FALSE, vcovfunc = regtools::nlshc, alpha = 0.05,
+                     anova = FALSE, vcovfunc = r_nlshc, alpha = 0.05,
                      store.boot = FALSE, vcov.args = list(), unbiased = TRUE,
                      parallel = c("no", "multicore", "snow"), ncpus = getOption("boot.ncpus", 1L),
                      ...){
@@ -372,7 +372,7 @@ resi.nls = function(model.full, model.reduced = NULL, data, coefficients = TRUE,
     stop("\nData argument is required for nls model")
   }
   if (identical(vcovfunc, sandwich::vcovHC)){
-    vcovfunc = regtools::nlshc
+    vcovfunc = r_nlshc
     warning("Sandwich vcov function not applicable for nls model type, vcovfunc set to regtools::nlshc")
   }
 

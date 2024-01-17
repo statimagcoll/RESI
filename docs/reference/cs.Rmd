@@ -1,0 +1,12 @@
+---
+title: "Features Coming Soon"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Package Features
+
+* feature

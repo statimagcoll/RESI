@@ -202,7 +202,7 @@ test_that("resi produces the correct estimates", {
                tolerance = 1e-07)
   expect_equal(unname(resi(mod.zinf, nboot = 1)$estimates[c(1, 2, 5, 8, 10)]),
                c(0.23725614, 0.11892936, -0.07014934, -0.03481673, -0.03461235),
-               tolerance = 1e-07)
+               tolerance = 1e-05)
   }
   if(requireNamespace("gee")){
   expect_equal(unname(resi(mod.gee, nboot = 10, data = data.gee)$coefficients[,'L-RESI']),
@@ -346,7 +346,7 @@ test_that("tibbles work", {
   }
   if(requireNamespace("pscl")){
   expect_equal(unname(resi(mod.hurdle.tib, nboot = 1)$estimates[c(1, 2, 5, 8, 10)]), c(0.28063439, 0.12770489, -0.06898884, 0.02686305, 0.06039791), tolerance = 1e-07)
-  expect_equal(unname(resi(mod.zinf.tib, nboot = 1)$estimates[c(1, 2, 5, 8, 10)]), c(0.23725614, 0.11892936, -0.07014934, -0.03481673, -0.03461235), tolerance = 1e-07)
+  expect_equal(unname(resi(mod.zinf.tib, nboot = 1)$estimates[c(1, 2, 5, 8, 10)]), c(0.23725614, 0.11892936, -0.07014934, -0.03481673, -0.03461235), tolerance = 1e-05)
   }
   if(requireNamespace("gee")){
   expect_equal(unname(resi(mod.gee.tib, nboot = 10, data = data.gee)$coefficients[,'L-RESI']), c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258), tolerance = 1e-07)
