@@ -3,7 +3,7 @@ pkgdown: 2.0.7
 pkgdown_sha: ~
 articles:
   RESI: RESI.html
-last_built: 2024-01-17T17:51Z
+last_built: 2024-01-17T18:27Z
 urls:
   reference: https://statimagcoll.github.io/RESI/reference
   article: https://statimagcoll.github.io/RESI/articles
