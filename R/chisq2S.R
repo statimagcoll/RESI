@@ -7,7 +7,7 @@
 #' @param chisq The chi-square statistic for the parameter of interest.
 #' @param df Number of degrees of freedom of the chi-square statistic.
 #' @param n Number of independent samples.
-#' @return Returns a scalar or vector argument of the the robust effect size index estimate.
+#' @return Returns a scalar or vector argument of the robust effect size index estimate.
 #' @details The formula for converting a Chi-square statistic to RESI is:
 #'
 #' \eqn{ S = \sqrt(max( 0, (chisq - df)/n))}

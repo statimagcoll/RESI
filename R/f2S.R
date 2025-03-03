@@ -13,7 +13,7 @@
 #' The estimator is derived by setting the statistic equal to the expected value of
 #' the test statistic and solving for S.
 #'
-#' @return Returns a scalar or vector argument of the the robust effect size index estimate.
+#' @return Returns a scalar or vector argument of the robust effect size index estimate.
 #'
 #' @examples
 #'

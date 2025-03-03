@@ -25,7 +25,7 @@
 #'
 #' \eqn{ \sqrt(max(0, (t^2 * (rdf - 2)/rdf - 1)/rdf))}
 #'
-#' @return Returns a scalar or vector argument of the the robust effect size index estimate.
+#' @return Returns a scalar or vector argument of the robust effect size index estimate.
 #' @examples
 #' # to obtain t values, first fit a lm
 #' mod = lm(charges ~ region * age + bmi + sex, data = RESI::insurance)

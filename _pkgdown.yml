@@ -4,6 +4,21 @@ template:
   bootstrap: 5
   bootswatch: flatly
   theme: breeze-light
+
+title: "RESI: Robust Effect Size Inference in R"
+description: "Summarize model output using a robust effect size index."
+
+home:
+  title: "RESI: Robust Effect Size Inference in R"
+  description: "Summarize model output using a robust effect size index."
+  links:
+  - text: Suggest a feature
+    href: https://github.com/statimagcoll/RESI/discussions/27
+  - text: 📦 GitHub Repository
+    href: https://github.com/statimagcoll/RESI
+  - text: 📄 Reference Manual
+    href: https://statimagcoll.github.io/RESI/reference/
+
 navbar:
   structure:
     left:
@@ -18,7 +33,8 @@ navbar:
   components:
     comingsoon:
       text: Coming Soon
-      href: cs.html
+      contents:
+        - cs.html
 reference:
 - title: Model-based functions
   desc: Use these functions on fitted models to obtain RESI estimates and confidence
@@ -52,8 +68,8 @@ reference:
 - contents:
   - depression
   - insurance
-home:
-  links:
-  - text: Suggest a feature
-    href: https://github.com/statimagcoll/RESI/discussions/27
+
+include:
+  - docs/google3f0bafd3c82d41f6.html
+
 

@@ -387,5 +387,10 @@ test_that("wald.test and waldtest still consistent",{
                                      Terms = 2:nrow(vcovHC(mod.lm)))$result$chi2["chi2"]))
 })
 
+# issue from github
+test_that("overall = FALSE doesn't produce an error", {
+  expect_equal(unname(resi(mod.lm, nboot = 1, overall = F, coefficients = F)$estimates),
+               c(0.03647985, 0.29511133, 0.14979819, 0.05154917, 0.01605603), tolerance = 1e-05)
+})
 
 

@@ -23,7 +23,7 @@
 #' The formula for the alternative conversion is:
 #'
 #' \eqn{ \sqrt(max(0, (Z^2 - 1)/n)) * sign(Z)}
-#' @return Returns a scalar or vector argument of the the robust effect size index estimate.
+#' @return Returns a scalar or vector argument of the robust effect size index estimate.
 #' @examples
 #' # to obtain example z values, first fit a glm
 #' mod = glm(charges ~ region * age + bmi + sex, data = RESI::insurance)

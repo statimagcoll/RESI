@@ -195,6 +195,9 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
     output$overall = overall.tab
     names.est = "Overall"
     names(output$estimates) = names.est
+  } else{
+    # get residual df if not computing overall test
+    res.df = model.full$df.residual
   }
 
   # coefficients table (z or t statistics)
@@ -217,9 +220,6 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
     if (torZ == "z"){
       coefficients.df[,"RESI"] = suppressWarnings(z2S(coefficients.df[,3], nrow(data), unbiased))
     } else{
-      if(!overall){
-        res.df = model.full$df.residual
-      }
       coefficients.df[,"RESI"] = suppressWarnings(t2S(coefficients.df[,"t value"],
                                                       res.df, nrow(data), unbiased))
     }
