@@ -7,6 +7,7 @@
 
 [![CRAN
 status](https://www.r-pkg.org/badges/version/RESI)](https://CRAN.R-project.org/package=RESI)
+[![Website](https://img.shields.io/badge/Website-RESI-blue)](https://statimagcoll.github.io/RESI/)
 <!-- badges: end -->
 
 RESI is an R package designed to implement the Robust Effect Size Index
