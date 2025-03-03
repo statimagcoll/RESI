@@ -25,6 +25,8 @@ Collate:
   'S2Rsq.R'
   'S2d.R'
   'S2fsq.R'
+  'S2z.R'
+  'S2chisq.R'
   'd2S.R'
   'fsq2S.R'
   'plot.R'
