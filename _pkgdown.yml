@@ -56,6 +56,8 @@ reference:
   - S2d
   - S2fsq
   - S2Rsq
+  - S2chisq
+  - S2z
   - t2S
   - z2S
 - title: Additional functions

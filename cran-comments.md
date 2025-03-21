@@ -1,6 +1,6 @@
 ## Test Environments
 * local R installation, version 4.4.1
-* rhub::check_for_cran()
+* rhub::check() (linux, macos, windows)
 * win-builder
 
 ## R CMD check results
