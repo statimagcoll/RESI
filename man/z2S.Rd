@@ -14,7 +14,7 @@ z2S(z, n, unbiased = TRUE)
 \item{unbiased}{Logical, whether to use unbiased or alternative estimator. See details.}
 }
 \value{
-Returns a scalar or vector argument of the the robust effect size index estimate.
+Returns a scalar or vector argument of the robust effect size index estimate.
 }
 \description{
 This function computes the robust effect size index from Vandekar, Tao, & Blume (2020).

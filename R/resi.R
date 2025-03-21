@@ -140,6 +140,8 @@
 #' @references Vandekar S, Tao R, Blume J. A Robust Effect Size Index. \emph{Psychometrika}. 2020 Mar;85(1):232-246. doi: 10.1007/s11336-020-09698-2.
 #'
 #' Kang, K., Armstrong, K., Avery, S., McHugo, M., Heckers, S., & Vandekar, S. (2021). Accurate confidence interval estimation for non-centrality parameters and effect size indices. \emph{arXiv preprint arXiv:2111.05966}.
+#'
+#' Jones, M., Kang, K., Vandekar, S. (2025). \emph{Journal of Statistical Software}. RESI: An R Package for Robust Effect Sizes.<doi:10.18637/jss.v112.i03>
 
 resi = function(model.full, ...){
   UseMethod("resi")

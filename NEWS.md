@@ -1,3 +1,9 @@
+## RESI 1.2.5
+
+* Added citation for Journal of Statistical Software paper <doi:10.18637/jss.v112.i03>
+* Bug fix in cluster bootstrapping: Now correctly assigns the clustered IDs in the bootstrap
+* Minor documentation updates
+
 ## RESI 1.2.4
 
 * Minor bug and documentation fixes

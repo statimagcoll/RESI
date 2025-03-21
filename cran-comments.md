@@ -1,4 +1,22 @@
 ## Test Environments
+* local R installation, version 4.4.1
+* rhub::check_for_cran()
+* win-builder
+
+## R CMD check results
+There were no ERRORs, WARNINGs, or NOTEs.
+
+## CRAN Submission 1.3.0
+This is a requested update by the editor of the *Journal of Statistical Software* to include citations to the forthcoming publication regarding the package. The DOI in the CITATION is for a new JSS publication that will be registered after publication on CRAN. There is also a minor bug fix included for assigning the bootstrap ids in the cluster bootstrap.
+
+Words flagged by spell_check are not misspelled.
+
+## Downstream dependencies
+There are currently no downstream dependencies for this package.
+
+## Previous CRAN Comments
+
+## Test Environments
 * local R installation, version 4.3.1
 * rhub::check_for_cran()
 * win-builder
@@ -13,8 +31,6 @@ Words flagged by spell_check are not misspelled.
 
 ## Downstream dependencies
 There are currently no downstream dependencies for this package.
-
-## Previous cran-comments
 
 ## Test Environments
 * local R installation, version 4.3.1
