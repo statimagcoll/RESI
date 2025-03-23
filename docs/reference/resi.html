@@ -308,7 +308,7 @@
 
 
 <dt>vcovfunc</dt>
-<dd><p>The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).</p></dd>
+<dd><p>The variance estimator function for constructing the Wald test statistic. By default, <a href="https://sandwich.R-Forge.R-project.org/reference/vcovHC.html" class="external-link">vcovHC</a> (the robust (sandwich) variance estimator).</p></dd>
 
 
 <dt>alpha</dt>
@@ -332,11 +332,11 @@
 
 
 <dt>parallel</dt>
-<dd><p>See documentation for <code>boot</code>.</p></dd>
+<dd><p>See documentation for <a href="https://rdrr.io/pkg/boot/man/boot.html" class="external-link">boot</a>.</p></dd>
 
 
 <dt>ncpus</dt>
-<dd><p>See documentation for <code>boot</code>.</p></dd>
+<dd><p>See documentation for <a href="https://rdrr.io/pkg/boot/man/boot.html" class="external-link">boot</a>.</p></dd>
 
 
 <dt>long</dt>
@@ -377,7 +377,7 @@ the F or Chi-square statistic. The RESI based on the Chi-Square and F statistics
 is always greater than or equal to 0. The type of statistic
 used is listed with the output. See <code><a href="f2S.html">f2S</a></code>, <code><a href="chisq2S.html">chisq2S</a></code>,
 <code><a href="t2S.html">t2S</a></code>, and <code><a href="z2S.html">z2S</a></code> for more details on the formulas.</p>
-<p>For GEE (<code>geeglm</code>) models, a longitudinal RESI (L-RESI) and a cross-sectional,
+<p>For GEE (<a href="https://rdrr.io/pkg/geepack/man/geeglm.html" class="external-link">geeglm</a>) models, a longitudinal RESI (L-RESI) and a cross-sectional,
 per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
 specified clustering into account, while the cross-sectional RESI is estimated
 using a model where each measurement is its own cluster.</p>
@@ -416,7 +416,7 @@ and then try rerunning <code>resi</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="resi_pe.html">resi_pe</a></code>, <code>vcovHC</code>,
+    <div class="dont-index"><p><code><a href="resi_pe.html">resi_pe</a></code>, <a href="https://sandwich.R-Forge.R-project.org/reference/vcovHC.html" class="external-link">vcovHC</a>,
 <code><a href="f2S.html">f2S</a></code>, <code><a href="chisq2S.html">chisq2S</a></code>, <code><a href="z2S.html">z2S</a></code>, <code><a href="t2S.html">t2S</a></code></p></div>
     </div>
 
