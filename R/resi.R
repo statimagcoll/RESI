@@ -4,7 +4,7 @@
 #' @param model.full \code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.
 #' @param model.reduced Fitted model object of same type as model.full. By default `NULL`; the same model as the full model but only having intercept.
 #' @param data Data.frame or object coercible to data.frame of model.full data (required for some model types).
-#' @param vcovfunc The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).
+#' @param vcovfunc The variance estimator function for constructing the Wald test statistic. By default, \link[sandwich]{vcovHC} (the robust (sandwich) variance estimator).
 #' @param coefficients Logical, whether to produce a coefficients (summary) table with the RESI columns added. By default = `TRUE`.
 #' @param anova Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.
 #' @param overall Logical, whether to produce an overall Wald test comparing full to reduced model with RESI columns added. By default = `TRUE`.
@@ -15,8 +15,8 @@
 #' @param Anova.args List, additional arguments to be passed to \link[car]{Anova} function.
 #' @param vcov.args List, additional arguments to be passed to vcovfunc.
 #' @param unbiased Logical, whether to use the unbiased or alternative T/Z statistic to RESI conversion. By default, `TRUE`. See details.
-#' @param parallel See documentation for \code{\link{boot}}.
-#' @param ncpus See documentation for \code{\link{boot}}.
+#' @param parallel See documentation for \link[boot]{boot}.
+#' @param ncpus See documentation for \link[boot]{boot}.
 #' @param long Logical, whether the data is longitudinal/clustered. By default, `FALSE`.
 #' @param clvar Character, the name of the cluster/id variable if data is clustered. By default, `NULL`.
 #' @param ... Ignored.
@@ -51,7 +51,7 @@
 #' used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
 #' \code{\link{t2S}}, and \code{\link{z2S}} for more details on the formulas.
 #'
-#' For GEE (\code{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
+#' For GEE (\link[geepack]{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
 #' per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
 #' specified clustering into account, while the cross-sectional RESI is estimated
 #' using a model where each measurement is its own cluster.
@@ -72,7 +72,7 @@
 #' @return Returns a list that includes function arguments, RESI point estimates,
 #' and confidence intervals in coefficients/anova-style tables
 #' @family RESI functions
-#' @seealso \code{\link{resi_pe}}, \code{\link{vcovHC}},
+#' @seealso \code{\link{resi_pe}}, \link[sandwich]{vcovHC},
 #' \code{\link{f2S}}, \code{\link{chisq2S}}, \code{\link{z2S}}, \code{\link{t2S}}
 #'
 #' @examples

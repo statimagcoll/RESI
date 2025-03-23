@@ -237,7 +237,7 @@ resi(model.full, ...)
 
 \item{boot.method}{String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.}
 
-\item{vcovfunc}{The variance estimator function for constructing the Wald test statistic. By default, sandwich::vcovHC (the robust (sandwich) variance estimator).}
+\item{vcovfunc}{The variance estimator function for constructing the Wald test statistic. By default, \link[sandwich]{vcovHC} (the robust (sandwich) variance estimator).}
 
 \item{alpha}{Numeric, significance level of the constructed CIs. By default, 0.05.}
 
@@ -249,9 +249,9 @@ resi(model.full, ...)
 
 \item{unbiased}{Logical, whether to use the unbiased or alternative T/Z statistic to RESI conversion. By default, `TRUE`. See details.}
 
-\item{parallel}{See documentation for \code{\link{boot}}.}
+\item{parallel}{See documentation for \link[boot]{boot}.}
 
-\item{ncpus}{See documentation for \code{\link{boot}}.}
+\item{ncpus}{See documentation for \link[boot]{boot}.}
 
 \item{long}{Logical, whether the data is longitudinal/clustered. By default, `FALSE`.}
 
@@ -288,7 +288,7 @@ is always greater than or equal to 0. The type of statistic
 used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
 \code{\link{t2S}}, and \code{\link{z2S}} for more details on the formulas.
 
-For GEE (\code{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
+For GEE (\link[geepack]{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
 per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
 specified clustering into account, while the cross-sectional RESI is estimated
 using a model where each measurement is its own cluster.
@@ -404,7 +404,7 @@ Kang, K., Armstrong, K., Avery, S., McHugo, M., Heckers, S., & Vandekar, S. (202
 Jones, M., Kang, K., Vandekar, S. (2025). \emph{Journal of Statistical Software}. RESI: An R Package for Robust Effect Sizes.<doi:10.18637/jss.v112.i03>
 }
 \seealso{
-\code{\link{resi_pe}}, \code{\link{vcovHC}},
+\code{\link{resi_pe}}, \link[sandwich]{vcovHC},
 \code{\link{f2S}}, \code{\link{chisq2S}}, \code{\link{z2S}}, \code{\link{t2S}}
 }
 \concept{RESI functions}

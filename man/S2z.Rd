@@ -34,11 +34,13 @@ For a non-zero S, the formula is:
 \eqn{\sqrt{S^2}/S\sqrt(n*abs(S) + 1)}
 }
 \examples{
-# convert S estimates with corresponding degrees of freedom to Z statistics estimates (using unbiased formula)
+# convert S estimates with corresponding degrees of freedom to
+Z statistics estimates (using unbiased formula)
 S_ests = c(-0.2, 0, 0.1)
 S2z(S = S_ests, n = 300, unbiased = TRUE)
 
-# convert S estimates with corresponding degrees of freedom to Z statistics estimates (using alernative formula)
+# convert S estimates with corresponding degrees of freedom to
+Z statistics estimates (using alernative formula)
 S_ests = c(-0.2, 0, 0.1)
 S2z(S = S_ests, n = 300, unbiased = FALSE)
 }
