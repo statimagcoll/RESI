@@ -1,0 +1,22 @@
+---
+title: "resi-paper"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{resi-paper}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(RESI)
+```
+
+For a complete description of the RESI method, see our paper in the *Journal of Statistical Software*:
+[https://www.jstatsoft.org/article/view/v112i03](https://www.jstatsoft.org/article/view/v112i03).
