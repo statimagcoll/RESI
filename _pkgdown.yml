@@ -63,6 +63,7 @@ reference:
 - title: Additional functions
   desc: Functions for summarizing and visualization.
 - contents:
+  - Anova.resi
   - anova.resi
   - ggplot.resi
   - omnibus
