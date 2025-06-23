@@ -1,8 +1,8 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://statimagcoll.github.io/RESI/404.html</loc></url>
 <url><loc>https://statimagcoll.github.io/RESI/articles/RESI.html</loc></url>
+<url><loc>https://statimagcoll.github.io/RESI/articles/RESI_paper.html</loc></url>
 <url><loc>https://statimagcoll.github.io/RESI/articles/index.html</loc></url>
-<url><loc>https://statimagcoll.github.io/RESI/articles/resi-paper.html</loc></url>
 <url><loc>https://statimagcoll.github.io/RESI/authors.html</loc></url>
 <url><loc>https://statimagcoll.github.io/RESI/index.html</loc></url>
 <url><loc>https://statimagcoll.github.io/RESI/news/index.html</loc></url>
@@ -13,6 +13,7 @@
 <url><loc>https://statimagcoll.github.io/RESI/reference/S2d.html</loc></url>
 <url><loc>https://statimagcoll.github.io/RESI/reference/S2fsq.html</loc></url>
 <url><loc>https://statimagcoll.github.io/RESI/reference/S2z.html</loc></url>
+<url><loc>https://statimagcoll.github.io/RESI/reference/anova.resi.html</loc></url>
 <url><loc>https://statimagcoll.github.io/RESI/reference/chisq2S.html</loc></url>
 <url><loc>https://statimagcoll.github.io/RESI/reference/d2S.html</loc></url>
 <url><loc>https://statimagcoll.github.io/RESI/reference/depression.html</loc></url>

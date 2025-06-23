@@ -13,7 +13,7 @@ for models with existing Anova methods. This function is the building block for 
 
     <a class="navbar-brand me-2" href="../index.html">RESI: Robust Effect Size Inference in R</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0.9999</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -23,7 +23,7 @@ for models with existing Anova methods. This function is the building block for 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/resi-paper.html">resi-paper</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/RESI_paper.html">RESI: An R Package for Robust Effect Sizes</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -204,6 +204,16 @@ for models with existing Anova methods. This function is the building block for 
 <span>  Anova.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  vcov.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'glmmTMB'</span></span>
+<span><span class="fu">resi_pe</span><span class="op">(</span></span>
+<span>  <span class="va">model.full</span>,</span>
+<span>  anova <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  vcovfunc <span class="op">=</span> <span class="fu">clubSandwich</span><span class="fu">::</span><span class="va"><a href="http://jepusto.github.io/clubSandwich/reference/vcovCR.html" class="external-link">vcovCR</a></span>,</span>
+<span>  Anova.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  vcov.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -307,6 +317,7 @@ using a model where each measurement is its own cluster.</p>
 <li><p><code>resi_pe(gee)</code>: RESI point estimation for gee object</p></li>
 <li><p><code>resi_pe(lme)</code>: RESI point estimation for lme object</p></li>
 <li><p><code>resi_pe(lmerMod)</code>: RESI point estimation for lmerMod object</p></li>
+<li><p><code>resi_pe(glmmTMB)</code>: RESI point estimation for glmmTMB object - Gaussian only</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
