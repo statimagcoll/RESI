@@ -1,0 +1,13 @@
+---
+title: "RESI: An R Package for Robust Effect Sizes"
+output: pdf_document
+vignette: >
+  %\VignetteIndexEntry{RESI: An R Package for Robust Effect Sizes}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+
+For a complete description of the RESI method, see our paper in the *Journal of Statistical Software*:
+[https://www.jstatsoft.org/article/view/v112i03](https://www.jstatsoft.org/article/view/v112i03), available as a PDF [here](RESI_paper.pdf).
