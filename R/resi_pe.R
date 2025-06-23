@@ -683,3 +683,44 @@ resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::v
   class(output) = c("resi", "list")
   return(output)
 }
+
+
+#' @describeIn resi_pe RESI point estimation for glmmTMB object - Gaussian only
+#' @export
+resi_pe.glmmTMB <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::vcovCR,
+                            Anova.args = list(), vcov.args = list(), ...){
+  # only support Gaussian family at the moment (similar to lmer but not glmer)
+  fam <- model.full$modelInfo$family$family
+    if (fam != "gaussian") {
+      stop("Only Gaussian GLMM supported at this time.")
+    }
+
+  x = as.matrix(summary(model.full)$coefficients$cond)
+  #sample size
+  N = summary(model.full)$ngrps$cond
+
+  # robust se not currently available for GLMM
+  if(!identical(vcovfunc, stats::vcov)){
+    warning("Robust standard errors not implemented for glmmTMB. Consider using lme4 or nlme if needed.")
+  }
+
+  coefficients.tab = cbind(x, 'Wald' = x[, 'z value']^2, RESI = RESI::chisq2S(x[, 'z value']^2, 1, N))
+  output = list(estimates = coefficients.tab[,"RESI"], coefficients = coefficients.tab, naive.var = TRUE)
+
+  names(output$estimates) = rownames(coefficients.tab)
+  # Anova table (Chi sq statistics)
+  if (anova){
+    suppressMessages(anova.tab <- do.call(car::Anova,
+                                          c(list(mod = model.full), Anova.args)))
+    anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], N)
+    names.est = names(output$estimates)
+    output$estimates = c(output$estimates, anova.tab$RESI)
+    names.est = c(names.est, rownames(anova.tab))
+    names(output$estimates) = names.est
+    output$anova = anova.tab
+    class(output$anova) = c("anova_resi", class(output$anova))
+  }
+  output$model.full = list(call = model.full$call, formula = formula(model.full))
+  class(output) = c("resi", "list")
+  return(output)
+}

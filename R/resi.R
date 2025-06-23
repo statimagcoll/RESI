@@ -597,3 +597,17 @@ resi.lmerMod = function(model.full, alpha = 0.05, nboot = 1000, anova = TRUE,
   class(output) = "resi"
   return(output)
 }
+
+
+#' @describeIn resi RESI point and interval estimation for glmmTMB models - Gaussian only
+#' @export
+resi.glmmTMB = function(model.full, alpha = 0.05, nboot = 1000, anova = TRUE,
+                        vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...){
+  warning("\nConfidence Interval procedure not developed for glmmTMB, returning point estimates only")
+  output = list(alpha = alpha, nboot = 0)
+  output = c(output, resi_pe(model.full, vcovfunc = vcovfunc, vcov.args = vcov.args, anova = anova, ...)) # RESI point estimates
+  output$boot.method = "nonparam"
+  class(output) = "resi"
+  return(output)
+}
+
