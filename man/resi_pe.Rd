@@ -14,6 +14,7 @@
 \alias{resi_pe.gee}
 \alias{resi_pe.lme}
 \alias{resi_pe.lmerMod}
+\alias{resi_pe.glmmTMB}
 \title{Robust Effect Size Index (RESI) Point Estimation}
 \usage{
 resi_pe(model.full, ...)
@@ -157,6 +158,15 @@ resi_pe(model.full, ...)
   vcov.args = list(),
   ...
 )
+
+\method{resi_pe}{glmmTMB}(
+  model.full,
+  anova = TRUE,
+  vcovfunc = clubSandwich::vcovCR,
+  Anova.args = list(),
+  vcov.args = list(),
+  ...
+)
 }
 \arguments{
 \item{model.full}{\code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.}
@@ -248,6 +258,8 @@ using a model where each measurement is its own cluster.
 \item \code{resi_pe(lme)}: RESI point estimation for lme object
 
 \item \code{resi_pe(lmerMod)}: RESI point estimation for lmerMod object
+
+\item \code{resi_pe(glmmTMB)}: RESI point estimation for glmmTMB object - Gaussian only
 
 }}
 \examples{
