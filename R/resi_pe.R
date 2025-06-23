@@ -421,13 +421,19 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   N = length(summary(model.full)$clusz)
   # total num of observations
   tot_obs = nrow(data)
+  # Get the rownames of observations actually used in model fitting
+  # This excludes any rows with missing values automatically dropped by model.frame()
+  used_rows <- rownames(model.frame(model.full))
 
   # num of observations from each subject
-  n_i = table(model.full$id)
-  n_i = rep(n_i, times = n_i)
-  # weight in independent model
-  w = 1 / n_i
-  data$w = w
+  n_i <- table(data$id)
+  # n_i = rep(n_i, times = n_i)
+
+  # Assign weights: for each row, if ID is present, assign weights from model
+  # If ID is NA or not used in model fitting, weight is set to NA
+  data[used_rows, "w"] <- mod_gee$weights
+  # data$w = 1/n_i
+
   # sample size
   N = length(unique(model.full$id))
   # total num of observations
