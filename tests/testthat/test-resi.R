@@ -83,6 +83,17 @@ if(requireNamespace("geepack")){
                                  family = binomial, corstr = "independence")
 }
 
+
+if(requireNamespace("glmtoolbox")){
+  library(geepack)
+  mod.glmgee = glmtoolbox::glmgee(depression ~ diagnose + drug*time, data = data.gee,
+                               id = id, family = binomial, corstr = "independence")
+  mod.glmgee.r = glmtoolbox::glmgee(depression ~ diagnose, data = data.gee, id = id,
+                                 family = binomial, corstr = "independence")
+  mod.glmgee.int = glmtoolbox::glmgee(depression ~ 1, data = data.gee, id = id,
+                                   family = binomial, corstr = "independence")
+}
+
 mod.lme = nlme::lme(distance ~ age + Sex, data = nlme::Orthodont, random = ~ 1)
 mod.lme.int = nlme::lme(distance ~ 1, data = nlme::Orthodont, random = ~ 1)
 
@@ -127,6 +138,13 @@ if(requireNamespace("tibble")){
                                       data = tib.gee, id = id, family = binomial,
                                       corstr = "independence")
   }
+
+  if(requireNamespace("glmtoolbox")){
+    mod.geeglm.tib <- glmtoolbox::glmgee(depression ~ diagnose + drug*time,
+                                      data = tib.gee, id = id, family = binomial,
+                                      corstr = "independence")
+  }
+
   if(requireNamespace("lme4")){
     lmerModtibdat = tibble::as_tibble(lme4::sleepstudy)
     mod.lmerMod.tib <- lme4::lmer(Reaction ~ Days + (Days | Subject),
@@ -220,6 +238,28 @@ test_that("resi produces the correct estimates", {
                c(-0.007006305,-0.121182453,0.003769394,0.119402133,-0.069223594),
                tolerance = 1e-07)
   }
+
+
+  if(requireNamespace("glmtoolbox")){
+    expect_equal(unname(resi(mod.glmgee, nboot = 10, data = data.gee)$coefficients[,'L-RESI']),
+                 c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258),
+                 tolerance = 1e-07)
+    expect_equal(unname(resi(mod.glmgee, nboot = 10, data = data.gee)$coefficients[,'CS-RESI']),
+                 c(-0.007006305,-0.121182453,0.003769394,0.119402133,-0.069223594),
+                 tolerance = 1e-07)
+
+    # SNV: temporary pasted in for now
+    m1 =  glmgee(size ~ poly(days,4) + treat, id=tree, family=Gamma(log), data=spruces)
+    debug(resi.glmgee)
+    glmtoolboxRESI = resi.glmgee(m1, nboot=10, data=spruces)
+    glmtoolboxRESI = resi_pe(m1, nboot=10, data=spruces)
+
+    ggmod = geeglm(size ~ poly(days,4) + treat, id=tree, family=Gamma(log), data=spruces)
+    geeglmRESI = resi_pe(ggmod)
+
+
+
+  }
   expect_equal(unname(suppressWarnings(resi(mod.lme, nboot = 10)$coefficients[,'RESI'])),
                c(3.659090, 1.739166, 0.512371), tolerance = 1e-07)
   if(requireNamespace("lme4")){
@@ -272,6 +312,20 @@ test_that("boot.results same (approx) for gee and geeglm",{
   resi.obj2 = resi(mod.gee, data = data.gee, nboot = 5, store.boot = T)
   expect_equal(resi.obj$boot.results$t[,-1], resi.obj2$boot.results$t, tolerance = 1e-09)
 })}
+
+if(requireNamespace("glmtoolbox") & requireNamespace("geepack")){
+  test_that("vcov and estimates are the same for glmgee and geeglm",{
+    expect_equal(unname(mod.glmgee$R), mod.geeglm$geese$vbeta)
+    expect_equal(sandwich::vcovHC(modg1, type = "HC0"), sandwich::vcovHC(modg2, type = "HC0"))
+  })
+
+  test_that("boot.results same (approx) for gee and geeglm",{
+    set.seed(123)
+    resi.obj = resi(mod.geeglm, nboot = 5, store.boot = T, anova = F)
+    set.seed(123)
+    resi.obj2 = resi(mod.gee, data = data.gee, nboot = 5, store.boot = T)
+    expect_equal(resi.obj$boot.results$t[,-1], resi.obj2$boot.results$t, tolerance = 1e-09)
+  })}
 
 test_that("unbiased = FALSE returns same abs. RESI as Chi-sq/F",{
   resi.obj = resi(mod, nboot = 1, unbiased = FALSE)

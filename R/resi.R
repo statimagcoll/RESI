@@ -530,6 +530,10 @@ resi.geeglm = function(model.full, model.reduced = NULL, data, anova = TRUE,
   return(output)
 }
 
+#' @describeIn resi RESI point and interval estimation for GEE models in glmtoolbox
+#' @export
+resi.glmgee = resi.geeglm
+
 
  #' @describeIn resi RESI point and interval estimation for GEE models
 #' @export

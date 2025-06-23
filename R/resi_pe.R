@@ -428,16 +428,12 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   # weight in independent model
   w = 1 / n_i
   data$w = w
-  # sample size
-  N = length(unique(model.full$id))
-  # total num of observations
-  tot_obs = nrow(data)
 
   # model form
   form = formula(model.full)
   # independence model
-  mod_indg = suppressWarnings(glm(formula = form, family = model.full$family, data = data,
-                                  weights = w, contrasts = model.full$contrasts))
+  mod_indg = glm(formula = form, family = model.full$family, data = data,
+                                  weights = w, contrasts = model.full$contrasts)
   mod_indg$residuals = mod_indg$residuals / sqrt(mod_indg$weights)
   # the var-cov matrix estimate from the independence model
   # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
@@ -514,6 +510,119 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
     output$estimates = c(output$estimates, anova.tab$`L-RESI`,
                          anova.tab[,"CS-RESI"])
     names.est = c(names.est, rep(rownames(anova.tab), 2))
+    names(output$estimates) = names.est
+    class(output$anova) = c("anova_resi", class(output$anova))
+  }
+
+  output$naive.var = FALSE
+  class(output) = c("resi", "list")
+  return(output)
+}
+
+
+#' @describeIn resi_pe RESI point estimation for glmgee object
+#' @export
+resi_pe.glmgee <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+                           coefficients = TRUE, overall = TRUE, unbiased = TRUE, ...){
+  if (missing(data)){
+    data = model.full$data
+  }
+
+  # sample size
+  N = model.full$clusters[1]
+  # total num of observations
+  tot_obs = nrow(data)
+
+  # num of observations from each subject
+  n_i = table(model.full$id)
+  n_i = rep(n_i, times = n_i)
+  # weight in independent model
+  w = 1 / n_i
+  data$w = w
+
+  # model form
+  form = formula(model.full)
+
+  # the var-cov matrix estimate from the independence model
+  # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
+  mod_indg = glm(formula = form, family = model.full$family, data = data,
+                 weights = w, contrasts = model.full$contrasts)
+  mod_indg$residuals = mod_indg$residuals / sqrt(mod_indg$weights)
+  cov_ind = sandwich::vcovHC(mod_indg, type = "HC0")
+
+
+  # make copy of model.full, replace vbeta with independence
+  mod_ind = model.full
+  mod_ind$R = cov_ind
+
+  output = list(model.full = list(call = model.full$call, formula = form),
+                model.reduced = NULL)
+  names.est = c()
+  if (overall){
+    # reduced model
+    if (is.null(model.reduced)){
+      form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
+      model.reduced = update(model.full, formula = form.reduced, data = data)
+    } else{
+      form.reduced = formula(model.reduced)
+    }
+
+    # overall
+    # longitudinal
+    overall.tab = as.data.frame(anova(model.reduced, model.full, verbose=FALSE))
+    overall.tab[,"L-RESI"] = chisq2S(overall.tab[," Chi  "], overall.tab[," df"], N)
+
+    output$model.reduced = list(call = model.reduced$call, formula = form.reduced)
+    output$estimates = c(overall.tab[,"L-RESI"])
+    output$overall = overall.tab
+    names.est = c("Overall-L")
+    names(output$estimates) = names.est
+  }
+
+  # longitudinal RESI
+  # coefficients (z statistics)
+  if (coefficients) {
+    # longitudinal resi
+    # geeglm uses robust estimate by default, do not need to specify vcov
+    coefficients.tab <- lmtest::coeftest(model.full, df=Inf)
+    coefficients.df = data.frame(coefficients.tab[,"Estimate"],
+                                 coefficients.tab[,"Std. Error"],
+                                 coefficients.tab[,"z value"],
+                                 coefficients.tab[,"Pr(>|z|)"],
+                                 row.names = rownames(coefficients.tab))
+    colnames(coefficients.df) = colnames(coefficients.tab)
+    # glmgee uses t-statistic and t- reference distribution
+    coefficients.df[,"L-RESI"] = z2S(coefficients.df[,"z value"], n=N, unbiased)
+
+    # CS RESI
+    # M: use independence mod
+    coefficients.tabcs <- lmtest::coeftest(mod_ind, vcov. = cov_ind, df=Inf)
+    coefficients.df[,"CS-RESI"] = z2S(coefficients.tabcs[,"z value"], n=N, unbiased)
+
+    output$coefficients = coefficients.df
+    output$estimates = c(output$estimates, coefficients.df$`L-RESI`,
+                         coefficients.df[,"CS-RESI"])
+    names.est = c(names.est, rep(rownames(coefficients.df), 2))
+    names(output$estimates) = names.est
+  }
+
+  # anova
+  if (anova) {
+    # longitudinal RESI
+    anova.tab <- as.data.frame(anova(model.full, verbose=FALSE))
+    anova.tab[,"L-RESI"] = chisq2S(anova.tab[," Chi  "], anova.tab[," df"], N)
+
+    # CS RESI
+    # M: use anova() on new mod with substituted variance
+    # anova.tabcs <- as.data.frame(anova(mod_ind, verbose=FALSE))
+    # anova.tab[,"CS-RESI"] = chisq2S(anova.tabcs[," Chi  "], anova.tabcs[," df"], N)
+    #
+    output$anova = anova.tab
+    output$estimates = c(output$estimates, anova.tab$`L-RESI`)
+    names.est = c(names.est, rep(rownames(anova.tab), 1))
+    # output$estimates = c(output$estimates, anova.tab$`L-RESI`,
+    #                      anova.tab[,"CS-RESI"])
+    # names.est = c(names.est, rep(rownames(anova.tab), 2))
     names(output$estimates) = names.est
     class(output$anova) = c("anova_resi", class(output$anova))
   }
