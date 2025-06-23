@@ -133,6 +133,10 @@ if(requireNamespace("tibble")){
                                   lmerModtibdat)
   }}
 
+# glmmTMB
+if(requireNamespace("glmmTMB")){
+  model_glmmTMB <- glmmTMB::glmmTMB(Reaction ~ Days + (1 | Subject), data = lme4::sleepstudy, family = gaussian())
+}
 
 ## tests
 test_that("Specifying non-allowed vcov produces warning",{
@@ -225,6 +229,10 @@ test_that("resi produces the correct estimates", {
   if(requireNamespace("lme4")){
   expect_equal(unname(suppressWarnings(resi(mod.lmerMod, nboot = 10)$coefficients[,'RESI'])),
                c(8.434942, 1.533073), tolerance = 1e-07)}
+  if(requireNamespace("glmmTMB")){
+    expect_equal(unname(suppressWarnings(resi(model_glmmTMB, nboot = 10)$coefficients[,'RESI'])),
+                 c( 6.22903, 3.06823), tolerance = 1e-05)
+  }
 })
 
 test_that("RESI estimates are in between the confidence limits", {
