@@ -432,8 +432,9 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   # model form
   form = formula(model.full)
   # independence model
-  mod_indg = glm(formula = form, family = model.full$family, data = data,
-                                  weights = w, contrasts = model.full$contrasts)
+  # non-integer #successes in a binomial glm! occurs due to weights
+  mod_indg = suppressWarnings(glm(formula = form, family = model.full$family, data = data,
+                                  weights = w, contrasts = model.full$contrasts))
   mod_indg$residuals = mod_indg$residuals / sqrt(mod_indg$weights)
   # the var-cov matrix estimate from the independence model
   # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
@@ -545,8 +546,9 @@ resi_pe.glmgee <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # the var-cov matrix estimate from the independence model
   # Note: this is the estimate for Cov[(\hat{\beta}_ind - \beta_0)]
-  mod_indg = glm(formula = form, family = model.full$family, data = data,
-                 weights = w, contrasts = model.full$contrasts)
+  # non-integer #successes in a binomial glm! occurs due to weights
+  mod_indg = suppressWarnings(glm(formula = form, family = model.full$family, data = data,
+                 weights = w, contrasts = model.full$contrasts))
   mod_indg$residuals = mod_indg$residuals / sqrt(mod_indg$weights)
   cov_ind = sandwich::vcovHC(mod_indg, type = "HC0")
 
@@ -608,23 +610,24 @@ resi_pe.glmgee <- function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # anova
   if (anova) {
-    # longitudinal RESI
-    anova.tab <- as.data.frame(anova(model.full, verbose=FALSE))
-    anova.tab[,"L-RESI"] = chisq2S(anova.tab[," Chi  "], anova.tab[," df"], N)
-
-    # CS RESI
-    # M: use anova() on new mod with substituted variance
-    # anova.tabcs <- as.data.frame(anova(mod_ind, verbose=FALSE))
-    # anova.tab[,"CS-RESI"] = chisq2S(anova.tabcs[," Chi  "], anova.tabcs[," df"], N)
-    #
-    output$anova = anova.tab
-    output$estimates = c(output$estimates, anova.tab$`L-RESI`)
-    names.est = c(names.est, rep(rownames(anova.tab), 1))
-    # output$estimates = c(output$estimates, anova.tab$`L-RESI`,
-    #                      anova.tab[,"CS-RESI"])
-    # names.est = c(names.est, rep(rownames(anova.tab), 2))
-    names(output$estimates) = names.est
-    class(output$anova) = c("anova_resi", class(output$anova))
+    warning('anova not currently supported for glmgee class.')
+  #   # longitudinal RESI
+  #   anova.tab <- as.data.frame(anova(model.full, verbose=FALSE))
+  #   anova.tab[,"L-RESI"] = chisq2S(anova.tab[," Chi  "], anova.tab[," df"], N)
+  #
+  #   # CS RESI
+  #   # M: use anova() on new mod with substituted variance
+  #   # anova.tabcs <- as.data.frame(anova(mod_ind, verbose=FALSE))
+  #   # anova.tab[,"CS-RESI"] = chisq2S(anova.tabcs[," Chi  "], anova.tabcs[," df"], N)
+  #   #
+  #   output$anova = anova.tab
+  #   output$estimates = c(output$estimates, anova.tab$`L-RESI`)
+  #   names.est = c(names.est, rep(rownames(anova.tab), 1))
+  #   # output$estimates = c(output$estimates, anova.tab$`L-RESI`,
+  #   #                      anova.tab[,"CS-RESI"])
+  #   # names.est = c(names.est, rep(rownames(anova.tab), 2))
+  #   names(output$estimates) = names.est
+  #   class(output$anova) = c("anova_resi", class(output$anova))
   }
 
   output$naive.var = FALSE

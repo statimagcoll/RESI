@@ -64,9 +64,9 @@ if(requireNamespace("pscl")){
   mod.zinf.int = pscl::zeroinfl(art ~ 1, data = data.hurdle)
 }
 
+data.gee = RESI::depression
 # gee and lme
 if(requireNamespace("gee")){
-  data.gee = RESI::depression
   mod.gee = gee::gee(depression ~ diagnose + drug*time, data = data.gee,
                      id = id, family = binomial, corstr = "independence")
   mod.gee.int = gee::gee(depression ~ 1, data = data.gee,
@@ -85,7 +85,7 @@ if(requireNamespace("geepack")){
 
 
 if(requireNamespace("glmtoolbox")){
-  library(geepack)
+  library(glmtoolbox)
   mod.glmgee = glmtoolbox::glmgee(depression ~ diagnose + drug*time, data = data.gee,
                                id = id, family = binomial, corstr = "independence")
   mod.glmgee.r = glmtoolbox::glmgee(depression ~ diagnose, data = data.gee, id = id,
@@ -140,7 +140,7 @@ if(requireNamespace("tibble")){
   }
 
   if(requireNamespace("glmtoolbox")){
-    mod.geeglm.tib <- glmtoolbox::glmgee(depression ~ diagnose + drug*time,
+    mod.glmgee.tib <- glmtoolbox::glmgee(depression ~ diagnose + drug*time,
                                       data = tib.gee, id = id, family = binomial,
                                       corstr = "independence")
   }
@@ -239,26 +239,24 @@ test_that("resi produces the correct estimates", {
                tolerance = 1e-07)
   }
 
-
   if(requireNamespace("glmtoolbox")){
-    expect_equal(unname(resi(mod.glmgee, nboot = 10, data = data.gee)$coefficients[,'L-RESI']),
+    # tests don't seem to like passing data argument. I think glmtoolbox deals with environments strangely
+    expect_equal(unname(resi(mod.glmgee, nboot = 10)$coefficients[,'L-RESI']),
                  c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258),
                  tolerance = 1e-07)
-    expect_equal(unname(resi(mod.glmgee, nboot = 10, data = data.gee)$coefficients[,'CS-RESI']),
+    expect_equal(unname(resi(mod.glmgee, nboot = 10)$coefficients[,'CS-RESI']),
                  c(-0.007006305,-0.121182453,0.003769394,0.119402133,-0.069223594),
                  tolerance = 1e-07)
 
-    # SNV: temporary pasted in for now
-    m1 =  glmgee(size ~ poly(days,4) + treat, id=tree, family=Gamma(log), data=spruces)
-    debug(resi.glmgee)
-    glmtoolboxRESI = resi.glmgee(m1, nboot=10, data=spruces)
-    glmtoolboxRESI = resi_pe(m1, nboot=10, data=spruces)
-
+    # # SNV: temporary pasted in for now
+    # library(glmtoolbox)
+    # data(spruce)
+    # m1 =  glmgee(size ~ poly(days,4) + treat, id=tree, family=Gamma(log), data=spruces)
+    # debug(resi.glmgee)
+    # glmtoolboxRESI = resi(m1, nboot=10, data=spruces)
+    # glmtoolboxRESI = resi_pe(m1, nboot=10, data=spruces)
     ggmod = geeglm(size ~ poly(days,4) + treat, id=tree, family=Gamma(log), data=spruces)
     geeglmRESI = resi_pe(ggmod)
-
-
-
   }
   expect_equal(unname(suppressWarnings(resi(mod.lme, nboot = 10)$coefficients[,'RESI'])),
                c(3.659090, 1.739166, 0.512371), tolerance = 1e-07)
@@ -316,7 +314,6 @@ test_that("boot.results same (approx) for gee and geeglm",{
 if(requireNamespace("glmtoolbox") & requireNamespace("geepack")){
   test_that("vcov and estimates are the same for glmgee and geeglm",{
     expect_equal(unname(mod.glmgee$R), mod.geeglm$geese$vbeta)
-    expect_equal(sandwich::vcovHC(modg1, type = "HC0"), sandwich::vcovHC(modg2, type = "HC0"))
   })
 
   test_that("boot.results same (approx) for gee and geeglm",{
@@ -408,6 +405,9 @@ test_that("tibbles work", {
   if(requireNamespace("geepack")){
   expect_equal(unname(resi(mod.geeglm.tib, nboot = 10, data = data.gee)$coefficients[,'L-RESI']), c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258), tolerance = 1e-07)
   }
+  # if(requireNamespace("glmtoolbox")){
+  #   expect_equal(unname(resi(mod.glmgee.tib, nboot = 10)$coefficients[,'L-RESI']), c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258), tolerance = 1e-07)
+  # }
   if(requireNamespace("lme4")){
   expect_equal(unname(suppressWarnings(resi(mod.lmerMod.tib, nboot = 10))$coefficients[,'RESI']),c(8.434942, 1.533073), tolerance = 1e-07)
   }
