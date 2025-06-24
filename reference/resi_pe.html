@@ -183,6 +183,18 @@ for models with existing Anova methods. This function is the building block for 
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
+<span><span class="co"># S3 method for class 'glmgee'</span></span>
+<span><span class="fu">resi_pe</span><span class="op">(</span></span>
+<span>  <span class="va">model.full</span>,</span>
+<span>  model.reduced <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  <span class="va">data</span>,</span>
+<span>  anova <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  coefficients <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  overall <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  unbiased <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span>
+<span></span>
 <span><span class="co"># S3 method for class 'gee'</span></span>
 <span><span class="fu">resi_pe</span><span class="op">(</span><span class="va">model.full</span>, <span class="va">data</span>, unbiased <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
@@ -314,6 +326,7 @@ using a model where each measurement is its own cluster.</p>
 <li><p><code>resi_pe(hurdle)</code>: RESI point estimation for hurdle models</p></li>
 <li><p><code>resi_pe(zeroinfl)</code>: RESI point estimation for zeroinfl models</p></li>
 <li><p><code>resi_pe(geeglm)</code>: RESI point estimation for geeglm object</p></li>
+<li><p><code>resi_pe(glmgee)</code>: RESI point estimation for glmgee object</p></li>
 <li><p><code>resi_pe(gee)</code>: RESI point estimation for gee object</p></li>
 <li><p><code>resi_pe(lme)</code>: RESI point estimation for lme object</p></li>
 <li><p><code>resi_pe(lmerMod)</code>: RESI point estimation for lmerMod object</p></li>
