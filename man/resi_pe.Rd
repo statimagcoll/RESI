@@ -11,6 +11,7 @@
 \alias{resi_pe.hurdle}
 \alias{resi_pe.zeroinfl}
 \alias{resi_pe.geeglm}
+\alias{resi_pe.glmgee}
 \alias{resi_pe.gee}
 \alias{resi_pe.lme}
 \alias{resi_pe.lmerMod}
@@ -139,6 +140,17 @@ resi_pe(model.full, ...)
   ...
 )
 
+\method{resi_pe}{glmgee}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  overall = TRUE,
+  unbiased = TRUE,
+  ...
+)
+
 \method{resi_pe}{gee}(model.full, data, unbiased = TRUE, ...)
 
 \method{resi_pe}{lme}(
@@ -252,6 +264,8 @@ using a model where each measurement is its own cluster.
 \item \code{resi_pe(zeroinfl)}: RESI point estimation for zeroinfl models
 
 \item \code{resi_pe(geeglm)}: RESI point estimation for geeglm object
+
+\item \code{resi_pe(glmgee)}: RESI point estimation for glmgee object
 
 \item \code{resi_pe(gee)}: RESI point estimation for gee object
 

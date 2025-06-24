@@ -64,9 +64,9 @@ if(requireNamespace("pscl")){
   mod.zinf.int = pscl::zeroinfl(art ~ 1, data = data.hurdle)
 }
 
+data.gee = RESI::depression
 # gee and lme
 if(requireNamespace("gee")){
-  data.gee = RESI::depression
   mod.gee = gee::gee(depression ~ diagnose + drug*time, data = data.gee,
                      id = id, family = binomial, corstr = "independence")
   mod.gee.int = gee::gee(depression ~ 1, data = data.gee,
@@ -81,6 +81,17 @@ if(requireNamespace("geepack")){
                                  family = binomial, corstr = "independence")
   mod.geeglm.int = geepack::geeglm(depression ~ 1, data = data.gee, id = id,
                                  family = binomial, corstr = "independence")
+}
+
+
+if(requireNamespace("glmtoolbox")){
+  #library(glmtoolbox)
+  mod.glmgee = glmtoolbox::glmgee(depression ~ diagnose + drug*time, data = data.gee,
+                               id = id, family = binomial, corstr = "independence")
+  mod.glmgee.r = glmtoolbox::glmgee(depression ~ diagnose, data = data.gee, id = id,
+                                 family = binomial, corstr = "independence")
+  mod.glmgee.int = glmtoolbox::glmgee(depression ~ 1, data = data.gee, id = id,
+                                   family = binomial, corstr = "independence")
 }
 
 mod.lme = nlme::lme(distance ~ age + Sex, data = nlme::Orthodont, random = ~ 1)
@@ -127,6 +138,13 @@ if(requireNamespace("tibble")){
                                       data = tib.gee, id = id, family = binomial,
                                       corstr = "independence")
   }
+
+  if(requireNamespace("glmtoolbox")){
+    mod.glmgee.tib <- glmtoolbox::glmgee(depression ~ diagnose + drug*time,
+                                      data = tib.gee, id = id, family = binomial,
+                                      corstr = "independence")
+  }
+
   if(requireNamespace("lme4")){
     lmerModtibdat = tibble::as_tibble(lme4::sleepstudy)
     mod.lmerMod.tib <- lme4::lmer(Reaction ~ Days + (Days | Subject),
@@ -224,6 +242,26 @@ test_that("resi produces the correct estimates", {
                c(-0.007006305,-0.121182453,0.003769394,0.119402133,-0.069223594),
                tolerance = 1e-07)
   }
+
+  if(requireNamespace("glmtoolbox")){
+    # tests don't seem to like passing data argument. I think glmtoolbox deals with environments strangely
+    expect_equal(unname(resi(mod.glmgee, nboot = 10)$coefficients[,'L-RESI']),
+                 c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258),
+                 tolerance = 1e-07)
+    expect_equal(unname(resi(mod.glmgee, nboot = 10)$coefficients[,'CS-RESI']),
+                 c(-0.007006305,-0.121182453,0.003769394,0.119402133,-0.069223594),
+                 tolerance = 1e-07)
+
+    # # SNV: temporary pasted in for now
+    # library(glmtoolbox)
+    # data(spruce)
+    # m1 =  glmgee(size ~ poly(days,4) + treat, id=tree, family=Gamma(log), data=spruces)
+    # debug(resi.glmgee)
+    # glmtoolboxRESI = resi(m1, nboot=10, data=spruces)
+    # glmtoolboxRESI = resi_pe(m1, nboot=10, data=spruces)
+    ggmod = geeglm(size ~ poly(days,4) + treat, id=tree, family=Gamma(log), data=spruces)
+    geeglmRESI = resi_pe(ggmod)
+  }
   expect_equal(unname(suppressWarnings(resi(mod.lme, nboot = 10)$coefficients[,'RESI'])),
                c(3.659090, 1.739166, 0.512371), tolerance = 1e-07)
   if(requireNamespace("lme4")){
@@ -280,6 +318,19 @@ test_that("boot.results same (approx) for gee and geeglm",{
   resi.obj2 = resi(mod.gee, data = data.gee, nboot = 5, store.boot = T)
   expect_equal(resi.obj$boot.results$t[,-1], resi.obj2$boot.results$t, tolerance = 1e-09)
 })}
+
+if(requireNamespace("glmtoolbox") & requireNamespace("geepack")){
+  test_that("vcov and estimates are the same for glmgee and geeglm",{
+    expect_equal(unname(mod.glmgee$R), mod.geeglm$geese$vbeta)
+  })
+
+  test_that("boot.results same (approx) for gee and geeglm",{
+    set.seed(123)
+    resi.obj = resi(mod.geeglm, nboot = 5, store.boot = T, anova = F)
+    set.seed(123)
+    resi.obj2 = resi(mod.gee, data = data.gee, nboot = 5, store.boot = T)
+    expect_equal(resi.obj$boot.results$t[,-1], resi.obj2$boot.results$t, tolerance = 1e-09)
+  })}
 
 test_that("unbiased = FALSE returns same abs. RESI as Chi-sq/F",{
   resi.obj = resi(mod, nboot = 1, unbiased = FALSE)
@@ -362,6 +413,9 @@ test_that("tibbles work", {
   if(requireNamespace("geepack")){
   expect_equal(unname(resi(mod.geeglm.tib, nboot = 10, data = data.gee)$coefficients[,'L-RESI']), c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258), tolerance = 1e-07)
   }
+  # if(requireNamespace("glmtoolbox")){
+  #   expect_equal(unname(resi(mod.glmgee.tib, nboot = 10)$coefficients[,'L-RESI']), c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258), tolerance = 1e-07)
+  # }
   if(requireNamespace("lme4")){
   expect_equal(unname(suppressWarnings(resi(mod.lmerMod.tib, nboot = 10))$coefficients[,'RESI']),c(8.434942, 1.533073), tolerance = 1e-07)
   }
