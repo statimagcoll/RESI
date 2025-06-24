@@ -11,6 +11,7 @@
 \alias{resi.hurdle}
 \alias{resi.zeroinfl}
 \alias{resi.geeglm}
+\alias{resi.glmgee}
 \alias{resi.gee}
 \alias{resi.lme}
 \alias{resi.lmerMod}
@@ -187,6 +188,22 @@ resi(model.full, ...)
   ...
 )
 
+\method{resi}{glmgee}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = FALSE,
+  coefficients = TRUE,
+  overall = TRUE,
+  nboot = 1000,
+  alpha = 0.05,
+  store.boot = FALSE,
+  unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
+  ...
+)
+
 \method{resi}{gee}(
   model.full,
   data,
@@ -299,10 +316,10 @@ is always greater than or equal to 0. The type of statistic
 used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
 \code{\link{t2S}}, and \code{\link{z2S}} for more details on the formulas.
 
-For GEE (\link[geepack]{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
+For GEE (\link[geepack]{geeglm}, \link[glmtoolbox]{glmgee}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
 per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
-specified clustering into account, while the cross-sectional RESI is estimated
-using a model where each measurement is its own cluster.
+specified clustering into account, while the cross-sectional RESI is designed to
+estimate the effect size if a random observation for each participant were collected cross-sectionally.
 
 For most \code{lm} and \code{nls} model types, there is a Bayesian bootstrap
 option available as an alternative to the default, standard non-parametric
@@ -336,6 +353,8 @@ and then try rerunning \code{resi}.
 \item \code{resi(zeroinfl)}: RESI point and interval estimation for zeroinfl models
 
 \item \code{resi(geeglm)}: RESI point and interval estimation for GEE models
+
+\item \code{resi(glmgee)}: RESI point and interval estimation for GEE models in glmtoolbox
 
 \item \code{resi(gee)}: RESI point and interval estimation for GEE models
 

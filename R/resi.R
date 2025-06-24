@@ -51,10 +51,10 @@
 #' used is listed with the output. See \code{\link{f2S}}, \code{\link{chisq2S}},
 #' \code{\link{t2S}}, and \code{\link{z2S}} for more details on the formulas.
 #'
-#' For GEE (\link[geepack]{geeglm}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
+#' For GEE (\link[geepack]{geeglm}, \link[glmtoolbox]{glmgee}) models, a longitudinal RESI (L-RESI) and a cross-sectional,
 #' per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
-#' specified clustering into account, while the cross-sectional RESI is estimated
-#' using a model where each measurement is its own cluster.
+#' specified clustering into account, while the cross-sectional RESI is designed to
+#' estimate the effect size if a random observation for each participant were collected cross-sectionally.
 #'
 #' For most \code{lm} and \code{nls} model types, there is a Bayesian bootstrap
 #' option available as an alternative to the default, standard non-parametric
@@ -530,6 +530,30 @@ resi.geeglm = function(model.full, model.reduced = NULL, data, anova = TRUE,
   return(output)
 }
 
+#' @describeIn resi RESI point and interval estimation for GEE models in glmtoolbox
+#' @export
+resi.glmgee = function(model.full, model.reduced = NULL, data, anova = FALSE,
+                                     coefficients = TRUE, overall = TRUE, nboot = 1000,
+                                     alpha = 0.05, store.boot = FALSE,
+                                     unbiased = TRUE, parallel = c("no", "multicore", "snow"),
+                                     ncpus = getOption("boot.ncpus", 1L), ...){
+  # Capture the call to my_function
+  call <- match.call()
+
+  # Get the argument names and their default values
+  formal_args <- formals(resi.glmgee)
+
+  # Create a list of all arguments including defaults
+  args_list <- as.list(formal_args)
+  # remove ellipses
+  args_list = args_list[-length(args_list)]
+
+  # Update the list with the user's inputs from the call (if provided)
+  for (name in names(call)[-1]) {  # Exclude the function name
+    args_list[[name]] <- call[[name]]
+  }
+  do.call(resi.geeglm, args_list)
+}
 
  #' @describeIn resi RESI point and interval estimation for GEE models
 #' @export
