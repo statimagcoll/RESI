@@ -85,7 +85,7 @@ if(requireNamespace("geepack")){
 
 
 if(requireNamespace("glmtoolbox")){
-  library(glmtoolbox)
+  #library(glmtoolbox)
   mod.glmgee = glmtoolbox::glmgee(depression ~ diagnose + drug*time, data = data.gee,
                                id = id, family = binomial, corstr = "independence")
   mod.glmgee.r = glmtoolbox::glmgee(depression ~ diagnose, data = data.gee, id = id,
