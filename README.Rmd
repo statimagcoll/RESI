@@ -27,8 +27,7 @@ If you would like to contribute to the package, please branch off of our [GitHub
 
 ## References
 
-Jones, M., Kang, K., & Vandekar, S. (2023). RESI: An R Package for Robust Effect Sizes. <i>arXiv preprint arXiv:2302.12345.</i>
-
+Jones M, Kang K, Vandekar S (2025). RESI: An R Package for Robust Effect Sizes. <i> Journal of Statistical Software, 112(3), 1–27. <i> https://doi.org/10.18637/jss.v112.i03.
 
 Kang, K., Jones, M. T., Armstrong, K., Avery, S., McHugo, M., Heckers, S., & Vandekar, S. Accurate Confidence and Bayesian Interval Estimation for Non-centrality Parameters and Effect Size Indices. <i>Psychometrika.</i> 2023. 10.1007/s11336-022-09899-x. Advance online publication. https://doi.org/10.1007/s11336-022-09899-x.
 

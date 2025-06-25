@@ -4,7 +4,8 @@
 * win-builder
 
 ## R CMD check results
-There were no ERRORs, WARNINGs, or NOTEs.
+There were no ERRORs or WARNINGs.
+There was one NOTE with win-builder related to the DOI. The DOI in the CITATION is for a new JSS publication that will be registered after publication on CRAN. 
 
 ## CRAN Submission 1.3.0
 This is a requested update by the editor of the *Journal of Statistical Software* to include citations to the forthcoming publication regarding the package. The DOI in the CITATION is for a new JSS publication that will be registered after publication on CRAN. There is also a minor bug fix included for assigning the bootstrap ids in the cluster bootstrap.
