@@ -846,3 +846,40 @@ resi_pe.glmmTMB <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::v
   class(output) = c("resi", "list")
   return(output)
 }
+                  
+#' @describeIn resi_pe RESI point estimation for emmeans object
+#' @export
+resi_pe.emmGrid <- function(object, model, N = NULL, unbiased = TRUE, ...) {
+
+  if (!inherits(object, "emmGrid")) stop("object must be an emmGrid from emmeans")
+  if (missing(model)) stop("You must supply the model used to generate emmeans")
+
+  # Extract info
+  beta_hat <- object@bhat
+  Sigma_hat <- object@V
+  linfct <- object@linfct
+
+
+  # Use sample size if not given
+  if (is.null(N)) {
+    if (!is.null(model$model)) {
+      N <- length(unique(model$model[[1]]))  # fallback to number of clusters or subjects
+    } else {
+      N <- nobs(model)  # for lm
+    }
+  }
+
+  # Compute RESI for each linear combination
+  resi_values <- apply(linfct, 1, function(l) {
+    est <- as.numeric(t(l) %*% beta_hat)
+    var <- as.numeric(t(l) %*% Sigma_hat %*% l)
+    z <- est / sqrt(var)
+    RESI::z2S(z, n = N, unbiased = unbiased)
+  })
+
+  # Attach to emmeans result
+  result_df <- as.data.frame(object)
+  result_df$RESI <- resi_values
+
+  return(result_df)
+}
