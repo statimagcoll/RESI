@@ -11,9 +11,11 @@
 \alias{resi_pe.hurdle}
 \alias{resi_pe.zeroinfl}
 \alias{resi_pe.geeglm}
+\alias{resi_pe.glmgee}
 \alias{resi_pe.gee}
 \alias{resi_pe.lme}
 \alias{resi_pe.lmerMod}
+\alias{resi_pe.glmmTMB}
 \title{Robust Effect Size Index (RESI) Point Estimation}
 \usage{
 resi_pe(model.full, ...)
@@ -138,6 +140,17 @@ resi_pe(model.full, ...)
   ...
 )
 
+\method{resi_pe}{glmgee}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  overall = TRUE,
+  unbiased = TRUE,
+  ...
+)
+
 \method{resi_pe}{gee}(model.full, data, unbiased = TRUE, ...)
 
 \method{resi_pe}{lme}(
@@ -150,6 +163,15 @@ resi_pe(model.full, ...)
 )
 
 \method{resi_pe}{lmerMod}(
+  model.full,
+  anova = TRUE,
+  vcovfunc = clubSandwich::vcovCR,
+  Anova.args = list(),
+  vcov.args = list(),
+  ...
+)
+
+\method{resi_pe}{glmmTMB}(
   model.full,
   anova = TRUE,
   vcovfunc = clubSandwich::vcovCR,
@@ -243,11 +265,15 @@ using a model where each measurement is its own cluster.
 
 \item \code{resi_pe(geeglm)}: RESI point estimation for geeglm object
 
+\item \code{resi_pe(glmgee)}: RESI point estimation for glmgee object
+
 \item \code{resi_pe(gee)}: RESI point estimation for gee object
 
 \item \code{resi_pe(lme)}: RESI point estimation for lme object
 
 \item \code{resi_pe(lmerMod)}: RESI point estimation for lmerMod object
+
+\item \code{resi_pe(glmmTMB)}: RESI point estimation for glmmTMB object - Gaussian only
 
 }}
 \examples{

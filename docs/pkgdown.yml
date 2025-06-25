@@ -7,4 +7,5 @@ last_built: 2025-03-23T13:18Z
 urls:
   reference: https://statimagcoll.github.io/RESI/reference
   article: https://statimagcoll.github.io/RESI/articles
-
+include:
+  - google6a873f379e6f09bc.html
