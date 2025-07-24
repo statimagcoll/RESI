@@ -426,13 +426,13 @@ resi_pe.geeglm <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   used_rows <- rownames(model.frame(model.full))
 
   # num of observations from each subject
-  n_i <- table(data$id)
-  # n_i = rep(n_i, times = n_i)
+  n_i <- table(model.full$id)
+  n_i = rep(n_i, times = n_i)
 
   # Assign weights: for each row, if ID is present, assign weights from model
   # If ID is NA or not used in model fitting, weight is set to NA
-  data[used_rows, "w"] <- mod_gee$weights
-  # data$w = 1/n_i
+  # MJ: changed back to 1/n_i because weights from model need to be divided by number of measurement points for CS model
+  data[used_rows, "w"] <- 1/n_i
 
   # sample size
   N = length(unique(model.full$id))
@@ -846,7 +846,7 @@ resi_pe.glmmTMB <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::v
   class(output) = c("resi", "list")
   return(output)
 }
-                  
+
 #' @describeIn resi_pe RESI point estimation for emmeans object
 #' @export
 resi_pe.emmGrid <- function(object, model, N = NULL, unbiased = TRUE, ...) {
