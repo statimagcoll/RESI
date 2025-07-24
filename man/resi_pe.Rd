@@ -16,9 +16,10 @@
 \alias{resi_pe.lme}
 \alias{resi_pe.lmerMod}
 \alias{resi_pe.glmmTMB}
+\alias{resi_pe.emmGrid}
 \title{Robust Effect Size Index (RESI) Point Estimation}
 \usage{
-resi_pe(model.full, ...)
+resi_pe(...)
 
 \method{resi_pe}{default}(
   model.full,
@@ -179,11 +180,13 @@ resi_pe(model.full, ...)
   vcov.args = list(),
   ...
 )
+
+\method{resi_pe}{emmGrid}(object, model, N = NULL, unbiased = TRUE, ...)
 }
 \arguments{
-\item{model.full}{\code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.}
-
 \item{...}{Ignored.}
+
+\item{model.full}{\code{lm, glm, nls, survreg, coxph, hurdle, zeroinfl, gee, geeglm} or \code{lme} model object.}
 
 \item{model.reduced}{Fitted model object of same type as model.full. By default `NULL`; the same model as the full model but only having intercept.}
 
@@ -204,6 +207,12 @@ resi_pe(model.full, ...)
 \item{unbiased}{Logical, whether to use the unbiased or alternative T/Z statistic to RESI conversion. By default, `TRUE`. See details.}
 
 \item{waldtype}{Numeric, indicates which function to use for overall Wald test. 0 (default) = lmtest::waldtest Chi-square, 1 = lmtest::waldtest F, 2 = aod::wald.test}
+
+\item{object}{emmGrid object}
+
+\item{model}{model used to generate emmeans}
+
+\item{N}{sample size}
 }
 \value{
 Returns a list containing RESI point estimates
@@ -274,6 +283,8 @@ using a model where each measurement is its own cluster.
 \item \code{resi_pe(lmerMod)}: RESI point estimation for lmerMod object
 
 \item \code{resi_pe(glmmTMB)}: RESI point estimation for glmmTMB object - Gaussian only
+
+\item \code{resi_pe(emmGrid)}: RESI point estimation for emmeans object
 
 }}
 \examples{

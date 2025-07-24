@@ -20,7 +20,7 @@
 #' @importFrom car Anova
 #' @importFrom lmtest waldtest
 #' @importFrom sandwich vcovHC
-#' @importFrom stats coef df.residual formula glm hatvalues pf predict quantile residuals update vcov
+#' @importFrom stats coef df.residual formula glm hatvalues model.frame pf predict quantile residuals update vcov
 #' @importFrom utils methods
 #' @export
 #' @details The Robust Effect Size Index (RESI) is an effect size measure based on M-estimators.
@@ -71,7 +71,7 @@
 #' resi_pe(mod, unbiased = FALSE)
 #' @references Vandekar S, Tao R, Blume J. A Robust Effect Size Index. \emph{Psychometrika}. 2020 Mar;85(1):232-246. doi: 10.1007/s11336-020-09698-2.
 
-resi_pe = function(model.full, ...){
+resi_pe = function(...){
   UseMethod("resi_pe")
 }
 
@@ -548,8 +548,7 @@ resi_pe.glmgee <- function(model.full, model.reduced = NULL, data, anova = TRUE,
   n_i = table(model.full$id)
   n_i = rep(n_i, times = n_i)
   # weight in independent model
-  w = 1 / n_i
-  data$w = w
+  data$w = 1 / n_i
 
   # model form
   form = formula(model.full)
@@ -847,6 +846,9 @@ resi_pe.glmmTMB <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::v
   return(output)
 }
 
+#' @param object emmGrid object
+#' @param model model used to generate emmeans
+#' @param N sample size
 #' @describeIn resi_pe RESI point estimation for emmeans object
 #' @export
 resi_pe.emmGrid <- function(object, model, N = NULL, unbiased = TRUE, ...) {

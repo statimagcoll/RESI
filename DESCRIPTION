@@ -48,6 +48,7 @@ Suggests:
     gee,
     geepack,
     glmmTMB,
+    glmtoolbox,
     knitr,
     lme4,
     pscl,
