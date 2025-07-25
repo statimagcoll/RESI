@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">RESI: Robust Effect Size Inference in R</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0.9999</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,7 +18,13 @@
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item">
+      <ul class="navbar-nav me-auto"><li class="nav-item dropdown">
+  <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
+  <div class="dropdown-menu" aria-labelledby="dropdown-articles">
+    <a class="dropdown-item" href="../articles/RESI_paper.html">RESI: An R Package for Robust Effect Sizes</a>
+  </div>
+</li>
+<li class="active nav-item">
   <a class="nav-link" href="../reference/index.html">Reference</a>
 </li>
 <li class="nav-item">
@@ -233,6 +239,23 @@
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
+<span><span class="co"># S3 method for glmgee</span></span>
+<span><span class="fu">resi</span><span class="op">(</span></span>
+<span>  <span class="va">model.full</span>,</span>
+<span>  model.reduced <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  <span class="va">data</span>,</span>
+<span>  anova <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  coefficients <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  overall <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  nboot <span class="op">=</span> <span class="fl">1000</span>,</span>
+<span>  alpha <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span>  store.boot <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  unbiased <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  parallel <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"no"</span>, <span class="st">"multicore"</span>, <span class="st">"snow"</span><span class="op">)</span>,</span>
+<span>  ncpus <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"boot.ncpus"</span>, <span class="fl">1L</span><span class="op">)</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span>
+<span></span>
 <span><span class="co"># S3 method for gee</span></span>
 <span><span class="fu">resi</span><span class="op">(</span></span>
 <span>  <span class="va">model.full</span>,</span>
@@ -258,6 +281,17 @@
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for lmerMod</span></span>
+<span><span class="fu">resi</span><span class="op">(</span></span>
+<span>  <span class="va">model.full</span>,</span>
+<span>  alpha <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span>  nboot <span class="op">=</span> <span class="fl">1000</span>,</span>
+<span>  anova <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  vcovfunc <span class="op">=</span> <span class="fu">clubSandwich</span><span class="fu">::</span><span class="va"><a href="http://jepusto.github.io/clubSandwich/reference/vcovCR.html" class="external-link">vcovCR</a></span>,</span>
+<span>  vcov.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for glmmTMB</span></span>
 <span><span class="fu">resi</span><span class="op">(</span></span>
 <span>  <span class="va">model.full</span>,</span>
 <span>  alpha <span class="op">=</span> <span class="fl">0.05</span>,</span>
@@ -377,10 +411,10 @@ the F or Chi-square statistic. The RESI based on the Chi-Square and F statistics
 is always greater than or equal to 0. The type of statistic
 used is listed with the output. See <code><a href="f2S.html">f2S</a></code>, <code><a href="chisq2S.html">chisq2S</a></code>,
 <code><a href="t2S.html">t2S</a></code>, and <code><a href="z2S.html">z2S</a></code> for more details on the formulas.</p>
-<p>For GEE (<a href="https://rdrr.io/pkg/geepack/man/geeglm.html" class="external-link">geeglm</a>) models, a longitudinal RESI (L-RESI) and a cross-sectional,
+<p>For GEE (<a href="https://rdrr.io/pkg/geepack/man/geeglm.html" class="external-link">geeglm</a>, <a href="https://rdrr.io/pkg/glmtoolbox/man/glmgee.html" class="external-link">glmgee</a>) models, a longitudinal RESI (L-RESI) and a cross-sectional,
 per-measurement RESI (CS-RESI) is estimated. The longitudinal RESI takes the
-specified clustering into account, while the cross-sectional RESI is estimated
-using a model where each measurement is its own cluster.</p>
+specified clustering into account, while the cross-sectional RESI is designed to
+estimate the effect size if a random observation for each participant were collected cross-sectionally.</p>
 <p>For most <code>lm</code> and <code>nls</code> model types, there is a Bayesian bootstrap
 option available as an alternative to the default, standard non-parametric
 bootstrap. The interpretation of a Bayesian bootstrapped interval is similar to
@@ -404,9 +438,11 @@ and then try rerunning <code>resi</code>.</p>
 <li><p><code>resi(hurdle)</code>: RESI point and interval estimation for hurdle models</p></li>
 <li><p><code>resi(zeroinfl)</code>: RESI point and interval estimation for zeroinfl models</p></li>
 <li><p><code>resi(geeglm)</code>: RESI point and interval estimation for GEE models</p></li>
+<li><p><code>resi(glmgee)</code>: RESI point and interval estimation for GEE models in glmtoolbox</p></li>
 <li><p><code>resi(gee)</code>: RESI point and interval estimation for GEE models</p></li>
 <li><p><code>resi(lme)</code>: RESI point and interval estimation for LME (nlme) models</p></li>
 <li><p><code>resi(lmerMod)</code>: RESI point and interval estimation for lmerMod models</p></li>
+<li><p><code>resi(glmmTMB)</code>: RESI point and interval estimation for glmmTMB models - Gaussian only</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
