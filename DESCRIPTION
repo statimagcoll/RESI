@@ -17,7 +17,7 @@ Collate:
   'summary.resi.R'
   'resi.R'
   'resi_pe.R'
-  'Anova.resi.R'
+  'car_Anova.resi.R'
   'data.R'
   'chisq2S.R'
   'f2S.R'
