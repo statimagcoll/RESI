@@ -1,5 +1,24 @@
 ## Test Environments
 * local R installation, version 4.4.1
+* rhub::rhub_check() (linux, macos, windows, atlas)
+* win-builder
+
+## R CMD check results
+There were no ERRORs or WARNINGs.
+There was one NOTE, a false positive for resi_pe.geeglm: no visible binding for global variable 'w'. w is used for the weights argument of the glm function, which expects a column name (without quotes).
+
+## CRAN Submission 1.3.1
+This update fixes a few outstanding ISSUEs from our GitHub and adds support for a couple of model classes, namely `glmgee`, `glmmTMB`, and `emmGrid`. It also provides the published JSS manuscript as a pdf vignette.
+
+Words flagged by spell_check are not misspelled.
+
+## Downstream dependencies
+There are currently no downstream dependencies for this package.
+
+## Previous CRAN Comments
+
+## Test Environments
+* local R installation, version 4.4.1
 * rhub::check() (linux, macos, windows)
 * win-builder
 
@@ -14,8 +33,6 @@ Words flagged by spell_check are not misspelled.
 
 ## Downstream dependencies
 There are currently no downstream dependencies for this package.
-
-## Previous CRAN Comments
 
 ## Test Environments
 * local R installation, version 4.3.1

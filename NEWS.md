@@ -1,6 +1,11 @@
 ## RESI 1.3.1
 
-* 
+* Added RESI estimation for `emmeans` objects
+* Added support for `glmgee` models from `glmtoolbox`
+* Added support for Gaussian models from `glmmTMB`
+* Added pdf vignette (`vignette("RESI_paper")`)
+* Fixed bug with `geeglm` objects not assigning weights properly with missing data
+* Documentation fix for Linux systems
 
 ## RESI 1.3.0
 
