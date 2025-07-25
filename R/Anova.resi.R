@@ -14,6 +14,7 @@
 #'
 #' # run Anova, specifying a different alpha level if desired
 #' car::Anova(resi.obj, alpha = 0.05)
+#' @noRd
 #' @export
 Anova.resi <- function(mod, alpha = NULL, ...){
   if(is.null(mod$anova)){
