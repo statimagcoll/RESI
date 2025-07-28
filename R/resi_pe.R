@@ -1,3 +1,6 @@
+utils::globalVariables("w")
+
+
 #' Robust Effect Size Index (RESI) Point Estimation
 #'
 #' This function will estimate the robust effect size (RESI) from Vandekar, Tao, & Blume (2020).
