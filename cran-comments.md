@@ -1,3 +1,23 @@
+## Previous CRAN Comments
+
+## Test Environments
+* local R installation, version 4.4.1
+* rhub::rhub_check() (linux, macos, windows, atlas)
+* win-builder
+
+## R CMD check results
+There were no ERRORs, WARNING, or NOTEs.
+
+## CRAN Submission 1.3.2
+This submission is the same as 1.3.1, but addresses the NOTE about the undeclared variable 'w'. It is now declared with globalVariables() at the suggestion of the CRAN team.
+
+Words flagged by spell_check are not misspelled.
+
+## Downstream dependencies
+There are currently no downstream dependencies for this package.
+
+## Previous CRAN Comments
+
 ## Test Environments
 * local R installation, version 4.4.1
 * rhub::rhub_check() (linux, macos, windows, atlas)
@@ -14,8 +34,6 @@ Words flagged by spell_check are not misspelled.
 
 ## Downstream dependencies
 There are currently no downstream dependencies for this package.
-
-## Previous CRAN Comments
 
 ## Test Environments
 * local R installation, version 4.4.1

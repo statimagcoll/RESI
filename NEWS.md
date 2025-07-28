@@ -1,4 +1,4 @@
-## RESI 1.3.1
+## RESI 1.3.2
 
 * Added RESI estimation for `emmeans` objects
 * Added support for `glmgee` models from `glmtoolbox`
