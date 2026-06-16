@@ -35,6 +35,7 @@ Collate:
   'ggplot.R'
   'print.R'
   'omnibus.R'
+  'simulations.R'
 Imports:
     aod,
     boot,
@@ -43,7 +44,9 @@ Imports:
     ggplot2,
     lmtest,
     nlme,
-    sandwich
+    parallel,
+    sandwich,
+    splines
 Suggests:
     gee,
     geepack,
@@ -55,7 +58,6 @@ Suggests:
     R.rsp,
     regtools,
     rmarkdown,
-    splines,
     survival,
     tibble,
     testthat (>= 3.0.0)

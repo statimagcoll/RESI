@@ -128,8 +128,8 @@ if(requireNamespace("tibble")){
     mod.zinf.tib <- pscl::zeroinfl(art ~ fem + mar + kid5 + phd + ment | fem + mar +
                                      kid5 + phd + ment, data = tib.hurdle)
   }
+  tib.gee <- tibble::as_tibble(data.gee)
   if(requireNamespace("gee")){
-    tib.gee <- tibble::as_tibble(data.gee)
     mod.gee.tib <- gee::gee(depression ~ diagnose + drug*time, data = tib.gee,
                             id = id, family = binomial, corstr = "independence")
   }
