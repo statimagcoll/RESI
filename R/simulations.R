@@ -23,6 +23,35 @@
   )
 }
 
+# Overwrite RESI column in a resi_pe object with direct (population) formulas:
+#   T-stat  -> S = t / sqrt(n)          (signed)
+#   Z-stat  -> S = z / sqrt(n)          (signed)
+#   F-stat  -> S = sqrt(F * df / n)     (no rdf or df correction)
+#   Chisq   -> S = sqrt(chisq / n)      (no df subtraction)
+# This treats the full-dataset test statistics as the true population parameters
+# rather than using small-sample-corrected estimators from resi_pe.
+.simDirectRESI <- function(pe_obj, n) {
+  if (!is.null(pe_obj$coefficients)) {
+    tab <- pe_obj$coefficients
+    if ("t value" %in% colnames(tab)) {
+      tab[, "RESI"] <- tab[, "t value"] / sqrt(n)
+    } else if ("z value" %in% colnames(tab)) {
+      tab[, "RESI"] <- tab[, "z value"] / sqrt(n)
+    }
+    pe_obj$coefficients <- tab
+  }
+  if (!is.null(pe_obj$anova)) {
+    tab <- pe_obj$anova
+    if ("F" %in% colnames(tab)) {
+      tab[, "RESI"] <- sqrt(tab[, "F"] * tab[, "Df"] / n)
+    } else if ("Chisq" %in% colnames(tab)) {
+      tab[, "RESI"] <- sqrt(tab[, "Chisq"] / n)
+    }
+    pe_obj$anova <- tab
+  }
+  pe_obj
+}
+
 # Compute per-term simulation metrics from a list of resi objects.
 # Returns a data.frame with rows = terms and columns = bias, mse, coverage, width.
 .simComputeMetrics <- function(reps, table_name, true_resi, ci_lo, ci_hi,
@@ -167,7 +196,8 @@ insurancePlasmodeSim <- function(nsim              = 1000L,
       m$call[["family"]]  <- .family
       m
     }
-    resi_pe(full_mod, data = insurance, vcovfunc = s$vcovfunc)
+    .simDirectRESI(resi_pe(full_mod, data = insurance, vcovfunc = s$vcovfunc),
+                   n = nrow(insurance))
   })
   names(true_vals) <- sapply(model_settings, `[[`, "label")
 
@@ -379,7 +409,8 @@ simRecomputeSummary <- function(output.dir = "resiBootSim",
       m$call[["family"]]  <- .family
       m
     }
-    resi_pe(full_mod, data = insurance, vcovfunc = s$vcovfunc)
+    .simDirectRESI(resi_pe(full_mod, data = insurance, vcovfunc = s$vcovfunc),
+                   n = nrow(insurance))
   })
   names(true_vals) <- sapply(model_settings, `[[`, "label")
 
