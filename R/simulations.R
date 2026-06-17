@@ -43,11 +43,18 @@
   diff_mat <- sweep(resi_mat, 2L, tv, "-")
   in_ci    <- sweep(lo_mat,   2L, tv, "<=") & sweep(hi_mat, 2L, tv, ">=")
 
+  # upper_coverage: P(hi >= tv) — CI upper bound is at or above the true value
+  # lower_coverage: P(lo <= tv) — CI lower bound is at or below the true value
+  upper_cov_mat <- sweep(hi_mat, 2L, tv, ">=")
+  lower_cov_mat <- sweep(lo_mat, 2L, tv, "<=")
+
   data.frame(
-    bias     = colMeans(diff_mat,           na.rm = TRUE),
-    mse      = colMeans(diff_mat ^ 2L,      na.rm = TRUE),
-    coverage = colMeans(in_ci,              na.rm = TRUE),
-    width    = colMeans(hi_mat - lo_mat,    na.rm = TRUE),
+    bias           = colMeans(diff_mat,           na.rm = TRUE),
+    mse            = colMeans(diff_mat ^ 2L,      na.rm = TRUE),
+    coverage       = colMeans(in_ci,              na.rm = TRUE),
+    upper_coverage = colMeans(upper_cov_mat,      na.rm = TRUE),
+    lower_coverage = colMeans(lower_cov_mat,      na.rm = TRUE),
+    width          = colMeans(hi_mat - lo_mat,    na.rm = TRUE),
     row.names = terms,
     stringsAsFactors = FALSE
   )
@@ -306,6 +313,145 @@ insurancePlasmodeSim <- function(nsim              = 1000L,
 
 
 # ============================================================
+#  simRecomputeSummary
+# ============================================================
+
+#' Recompute Summary Table from Raw Simulation Output
+#'
+#' Reads the per-replicate raw \code{.rds} files saved by
+#' \code{\link{insurancePlasmodeSim}} and recomputes the summary metrics table
+#' (bias, MSE, coverage, upper_coverage, lower_coverage, width).  Use this
+#' whenever \code{.simComputeMetrics} has been updated (e.g. new metrics added)
+#' without needing to rerun the full simulation.
+#'
+#' True RESI values are re-estimated from the full \code{\link{insurance}} dataset
+#' using the same formulae and variance functions as the original simulation.
+#'
+#' @param output.dir Character, directory containing simulation output.
+#'   Default \code{"resiBootSim"}.
+#' @param alpha Numeric, CI significance level used in the original simulation.
+#'   Default 0.05.
+#'
+#' @return Invisibly returns the updated summary \code{data.frame}.
+#'   Overwrites \code{output.dir/summary_table.rds}.
+#' @seealso \code{\link{insurancePlasmodeSim}}, \code{\link{simFigures}}
+#' @importFrom splines ns
+#' @importFrom sandwich vcovHC
+#' @importFrom stats lm glm vcov binomial
+#' @export
+simRecomputeSummary <- function(output.dir = "resiBootSim",
+                                 alpha      = 0.05) {
+
+  insurance <- RESI::insurance
+
+  ci_lo <- paste0(alpha / 2 * 100, "%")
+  ci_hi <- paste0((1 - alpha / 2) * 100, "%")
+
+  lm_formula  <- log10(charges) ~ splines::ns(age, df = 3) * sex + bmi + smoker + region
+  glm_formula <- I(charges > 15000) ~ splines::ns(age, df = 3) * sex + bmi + smoker + region
+
+  model_settings <- list(
+    list(type = "lm",  label = "lm_parametric",
+         formula = lm_formula,  family = NULL,
+         vcov_name = "parametric", vcovfunc = stats::vcov),
+    list(type = "lm",  label = "lm_robust",
+         formula = lm_formula,  family = NULL,
+         vcov_name = "robust",     vcovfunc = sandwich::vcovHC),
+    list(type = "glm", label = "glm_parametric",
+         formula = glm_formula, family = stats::binomial(),
+         vcov_name = "parametric", vcovfunc = stats::vcov),
+    list(type = "glm", label = "glm_robust",
+         formula = glm_formula, family = stats::binomial(),
+         vcov_name = "robust",     vcovfunc = sandwich::vcovHC)
+  )
+
+  message("Recomputing true RESI values from full insurance dataset...")
+  true_vals <- lapply(model_settings, function(s) {
+    .formula <- s$formula
+    .family  <- s$family
+    full_mod <- if (s$type == "lm") {
+      m <- lm(.formula, data = insurance)
+      m$call[["formula"]] <- .formula
+      m
+    } else {
+      m <- glm(.formula, data = insurance, family = .family)
+      m$call[["formula"]] <- .formula
+      m$call[["family"]]  <- .family
+      m
+    }
+    resi_pe(full_mod, data = insurance, vcovfunc = s$vcovfunc)
+  })
+  names(true_vals) <- sapply(model_settings, `[[`, "label")
+
+  sim_raw_dir <- file.path(output.dir, "sim_raw")
+  raw_files   <- list.files(sim_raw_dir, pattern = "\\.rds$", full.names = TRUE)
+  if (length(raw_files) == 0L)
+    stop("No raw .rds files found in: ", sim_raw_dir)
+
+  setting_labels <- sapply(model_settings, `[[`, "label")
+
+  all_metrics <- lapply(raw_files, function(f) {
+    fname <- sub("\\.rds$", "", basename(f))
+    n     <- suppressWarnings(as.integer(sub(".*_n", "", fname)))
+    label <- sub("_n[0-9]+$", "", fname)
+
+    s_idx <- which(setting_labels == label)
+    if (length(s_idx) == 0L || is.na(n)) {
+      warning("Could not parse setting/n from filename: ", basename(f))
+      return(NULL)
+    }
+    s  <- model_settings[[s_idx]]
+    tv <- true_vals[[s_idx]]
+
+    reps_raw  <- readRDS(f)
+    n_success <- length(reps_raw)
+    if (n_success == 0L) return(NULL)
+
+    anova_metrics <- .simComputeMetrics(reps_raw, "anova",
+                                         tv$anova, ci_lo, ci_hi,
+                                         exclude_rows = "Residuals")
+    coef_metrics  <- .simComputeMetrics(reps_raw, "coefficients",
+                                         tv$coefficients, ci_lo, ci_hi,
+                                         exclude_rows = "(Intercept)")
+
+    rows <- list()
+    if (!is.null(anova_metrics)) {
+      rows[["anova"]] <- data.frame(
+        model     = s$type,
+        vcov      = s$vcov_name,
+        n         = n,
+        n_success = n_success,
+        table     = "anova",
+        term      = rownames(anova_metrics),
+        anova_metrics,
+        row.names = NULL,
+        stringsAsFactors = FALSE
+      )
+    }
+    if (!is.null(coef_metrics)) {
+      rows[["coef"]] <- data.frame(
+        model     = s$type,
+        vcov      = s$vcov_name,
+        n         = n,
+        n_success = n_success,
+        table     = "coefficients",
+        term      = rownames(coef_metrics),
+        coef_metrics,
+        row.names = NULL,
+        stringsAsFactors = FALSE
+      )
+    }
+    do.call(rbind, rows)
+  })
+
+  summary_table <- do.call(rbind, Filter(Negate(is.null), all_metrics))
+  saveRDS(summary_table, file = file.path(output.dir, "summary_table.rds"))
+  message("Done. Updated summary_table.rds saved to: ", output.dir)
+  invisible(summary_table)
+}
+
+
+# ============================================================
 #  simFigures
 # ============================================================
 
@@ -386,66 +532,92 @@ simFigures <- function(output.dir = "resiBootSim",
              main_prefix = "Coef")
       )
 
-      # Layout: 2 rows × 5 cols; col 5 of each row is the legend panel.
-      # Panels fill sequentially: 1-4 (anova metrics), 5 (anova legend),
-      # 6-9 (coef metrics), 10 (coef legend).
+      # Layout: 4 rows × 5 cols; coverage column (col 3) is split into two
+      # half-height panels (upper coverage on top, lower coverage on bottom).
+      # Row 1:  1   2   3   4   5   (anova bias, mse, upper cov, width, legend)
+      # Row 2:  1   2   6   4   5   (spans continue; anova lower cov)
+      # Row 3:  7   8   9  10  11   (coef bias, mse, upper cov, width, legend)
+      # Row 4:  7   8  12  10  11   (spans continue; coef lower cov)
       grDevices::pdf(fig_path, width = 15, height = 7)
       graphics::layout(
-        matrix(seq_len(10), nrow = 2L, byrow = TRUE),
-        widths = c(rep(3, 4), 2.2)
+        matrix(c( 1,  2,  3,  4,  5,
+                  1,  2,  6,  4,  5,
+                  7,  8,  9, 10, 11,
+                  7,  8, 12, 10, 11), nrow = 4L, byrow = TRUE),
+        widths  = c(rep(3, 4), 2.2),
+        heights = c(1, 1, 1, 1)
       )
 
       for (ri in row_info) {
         sub_tbl <- sub[sub$table == ri$table, ]
-
-        # Legend cex: as large as possible while fitting all terms
         cex_leg <- min(1.0, 9 / length(ri$terms))
 
-        for (m_idx in seq_along(metrics)) {
-          metric <- metrics[m_idx]
-          mlab   <- metric_labels[m_idx]
-
-          y_all  <- sub_tbl[[metric]]
-          ylim   <- range(y_all, na.rm = TRUE)
-          if (metric == "coverage") {
-            ylim <- range(c(ylim, 1 - alpha - 0.05, 1 + 0.02))
-          }
-          if (metric == "bias") {
-            ylim <- range(c(ylim, 0))  # ensure zero is visible
-          }
-
-          graphics::par(mar = c(2.8, 2.8, 1.8, 0.4), mgp = c(1.7, 0.45, 0))
-          graphics::plot(
-            NULL,
-            xlim = range(n_vals), ylim = ylim,
-            xlab = "Sample Size",
-            ylab = mlab,
-            main = paste(toupper(mtype), ri$main_prefix, mlab,
-                         paste0("(", vtype, ")")),
-            log  = "x",
-            xaxt = "n",
-            bty  = "l"
-          )
-          graphics::axis(1, at = n_vals, labels = n_vals, las = 2L,
-                         mgp = c(1.7, 0.35, 0))
-
-          if (metric == "coverage") {
-            graphics::abline(h = 1 - alpha, lty = 2L, col = "gray40")
-          }
-          if (metric == "bias") {
-            graphics::abline(h = 0, lty = 2L, col = "gray40")
-          }
-
+        # Helper: draw lines/points for all terms for a given metric
+        draw_lines <- function(metric) {
           for (term in ri$terms) {
             td <- sub_tbl[sub_tbl$term == term, ]
             td <- td[order(td$n), ]
-            graphics::lines(td$n,  td[[metric]], col = ri$cols[term], lwd = 2)
-            graphics::points(td$n, td[[metric]], col = ri$cols[term], pch = 16,
+            graphics::lines(td$n,  td[[metric]], col = ri$cols[term], lwd = 2L)
+            graphics::points(td$n, td[[metric]], col = ri$cols[term], pch = 16L,
                              cex = 0.8)
           }
         }
 
-        # Legend panel — minimal margins, maximise font size
+        # Shared y-range for both coverage sub-panels
+        cov_ylim <- range(
+          c(sub_tbl[["upper_coverage"]], sub_tbl[["lower_coverage"]],
+            1 - alpha/2 - 0.02, 1.01),
+          na.rm = TRUE
+        )
+
+        # --- Panel: Bias ---
+        ylim <- range(c(sub_tbl[["bias"]], 0), na.rm = TRUE)
+        graphics::par(mar = c(2.8, 2.8, 1.8, 0.4), mgp = c(1.7, 0.45, 0))
+        graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
+                       xlab = "Sample Size", ylab = "Bias",
+                       main = paste(toupper(mtype), ri$main_prefix, "Bias",
+                                    paste0("(", vtype, ")")),
+                       log = "x", xaxt = "n", bty = "l")
+        graphics::axis(1, at = n_vals, labels = n_vals, las = 2L,
+                       mgp = c(1.7, 0.35, 0))
+        graphics::abline(h = 0, lty = 2L, col = "gray40")
+        draw_lines("bias")
+
+        # --- Panel: MSE ---
+        ylim <- range(sub_tbl[["mse"]], na.rm = TRUE)
+        graphics::par(mar = c(2.8, 2.8, 1.8, 0.4), mgp = c(1.7, 0.45, 0))
+        graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
+                       xlab = "Sample Size", ylab = "MSE",
+                       main = paste(toupper(mtype), ri$main_prefix, "MSE",
+                                    paste0("(", vtype, ")")),
+                       log = "x", xaxt = "n", bty = "l")
+        graphics::axis(1, at = n_vals, labels = n_vals, las = 2L,
+                       mgp = c(1.7, 0.35, 0))
+        draw_lines("mse")
+
+        # --- Panel: Upper Coverage (top half-panel, no x-axis) ---
+        graphics::par(mar = c(0.3, 2.8, 1.8, 0.4), mgp = c(1.7, 0.45, 0))
+        graphics::plot(NULL, xlim = range(n_vals), ylim = cov_ylim,
+                       xlab = "", ylab = "Upper Cov.",
+                       main = paste(toupper(mtype), ri$main_prefix, "Coverage",
+                                    paste0("(", vtype, ")")),
+                       log = "x", xaxt = "n", bty = "l")
+        graphics::abline(h = 1 - alpha/2, lty = 2L, col = "gray40")
+        draw_lines("upper_coverage")
+
+        # --- Panel: Width ---
+        ylim <- range(sub_tbl[["width"]], na.rm = TRUE)
+        graphics::par(mar = c(2.8, 2.8, 1.8, 0.4), mgp = c(1.7, 0.45, 0))
+        graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
+                       xlab = "Sample Size", ylab = "CI Width",
+                       main = paste(toupper(mtype), ri$main_prefix, "CI Width",
+                                    paste0("(", vtype, ")")),
+                       log = "x", xaxt = "n", bty = "l")
+        graphics::axis(1, at = n_vals, labels = n_vals, las = 2L,
+                       mgp = c(1.7, 0.35, 0))
+        draw_lines("width")
+
+        # --- Legend panel (spans both coverage half-rows) ---
         graphics::par(mar = c(0.5, 0.3, 0.5, 0.3))
         graphics::plot.new()
         graphics::legend(
@@ -459,6 +631,17 @@ simFigures <- function(output.dir = "resiBootSim",
           title  = paste(ri$main_prefix, "terms"),
           title.font = 2L
         )
+
+        # --- Panel: Lower Coverage (bottom half-panel, with x-axis) ---
+        graphics::par(mar = c(2.8, 2.8, 0.3, 0.4), mgp = c(1.7, 0.45, 0))
+        graphics::plot(NULL, xlim = range(n_vals), ylim = cov_ylim,
+                       xlab = "Sample Size", ylab = "Lower Cov.",
+                       main = "",
+                       log = "x", xaxt = "n", bty = "l")
+        graphics::axis(1, at = n_vals, labels = n_vals, las = 2L,
+                       mgp = c(1.7, 0.35, 0))
+        graphics::abline(h = 1 - alpha/2, lty = 2L, col = "gray40")
+        draw_lines("lower_coverage")
       }
 
       grDevices::dev.off()

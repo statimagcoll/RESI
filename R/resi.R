@@ -222,91 +222,116 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
   }
 
   alpha.order = sort(c(alpha/2, 1-alpha/2))
+  ci_names    = paste(alpha.order * 100, "%", sep = "")
+
+  # Pivot (basic/reflected) bootstrap CI:
+  #   [2*pe - Q_{1-alpha/2}(boot*),  2*pe - Q_{alpha/2}(boot*)]
+  # Corrects for skewness in the bootstrap distribution (Hall 1992).
+
+  # 1-term pivot CI: returns named vector of length 2 (lower, upper).
+  .pci1 = function(bv, pe) {
+    q = quantile(bv, probs = rev(alpha.order), na.rm = TRUE)
+    setNames(2 * pe - q, ci_names)
+  }
+  # Multi-term pivot CI: returns matrix (terms x 2) with colnames = ci_names.
+  .pciN = function(bm, pe_vec, out_names = ci_names) {
+    q  = apply(bm, 2, quantile, probs = rev(alpha.order), na.rm = TRUE)
+    ci = t(sweep(-q, 2, 2 * pe_vec, "+"))
+    colnames(ci) = out_names
+    ci
+  }
 
   if (!long){
     if (overall & !is.null(output$overall)){
+      pe_ov = output$overall[nrow(output$overall), "RESI"]
       if(nrow(output$overall) == 1){
         names.overall = colnames(output$overall)
-        for (i in 1:length(alpha.order)){
-          output$overall = cbind(output$overall, quantile(boot.results[,1],
-                                                          probs = alpha.order[i], na.rm = TRUE))
+        ci_ov = .pci1(boot.results[,1], pe_ov)
+        for (i in seq_along(alpha.order)){
+          output$overall = cbind(output$overall, ci_ov[i])
         }
-        colnames(output$overall) = c(names.overall, paste(alpha.order*100, "%", sep=""))
+        colnames(output$overall) = c(names.overall, ci_names)
       } else{
-        output$overall[nrow(output$overall),paste(alpha.order*100, "%", sep="")] =
-          quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)}
+        output$overall[nrow(output$overall), ci_names] =
+          .pci1(boot.results[,1], pe_ov)
+      }
     }
 
     if (coefficients){
-      co = boot.results[,(1+!(is.null(output$overall))):((!is.null(output$overall))+nrow(output$coefficients))]
+      co    = boot.results[,(1+!(is.null(output$overall))):((!is.null(output$overall))+nrow(output$coefficients))]
+      pe_co = output$coefficients[, "RESI"]
       if (is.null(dim(co))){
-        CIs = quantile(co, probs = alpha.order, na.rm = TRUE)
+        CIs = t(as.matrix(.pci1(co, pe_co[1L])))
       } else{
-        CIs = apply(co, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+        CIs = .pciN(co, pe_co[seq_len(ncol(co))])
       }
-      CIs = t(CIs)
-      output$coefficients[1:nrow(CIs), paste(alpha.order*100, "%", sep="")] = CIs
+      output$coefficients[1:nrow(CIs), ci_names] = CIs
     }
 
     if (anova){
-      an = boot.results[,(ncol(boot.results)-length(which(rownames(output$anova) != "Residuals"))+1):ncol(boot.results)]
+      an_rows = which(rownames(output$anova) != "Residuals")
+      an      = boot.results[,(ncol(boot.results) - length(an_rows) + 1):ncol(boot.results)]
+      pe_an   = output$anova[an_rows, "RESI"]
       if (is.null(dim(an))){
-        CIs = quantile(an, probs = alpha.order, na.rm = TRUE)
+        CIs = t(as.matrix(.pci1(an, pe_an[1L])))
       } else{
-        CIs = apply(an, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+        CIs = .pciN(an, pe_an[seq_len(ncol(an))])
       }
-      CIs = t(CIs)
-      output$anova[1:nrow(CIs), paste(alpha.order*100, "%", sep="")] = CIs
+      output$anova[1:nrow(CIs), ci_names] = CIs
     }
   } else {
+    l_ci_names  = paste("L ",  alpha.order * 100, "%", sep = "")
+    cs_ci_names = paste("CS ", alpha.order * 100, "%", sep = "")
     r = 1
     if (!is.null(output$overall)){
       # L-RESI for geeglm model overall Wald test
-      output$overall[nrow(output$overall),paste("L ",alpha.order*100, "%", sep="")] =
-        quantile(boot.results[,1], probs = alpha.order, na.rm = TRUE)
+      pe_ov = output$overall[nrow(output$overall), "L-RESI"]
+      output$overall[nrow(output$overall), l_ci_names] =
+        .pci1(boot.results[,1], pe_ov)
       r = 2
     }
     # L-RESI and CS-RESI for longitudinal models
     if (coefficients){
-      lco = boot.results[,r:(nrow(output$coefficients) + r -1)]
+      lco    = boot.results[,r:(nrow(output$coefficients) + r - 1)]
+      pe_lco = output$coefficients[, "L-RESI"]
       if (is.null(dim(lco))){
-        lCIs = quantile(lco, probs = alpha.order, na.rm = TRUE)
+        lCIs = t(as.matrix(.pci1(lco, pe_lco[1L])))
       } else{
-        lCIs = apply(lco, 2,  quantile,
-                     probs = alpha.order, na.rm = TRUE)
+        lCIs = .pciN(lco, pe_lco[seq_len(ncol(lco))], l_ci_names)
       }
-      lCIs = t(lCIs)
-      output$coefficients[1:nrow(lCIs), paste("L ",alpha.order*100, "%", sep="")] = lCIs
-      cco = boot.results[,(nrow(output$coefficients)+r):(2*nrow(output$coefficients) + r - 1)]
+      output$coefficients[1:nrow(lCIs), l_ci_names] = lCIs
+
+      cco    = boot.results[,(nrow(output$coefficients)+r):(2*nrow(output$coefficients) + r - 1)]
+      pe_cco = output$coefficients[, "CS-RESI"]
       if (is.null(dim(cco))){
-        cCIs = quantile(cco, probs = alpha.order, na.rm = TRUE)
+        cCIs = t(as.matrix(.pci1(cco, pe_cco[1L])))
       } else{
-        cCIs = apply(cco, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+        cCIs = .pciN(cco, pe_cco[seq_len(ncol(cco))], cs_ci_names)
       }
-      cCIs = t(cCIs)
-      output$coefficients[1:nrow(cCIs), paste("CS ",alpha.order*100, "%", sep="")] = cCIs
+      output$coefficients[1:nrow(cCIs), cs_ci_names] = cCIs
     }
 
     if (anova){
-      lan = boot.results[,(ncol(boot.results)-
-                             2*length(rownames(output$anova))+1):
-                           (ncol(boot.results)-length(rownames(output$anova)))]
+      lan    = boot.results[,(ncol(boot.results)-
+                               2*length(rownames(output$anova))+1):
+                             (ncol(boot.results)-length(rownames(output$anova)))]
+      pe_lan = output$anova[, "L-RESI"]
       if (is.null(dim(lan))){
-        lCIs = quantile(lan, probs = alpha.order, na.rm = TRUE)
+        lCIs = t(as.matrix(.pci1(lan, pe_lan[1L])))
       } else{
-        lCIs = apply(lan, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+        lCIs = .pciN(lan, pe_lan[seq_len(ncol(lan))], l_ci_names)
       }
-      lCIs = t(lCIs)
-      output$anova[1:nrow(lCIs), paste("L ", alpha.order*100, "%", sep="")] = lCIs
-      can = boot.results[,(ncol(boot.results)-length(rownames(output$anova))+1):
-                           ncol(boot.results)]
+      output$anova[1:nrow(lCIs), l_ci_names] = lCIs
+
+      can    = boot.results[,(ncol(boot.results)-length(rownames(output$anova))+1):
+                              ncol(boot.results)]
+      pe_can = output$anova[, "CS-RESI"]
       if (is.null(dim(can))){
-        cCIs = quantile(can, probs = alpha.order, na.rm = TRUE)
+        cCIs = t(as.matrix(.pci1(can, pe_can[1L])))
       } else{
-        cCIs = apply(can, 2,  quantile, probs = alpha.order, na.rm = TRUE)
+        cCIs = .pciN(can, pe_can[seq_len(ncol(can))], cs_ci_names)
       }
-      cCIs = t(cCIs)
-      output$anova[1:nrow(cCIs), paste("CS ", alpha.order*100, "%", sep="")] = cCIs
+      output$anova[1:nrow(cCIs), cs_ci_names] = cCIs
     }
   }
 
