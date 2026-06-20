@@ -8,7 +8,12 @@
 #' @param coefficients Logical, whether to produce a coefficients (summary) table with the RESI columns added. By default = `TRUE`.
 #' @param anova Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.
 #' @param overall Logical, whether to produce an overall Wald test comparing full to reduced model with RESI columns added. By default = `TRUE`.
-#' @param nboot Numeric, the number of bootstrap replicates. By default, 1000.
+#' @param ci.method Character, the method used to compute confidence intervals.
+#'   One of `"boot"` (bootstrap, default), `"normal"` (delta-method normal approximation),
+#'   or `"qf"` (quadratic form inversion). See `resi_pe_asymptotic` for details on
+#'   the asymptotic methods.
+#' @param nboot Numeric, the number of bootstrap replicates. Used only when
+#'   `ci.method = "boot"`. By default, 1000.
 #' @param boot.method String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.
 #' @param alpha Numeric, significance level of the constructed CIs. By default, 0.05.
 #' @param store.boot Logical, whether to store all the bootstrapped estimates. By default, `FALSE`.
@@ -156,7 +161,11 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
                          vcov.args = list(), unbiased = TRUE,
                          parallel = c("no", "multicore", "snow"),
                          ncpus = getOption("boot.ncpus", 1L), long = FALSE,
-                         clvar = NULL, ...){
+                         clvar = NULL,
+                         ci.method = c("boot", "normal", "qf"),
+                         ...){
+
+  ci.method <- match.arg(ci.method)
 
   # check for supported model type
   if(!(any(class(model.full) %in%
@@ -204,6 +213,57 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   if (long){
     data = unique(data[, clvar])
+  }
+
+  # ---- asymptotic CIs (skip bootstrap) ----
+  if (ci.method != "boot") {
+    asym_out <- tryCatch(
+      resi_pe_asymptotic(model.full   = model.full,
+                         data         = data,
+                         vcovfunc     = vcovfunc,
+                         coefficients = coefficients,
+                         anova        = anova,
+                         alpha        = alpha,
+                         ci.method    = ci.method,
+                         unbiased     = unbiased,
+                         Anova.args   = Anova.args,
+                         vcov.args    = vcov.args),
+      error = function(e) {
+        warning("Asymptotic CI computation failed: ", conditionMessage(e),
+                "\nFalling back to bootstrap.")
+        NULL
+      }
+    )
+    if (!is.null(asym_out)) {
+      alpha.order <- sort(c(alpha / 2, 1 - alpha / 2))
+      ci_cols     <- paste0(alpha.order * 100, "%")
+      if (coefficients && !is.null(output$coefficients) && !is.null(asym_out$coefficients)) {
+        # Match row names and add CI columns
+        rn <- rownames(output$coefficients)
+        rn_asym <- rownames(asym_out$coefficients)
+        for (col in ci_cols) {
+          if (col %in% colnames(asym_out$coefficients)) {
+            output$coefficients[rn %in% rn_asym, col] <-
+              asym_out$coefficients[rn_asym %in% rn, col]
+          }
+        }
+      }
+      if (anova && !is.null(output$anova) && !is.null(asym_out$anova)) {
+        rn <- rownames(output$anova)
+        rn_asym <- rownames(asym_out$anova)
+        for (col in ci_cols) {
+          if (col %in% colnames(asym_out$anova)) {
+            output$anova[rn %in% rn_asym, col] <-
+              asym_out$anova[rn_asym %in% rn, col]
+          }
+        }
+      }
+      output$ci.method <- ci.method
+      class(output) <- "resi"
+      return(output)
+    }
+    # if we fell through (error), continue to bootstrap
+    ci.method <- "boot"
   }
 
   # bootstrapping

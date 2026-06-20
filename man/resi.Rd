@@ -39,6 +39,7 @@ resi(model.full, ...)
   ncpus = getOption("boot.ncpus", 1L),
   long = FALSE,
   clvar = NULL,
+  ci.method = c("boot", "normal", "qf"),
   ...
 )
 
@@ -261,7 +262,8 @@ resi(model.full, ...)
 
 \item{overall}{Logical, whether to produce an overall Wald test comparing full to reduced model with RESI columns added. By default = `TRUE`.}
 
-\item{nboot}{Numeric, the number of bootstrap replicates. By default, 1000.}
+\item{nboot}{Numeric, the number of bootstrap replicates. Used only when
+`ci.method = "boot"`. By default, 1000.}
 
 \item{boot.method}{String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.}
 
@@ -284,6 +286,11 @@ resi(model.full, ...)
 \item{long}{Logical, whether the data is longitudinal/clustered. By default, `FALSE`.}
 
 \item{clvar}{Character, the name of the cluster/id variable if data is clustered. By default, `NULL`.}
+
+\item{ci.method}{Character, the method used to compute confidence intervals.
+One of `"boot"` (bootstrap, default), `"normal"` (delta-method normal approximation),
+or `"qf"` (quadratic form inversion). See `resi_pe_asymptotic` for details on
+the asymptotic methods.}
 }
 \value{
 Returns a list that includes function arguments, RESI point estimates,

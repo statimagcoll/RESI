@@ -36,6 +36,7 @@ Collate:
   'print.R'
   'omnibus.R'
   'simulations.R'
+  'resi_asymptotic.R'
 Imports:
     aod,
     boot,
@@ -48,6 +49,7 @@ Imports:
     sandwich,
     splines
 Suggests:
+    CompQuadForm,
     gee,
     geepack,
     glmmTMB,

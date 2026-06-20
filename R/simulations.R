@@ -121,10 +121,16 @@
 #' @param n.vec Integer vector of sample sizes. Default
 #'   \code{c(50, 100, 200, 500, 1000, 2000, 5000)}.
 #' @param nboot Integer, bootstrap replicates per internal \code{\link{resi}} call.
-#'   Default 500. Use 10 for initial testing.
+#'   Default 500. Use 10 for initial testing. Ignored when \code{ci.method != "boot"}.
 #' @param alpha Numeric, CI significance level. Default 0.05.
+#' @param ci.method Character, CI method passed to \code{\link{resi}}. One of
+#'   \code{"boot"} (bootstrap, default), \code{"normal"} (asymptotic truncated-normal),
+#'   or \code{"qf"} (asymptotic quadratic-form / Imhof). When \code{ci.method != "boot"},
+#'   \code{nboot} is ignored.
 #' @param output.dir Character, path to the directory where all results are saved.
-#'   Created if it does not exist. Default \code{"resiBootSim"}.
+#'   Created if it does not exist. Defaults to \code{"resiBootSim"},
+#'   \code{"resiAsympNormalSim"}, or \code{"resiAsympQFSim"} based on
+#'   \code{ci.method} when \code{NULL}.
 #' @param mc.cores.settings Integer, cores for the outer
 #'   \code{mclapply} over (setting \eqn{\times} sample size) combinations. Default 1.
 #' @param mc.cores.reps Integer, cores for the inner \code{mclapply} over simulation
@@ -137,19 +143,30 @@
 #'   \item \code{output.dir/summary_table.rds}: combined metrics table with columns
 #'     \code{model, vcov, n, n_success, table, term, bias, mse, coverage, width}.
 #' }
-#' @seealso \code{\link{simFigures}}, \code{\link{resi}}, \code{\link{resi_pe}}
+#' @seealso \code{\link{simFigures}}, \code{\link{simCompareMethodsFigures}},
+#'   \code{\link{resi}}, \code{\link{resi_pe}}
 #' @importFrom parallel mclapply
 #' @importFrom splines ns
 #' @importFrom sandwich vcovHC
-#' @importFrom stats lm glm vcov binomial sample
+#' @importFrom stats lm glm vcov binomial
 #' @export
 insurancePlasmodeSim <- function(nsim              = 1000L,
                                   n.vec             = c(50, 100, 200, 500, 1000, 2000, 5000),
                                   nboot             = 500L,
                                   alpha             = 0.05,
-                                  output.dir        = "resiBootSim",
+                                  ci.method         = c("boot", "normal", "qf"),
+                                  output.dir        = NULL,
                                   mc.cores.settings = 1L,
                                   mc.cores.reps     = 1L) {
+
+  ci.method <- match.arg(ci.method)
+  if (is.null(output.dir)) {
+    output.dir <- switch(ci.method,
+      boot   = "resiBootSim",
+      normal = "resiAsympNormalSim",
+      qf     = "resiAsympQFSim"
+    )
+  }
 
   insurance <- RESI::insurance
 
@@ -263,7 +280,7 @@ insurancePlasmodeSim <- function(nsim              = 1000L,
 
       tryCatch(
         resi(mod, data = sample_data, nboot = nboot, vcovfunc = s$vcovfunc,
-             alpha = alpha, store.boot = FALSE),
+             alpha = alpha, store.boot = FALSE, ci.method = ci.method),
         error = function(e) NULL
       )
     }, mc.cores = mc.cores.reps)
@@ -681,4 +698,161 @@ simFigures <- function(output.dir = "resiBootSim",
   }
 
   invisible(summary_table)
+}
+
+
+# ============================================================
+#  simCompareMethodsFigures
+# ============================================================
+
+#' Per-Term CI Method Comparison Figures
+#'
+#' Reads simulation summary tables from multiple output directories (one per CI
+#' method) and produces one PDF figure per (model type \eqn{\times} variance
+#' estimator \eqn{\times} table \eqn{\times} term) combination. Each figure
+#' shows the standard performance metrics (Bias, MSE, Upper Coverage, Lower
+#' Coverage, CI Width) across sample sizes, with one colored line per CI method.
+#'
+#' @param output.dirs Named character vector mapping CI method labels to their
+#'   simulation output directories. Default:
+#'   \code{c(boot = "resiBootSim", normal = "resiAsympNormalSim", qf = "resiAsympQFSim")}.
+#'   Directories that do not exist are silently skipped.
+#' @param figures.dir Character, directory where comparison figures are saved.
+#'   Default: \code{file.path(output.dirs[1], "figures", "method_comparison")}.
+#' @param alpha Numeric, nominal CI level used for coverage reference lines.
+#'   Default 0.05.
+#'
+#' @return Invisibly returns the combined summary \code{data.frame}. Saves one PDF
+#'   per (model \eqn{\times} vcov \eqn{\times} table \eqn{\times} term) to
+#'   \code{figures.dir}, named
+#'   \code{compare_<model>_<vcov>_<table>_<term>.pdf}.
+#' @seealso \code{\link{insurancePlasmodeSim}}, \code{\link{simFigures}}
+#' @importFrom grDevices pdf dev.off
+#' @importFrom graphics plot lines points abline legend par axis plot.new
+#' @export
+simCompareMethodsFigures <- function(
+    output.dirs = c(boot   = "resiBootSim",
+                    normal = "resiAsympNormalSim",
+                    qf     = "resiAsympQFSim"),
+    figures.dir = NULL,
+    alpha       = 0.05) {
+
+  method_names <- names(output.dirs)
+  if (is.null(method_names) || any(method_names == ""))
+    stop("output.dirs must be a named vector (names = CI method labels)")
+
+  if (is.null(figures.dir))
+    figures.dir <- file.path(output.dirs[[1]], "figures", "method_comparison")
+  dir.create(figures.dir, recursive = TRUE, showWarnings = FALSE)
+
+  # Read and merge tables, skipping missing directories
+  tables <- lapply(seq_along(output.dirs), function(i) {
+    f <- file.path(output.dirs[[i]], "summary_table.rds")
+    if (!file.exists(f)) {
+      warning("summary_table.rds not found in: ", output.dirs[[i]], " -- skipping")
+      return(NULL)
+    }
+    tbl <- readRDS(f)
+    tbl$ci_method <- method_names[[i]]
+    tbl
+  })
+  tables <- Filter(Negate(is.null), tables)
+  if (length(tables) == 0L) stop("No valid summary tables found")
+  combined <- do.call(rbind, tables)
+
+  # Keep only methods that were successfully loaded, in supplied order
+  avail_methods <- intersect(method_names, unique(combined$ci_method))
+
+  # High-contrast palette per method
+  base_cols <- c("#1F77B4", "#D62728", "#2CA02C", "#FF7F0E", "#9467BD")
+  method_cols <- setNames(base_cols[seq_along(avail_methods)], avail_methods)
+
+  n_vals        <- sort(unique(combined$n))
+  metrics       <- c("bias", "mse", "upper_coverage", "lower_coverage", "width")
+  metric_labels <- c("Bias", "MSE", "Upper Cov.", "Lower Cov.", "CI Width")
+  metric_refs   <- list(
+    bias           = list(h = 0,           col = "gray40"),
+    mse            = NULL,
+    upper_coverage = list(h = 1 - alpha/2, col = "gray40"),
+    lower_coverage = list(h = 1 - alpha/2, col = "gray40"),
+    width          = NULL
+  )
+
+  for (mtype in c("lm", "glm")) {
+    for (vtype in c("parametric", "robust")) {
+      for (tbl_name in c("anova", "coefficients")) {
+
+        sub <- combined[
+          combined$model == mtype &
+          combined$vcov  == vtype &
+          combined$table == tbl_name, ]
+        if (nrow(sub) == 0L) next
+
+        for (term in unique(sub$term)) {
+          term_data <- sub[sub$term == term, ]
+
+          safe_term <- gsub("[^a-zA-Z0-9_]", "_", term)
+          fig_path  <- file.path(
+            figures.dir,
+            paste0("compare_", mtype, "_", vtype, "_",
+                   tbl_name, "_", safe_term, ".pdf")
+          )
+
+          # Layout: 5 metric panels + 1 narrow legend panel
+          grDevices::pdf(fig_path, width = 15, height = 3.5)
+          graphics::layout(
+            matrix(seq_len(length(metrics) + 1L), nrow = 1L),
+            widths = c(rep(2.8, length(metrics)), 1.8)
+          )
+          graphics::par(mar = c(3.2, 3.0, 2.2, 0.5), mgp = c(1.8, 0.5, 0))
+
+          for (mi in seq_along(metrics)) {
+            m   <- metrics[[mi]]
+            ref <- metric_refs[[m]]
+
+            ylim <- range(term_data[[m]], na.rm = TRUE)
+            if (!is.null(ref))
+              ylim <- range(c(ylim, ref$h - 0.02, ref$h + 0.01))
+
+            graphics::plot(
+              NULL,
+              xlim = range(n_vals), ylim = ylim,
+              xlab = "Sample Size", ylab = metric_labels[[mi]],
+              main = paste0(toupper(mtype), " ", tbl_name, " (", vtype, ")\n", term),
+              log  = "x", xaxt = "n", bty = "l"
+            )
+            graphics::axis(1, at = n_vals, labels = n_vals, las = 2L,
+                           mgp = c(1.7, 0.35, 0))
+            if (!is.null(ref))
+              graphics::abline(h = ref$h, lty = 2L, col = ref$col)
+
+            for (meth in avail_methods) {
+              md <- term_data[term_data$ci_method == meth, ]
+              md <- md[order(md$n), ]
+              if (nrow(md) == 0L) next
+              graphics::lines(md$n,  md[[m]], col = method_cols[[meth]], lwd = 2L)
+              graphics::points(md$n, md[[m]], col = method_cols[[meth]],
+                               pch = 16L, cex = 0.8)
+            }
+          }
+
+          # Legend panel
+          graphics::par(mar = c(0.5, 0.3, 0.5, 0.3))
+          graphics::plot.new()
+          graphics::legend(
+            "center",
+            legend = avail_methods,
+            col    = method_cols[avail_methods],
+            lwd    = 2L, pch = 16L, bty = "n", cex = 0.95,
+            title  = "CI method", title.font = 2L
+          )
+
+          grDevices::dev.off()
+        }
+      }
+    }
+  }
+
+  message("Comparison figures saved to: ", figures.dir)
+  invisible(combined)
 }
