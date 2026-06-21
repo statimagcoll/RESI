@@ -632,7 +632,7 @@ simFigures <- function(output.dir = "resiBootSim",
         draw_lines("bias")
 
         # --- Panel: MSE ---
-        ylim <- range(sub_tbl[["mse"]], na.rm = TRUE)
+        ylim <- if (any(is.finite(sub_tbl[["mse"]]))) range(sub_tbl[["mse"]], na.rm = TRUE) else c(0, 1)
         graphics::par(mar = c(2.8, 2.8, 1.8, 0.4), mgp = c(1.7, 0.45, 0))
         graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
                        xlab = "Sample Size", ylab = "MSE",
@@ -654,7 +654,7 @@ simFigures <- function(output.dir = "resiBootSim",
         draw_lines("upper_coverage")
 
         # --- Panel: Width ---
-        ylim <- range(sub_tbl[["width"]], na.rm = TRUE)
+        ylim <- if (any(is.finite(sub_tbl[["width"]]))) range(sub_tbl[["width"]], na.rm = TRUE) else c(0, 1)
         graphics::par(mar = c(2.8, 2.8, 1.8, 0.4), mgp = c(1.7, 0.45, 0))
         graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
                        xlab = "Sample Size", ylab = "CI Width",
