@@ -331,10 +331,6 @@
 #' Quadratic-form Imhof CI (anova, m1 >= 1)
 #' @noRd
 .resi_ci_qf <- function(contrast, alpha = 0.05) {
-  if (!requireNamespace("CompQuadForm", quietly = TRUE)) {
-    stop("Package 'CompQuadForm' is required for ci.method='qf'. Install it with install.packages('CompQuadForm').")
-  }
-
   Sigma_R <- contrast$Sigma_R
   R_beta  <- contrast$R_beta
   Stilde  <- contrast$Stilde
@@ -555,6 +551,7 @@
 #' @return A list of class \code{"resi"} with \code{coefficients} and/or
 #'   \code{anova} tables containing RESI point estimates and CIs.
 #' @importFrom sandwich vcovHC estfun
+#' @importFrom CompQuadForm imhof
 #' @importFrom car Anova
 #' @importFrom lmtest coeftest
 #' @importFrom stats coef hatvalues residuals fitted weights qnorm qchisq pchisq

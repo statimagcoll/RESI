@@ -42,6 +42,7 @@ Imports:
     boot,
     car,
     clubSandwich,
+    CompQuadForm,
     ggplot2,
     lmtest,
     nlme,
@@ -49,7 +50,6 @@ Imports:
     sandwich,
     splines
 Suggests:
-    CompQuadForm,
     gee,
     geepack,
     glmmTMB,
