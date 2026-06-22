@@ -30,11 +30,15 @@
 #   Chisq   -> S = sqrt(chisq / n)      (no df subtraction)
 # This treats the full-dataset test statistics as the true population parameters
 # rather than using small-sample-corrected estimators from resi_pe.
-.simDirectRESI <- function(pe_obj, n) {
+.simDirectRESI <- function(pe_obj, n, rdf = NULL) {
   if (!is.null(pe_obj$coefficients)) {
     tab <- pe_obj$coefficients
     if ("t value" %in% colnames(tab)) {
-      tab[, "RESI"] <- tab[, "t value"] / sqrt(n)
+      # For parametric lm, rdf = n-p is passed so that S_true = t/sqrt(rdf),
+      # which targets beta/sqrt(diag(n*(X'X)^{-1}*mean(resid^2))) -- the
+      # population RESI using sigma^2 = mean(resid^2) with no df correction.
+      denom <- if (!is.null(rdf)) sqrt(rdf) else sqrt(n)
+      tab[, "RESI"] <- tab[, "t value"] / denom
     } else if ("z value" %in% colnames(tab)) {
       tab[, "RESI"] <- tab[, "z value"] / sqrt(n)
     }
@@ -43,7 +47,9 @@
   if (!is.null(pe_obj$anova)) {
     tab <- pe_obj$anova
     if ("F" %in% colnames(tab)) {
-      tab[, "RESI"] <- sqrt(tab[, "F"] * tab[, "Df"] / n)
+      # Same logic: S_true = sqrt(F * df / rdf) when rdf is supplied.
+      denom <- if (!is.null(rdf)) rdf else n
+      tab[, "RESI"] <- sqrt(tab[, "F"] * tab[, "Df"] / denom)
     } else if ("Chisq" %in% colnames(tab)) {
       tab[, "RESI"] <- sqrt(tab[, "Chisq"] / n)
     }
@@ -213,8 +219,22 @@ insurancePlasmodeSim <- function(nsim              = 1000L,
       m$call[["family"]]  <- .family
       m
     }
-    .simDirectRESI(resi_pe(full_mod, data = insurance, vcovfunc = s$vcovfunc),
-                   n = nrow(insurance))
+    # Robust true values: use HC0 (no hat-value correction) so that the
+    # small-sample inflation from HC3 hat weights does not enter S_true.
+    # Parametric lm true values: pass rdf = n-p so that S_true = t/sqrt(rdf),
+    # targeting sigma^2 = mean(resid^2) (population value, no df correction).
+    true_vcovfunc <- if (s$vcov_name == "robust") {
+      function(x) sandwich::vcovHC(x, type = "HC0")
+    } else {
+      s$vcovfunc
+    }
+    rdf_true <- if (s$type == "lm" && s$vcov_name == "parametric") {
+      full_mod$df.residual
+    } else {
+      NULL
+    }
+    .simDirectRESI(resi_pe(full_mod, data = insurance, vcovfunc = true_vcovfunc),
+                   n = nrow(insurance), rdf = rdf_true)
   })
   names(true_vals) <- sapply(model_settings, `[[`, "label")
 
@@ -426,8 +446,18 @@ simRecomputeSummary <- function(output.dir = "resiBootSim",
       m$call[["family"]]  <- .family
       m
     }
-    .simDirectRESI(resi_pe(full_mod, data = insurance, vcovfunc = s$vcovfunc),
-                   n = nrow(insurance))
+    true_vcovfunc <- if (s$vcov_name == "robust") {
+      function(x) sandwich::vcovHC(x, type = "HC0")
+    } else {
+      s$vcovfunc
+    }
+    rdf_true <- if (s$type == "lm" && s$vcov_name == "parametric") {
+      full_mod$df.residual
+    } else {
+      NULL
+    }
+    .simDirectRESI(resi_pe(full_mod, data = insurance, vcovfunc = true_vcovfunc),
+                   n = nrow(insurance), rdf = rdf_true)
   })
   names(true_vals) <- sapply(model_settings, `[[`, "label")
 
@@ -619,7 +649,8 @@ simFigures <- function(output.dir = "resiBootSim",
         )
 
         # --- Panel: Bias ---
-        ylim <- range(c(sub_tbl[["bias"]], 0), na.rm = TRUE)
+        bias_rows <- if (mtype == "glm") sub_tbl$n > 100 else rep(TRUE, nrow(sub_tbl))
+        ylim <- range(c(sub_tbl[bias_rows, "bias"], 0), na.rm = TRUE)
         graphics::par(mar = c(2.8, 2.8, 1.8, 0.4), mgp = c(1.7, 0.45, 0))
         graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
                        xlab = "Sample Size", ylab = "Bias",
@@ -632,7 +663,8 @@ simFigures <- function(output.dir = "resiBootSim",
         draw_lines("bias")
 
         # --- Panel: MSE ---
-        ylim <- if (any(is.finite(sub_tbl[["mse"]]))) range(sub_tbl[["mse"]], na.rm = TRUE) else c(0, 1)
+        mse_rows <- if (mtype == "glm") sub_tbl$n > 100 else rep(TRUE, nrow(sub_tbl))
+        ylim <- if (any(is.finite(sub_tbl[mse_rows, "mse"]))) range(sub_tbl[mse_rows, "mse"], na.rm = TRUE) else c(0, 1)
         graphics::par(mar = c(2.8, 2.8, 1.8, 0.4), mgp = c(1.7, 0.45, 0))
         graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
                        xlab = "Sample Size", ylab = "MSE",
@@ -654,7 +686,8 @@ simFigures <- function(output.dir = "resiBootSim",
         draw_lines("upper_coverage")
 
         # --- Panel: Width ---
-        ylim <- if (any(is.finite(sub_tbl[["width"]]))) range(sub_tbl[["width"]], na.rm = TRUE) else c(0, 1)
+        width_rows <- if (mtype == "glm") sub_tbl$n > 100 else rep(TRUE, nrow(sub_tbl))
+        ylim <- if (any(is.finite(sub_tbl[width_rows, "width"]))) range(sub_tbl[width_rows, "width"], na.rm = TRUE) else c(0, 1)
         graphics::par(mar = c(2.8, 2.8, 1.8, 0.4), mgp = c(1.7, 0.45, 0))
         graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
                        xlab = "Sample Size", ylab = "CI Width",
