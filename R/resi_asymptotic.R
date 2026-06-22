@@ -207,15 +207,19 @@
 #' @noRd
 #' @param precomp output of .resi_precompute()
 #' @param L_model contrast matrix in *beta* (coefficient) space (m1 x p)
+#' @param vcovmat_n Optional matrix n * vcovfunc(model) in beta space (p x p).
+#'   When supplied, used for Sigma_beta so that Stilde targets the same population
+#'   quantity as the vcovfunc-based point estimate. cov_theta (from precomp) is
+#'   still used for Sigma_R via the delta method.
 #' @return list with R_beta, Stilde, dR_dtheta (m1 x m), Sigma_R (m1 x m1),
 #'         beta_hat, Sigma_beta, m1
-.resi_contrast <- function(precomp, L_model) {
+.resi_contrast <- function(precomp, L_model, vcovmat_n = NULL) {
 
   m1     <- nrow(L_model)
   m      <- precomp$m
   n      <- precomp$n
   A_inv  <- precomp$A_inv
-  Sig    <- precomp$cov_theta     # m x m
+  Sig    <- precomp$cov_theta     # m x m  (used for Sigma_R)
   dA     <- precomp$dA_dtheta     # m^2 x m
   dB     <- precomp$dB_dtheta     # m^2 x m
 
@@ -223,9 +227,17 @@
   L <- if (precomp$lm_model) cbind(0, L_model) else L_model  # m1 x m
 
   # ---- point estimate ----
-  beta_hat   <- drop(L %*% precomp$theta_hat)         # m1
-  Sigma_beta <- L %*% Sig %*% t(L)                    # m1 x m1
-  Sigma_beta <- .resi_sym(Sigma_beta)
+  beta_hat <- drop(L %*% precomp$theta_hat)           # m1
+
+  # Sigma_beta: use vcovmat_n (vcovfunc-based, in beta space) when supplied so
+  # that Stilde is consistent with the vcovfunc-based RESI point estimate.
+  # Note: cov_theta[beta,beta] ≈ n * vcovHC, so for the default HC3 vcovfunc
+  # this is numerically transparent; it matters when vcovfunc != type.
+  Sigma_beta <- if (!is.null(vcovmat_n)) {
+    .resi_sym(L_model %*% vcovmat_n %*% t(L_model))
+  } else {
+    .resi_sym(L %*% Sig %*% t(L))
+  }
 
   # ---- EVD of Sigma_beta ----
   eig <- eigen(Sigma_beta, symmetric = TRUE)
@@ -632,7 +644,7 @@ resi_pe_asymptotic <- function(model.full,
     # asymptotic signed CIs
     ci_mat <- do.call(rbind, lapply(coef_names, function(cn) {
       L_mod  <- .get_L_coef(model, cn)
-      contr  <- tryCatch(.resi_contrast(precomp, L_mod),
+      contr  <- tryCatch(.resi_contrast(precomp, L_mod, vcovmat_n = n * vcovmat),
                          error = function(e) NULL)
       if (is.null(contr)) return(c(LCI = NA_real_, UCI = NA_real_))
       .resi_ci_normal_signed(contr, alpha = alpha)
@@ -680,7 +692,8 @@ resi_pe_asymptotic <- function(model.full,
       if (is.null(L_mod) || nrow(L_mod) == 0)
         return(c(LCI = NA_real_, UCI = NA_real_))
 
-      contr <- tryCatch(.resi_contrast(precomp, L_mod), error = function(e) NULL)
+      contr <- tryCatch(.resi_contrast(precomp, L_mod, vcovmat_n = n * vcovmat),
+                        error = function(e) NULL)
       if (is.null(contr)) return(c(LCI = NA_real_, UCI = NA_real_))
 
       if (ci.method == "qf") {
