@@ -381,14 +381,14 @@
 
   # Normal-approx SE of Stilde (for search interval sizing).
   # Delta-method: se_S = sqrt(u^T Sigma_R u / n), u = R_beta/Stilde.
-  # Under the null (Stilde -> 0), u is undefined and se_S collapses; but
-  # the SD of Stilde is bounded below by sqrt(lambda_1 / n), because
-  # sqrt(n)*Stilde >= sqrt(n)*|u_1^T hat_R_beta| where u_1 is the leading
-  # eigenvector of Sigma_R.  Use this as a floor.
+  # Under H0, n*Stilde^2 ~ chi^2_{m1}, so Var(Stilde) -> m1/(2n) * (2/m1) = 1/n
+  # giving SD(Stilde) ~ sqrt(m1/n) / sqrt(2) ... more precisely the SD of
+  # chi(m1)/sqrt(n) is sqrt(m1/n) (since Var(chi(m1)) ~ m1 for large m1).
+  # Use sqrt(m1/n) as a floor so the bracket is never degenerate near null.
   u_dir        <- if (Stilde > 0) R_beta / Stilde else eigR$vectors[, 1]
   sigma2S      <- as.numeric(t(u_dir) %*% Sigma_R %*% u_dir)
   se_S_delta   <- sqrt(pmax(sigma2S / n, .Machine$double.eps))
-  se_S_floor   <- sqrt(lambda[1] / n)
+  se_S_floor   <- sqrt(m1 / n)
   se_S         <- max(se_S_delta, se_S_floor)
 
   # nc_k = n * S_b^2 * delta_unit_k^2 / lambda_k  (non-centrality for chi^2_1 k-th term)
@@ -455,19 +455,23 @@
   }
 
   # ---- Upper bound ----
-  # When p0 = P(Q(0) >= T2_obs) >= 1-alpha/2, i.e. T2_obs falls in the lower
-  # alpha/2 tail of the null WCS, strict test inversion gives an empty upper set
-  # (prob_fn(S_b) is increasing in S_b, so it never drops to 1-alpha/2).
-  # Reporting [0, 0] is invalid because it need not contain Stilde.
-  # Fallback: use the (1-alpha) quantile of sqrt(Q_0/n) under the null.
-  # This is the natural QF analogue of using z*se_floor in the normal CI:
-  # for m1=1 the two are algebraically identical.  It is a null-distribution
-  # bound, not strict test inversion, but it is conservative and always > 0.
-  # The same fallback is used if the bracket search for the normal case fails.
+  # When p0 = P(Q(0) >= T2_obs) >= 1-alpha/2, T2_obs falls in the lower alpha/2
+  # tail of the null distribution. Strict test inversion gives an empty upper set
+  # because prob_fn is increasing and never drops to 1-alpha/2. Fallback: use the
+  # (1-alpha) quantile of Stilde under H0: n*Stilde^2 ~ chi^2_{m1}, so
+  # UCI_null = sqrt(qchisq(1-alpha, df=m1) / n). Same formula as the normal CI.
+  # The same fallback is used when the bracket search fails.
+  # Null upper bound: (1-alpha) quantile of Stilde under H0.
+  # Under H0, n*Stilde^2 ~ chi^2_{m1} asymptotically, so
+  # UCI_null = sqrt(qchisq(1-alpha, df=m1) / n).
+  UCI_null <- sqrt(qchisq(1 - alpha, df = m1) / n)
+
   if (p0 >= 1 - alpha / 2) {
-    UCI <- .resi_qf_null_upper(lambda, alpha, n, m1)
+    # T2_obs is in the lower alpha/2 tail of the null distribution;
+    # strict test inversion gives an empty upper set. Use the null upper bound.
+    UCI <- UCI_null
   } else {
-    # Normal case: uniroot in (Stilde, bracket_up) where prob_fn crosses 1-alpha/2
+    # Normal case: uniroot in (Shat, bracket_up) where prob_fn crosses 1-alpha/2
     upper_search <- Shat + se_S * c(3, 6, 12, 25, 50, 100) * qnorm(1 - alpha / 2)
     bracket_up   <- NA_real_
     for (up in upper_search) {
@@ -477,7 +481,7 @@
       }
     }
     if (is.na(bracket_up)) {
-      UCI <- .resi_qf_null_upper(lambda, alpha, n, m1)
+      UCI <- UCI_null
     } else {
       UCI <- tryCatch(
         uniroot(function(s) {
@@ -487,7 +491,7 @@
         },
                 lower = Shat, upper = bracket_up,
                 tol = se_S * 1e-3)$root,
-        error = function(e) .resi_qf_null_upper(lambda, alpha, n, m1)
+        error = function(e) UCI_null
       )
     }
   }
@@ -770,27 +774,6 @@ resi_pe_asymptotic <- function(model.full,
 #' @noRd
 .resi_safe_inv <- function(M) {
   tryCatch(chol2inv(chol(M)), error = function(e) solve(M))
-}
-
-#' (1-alpha) quantile of sqrt(Q_0/n) under the null, i.e. the one-sided upper
-#' bound when T2_obs is in the lower tail of the central weighted chi-square.
-#' For m1=1: exact via qchisq.  For m1>1: invert imhof.
-#' @noRd
-.resi_qf_null_upper <- function(lambda, alpha, n, m1) {
-  if (m1 == 1L) {
-    return(sqrt(lambda[1] * qchisq(1 - alpha, df = 1) / n))
-  }
-  # find q such that P(sum_k lambda_k Z_k^2 >= q) = alpha
-  # i.e. P(Q_0 <= q) = 1-alpha
-  q_upper <- sum(lambda) * qchisq(1 - alpha / 10, df = m1)  # generous upper bound
-  q_lo    <- .Machine$double.eps
-  q <- tryCatch(
-    uniroot(function(q)
-      suppressWarnings(CompQuadForm::imhof(q, lambda = lambda, delta = rep(0, m1))$Qq) - alpha,
-      lower = q_lo, upper = q_upper, tol = 1e-6)$root,
-    error = function(e) sum(lambda) * qchisq(1 - alpha, df = m1)   # fallback: equal-weight
-  )
-  sqrt(q / n)
 }
 
 #' Truncated CI for unsigned RESI (Algorithm 1, Zhang et al. 2025)
