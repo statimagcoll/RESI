@@ -458,4 +458,97 @@ test_that("overall = FALSE doesn't produce an error", {
                c(0.03647985, 0.29511133, 0.14979819, 0.05154917, 0.01605603), tolerance = 1e-05)
 })
 
+# robustbase: lmrob and glmrob
+if (requireNamespace("robustbase", quietly = TRUE)) {
+  set.seed(7)
+  n_rob <- 150
+  df_rob <- data.frame(
+    x1 = rnorm(n_rob),
+    x2 = factor(sample(c("a", "b", "c"), n_rob, replace = TRUE)),
+    y  = rnorm(n_rob)
+  )
+  df_rob$y <- df_rob$y + 2 * df_rob$x1 +
+    ifelse(df_rob$x2 == "b", 1.5, ifelse(df_rob$x2 == "c", -1, 0))
+  df_rob$y[1:5] <- df_rob$y[1:5] + 15   # outliers
+
+  mod.lmrob     <- robustbase::lmrob(y ~ x1 + x2, data = df_rob)
+  mod.lmrob.r   <- robustbase::lmrob(y ~ x1,      data = df_rob)
+  mod.lmrob.int <- robustbase::lmrob(y ~ 1,        data = df_rob)
+
+  set.seed(7)
+  n_grob <- 150
+  df_glmrob <- data.frame(
+    x1 = rnorm(n_grob),
+    x2 = factor(sample(c("a", "b", "c"), n_grob, replace = TRUE))
+  )
+  lp_grob <- 1.5 * df_glmrob$x1 +
+    ifelse(df_glmrob$x2 == "b", 1, -0.5)
+  df_glmrob$y <- rbinom(n_grob, 1, plogis(lp_grob))
+
+  mod.glmrob     <- suppressWarnings(robustbase::glmrob(y ~ x1 + x2, family = binomial, data = df_glmrob))
+  mod.glmrob.r   <- suppressWarnings(robustbase::glmrob(y ~ x1,      family = binomial, data = df_glmrob))
+  mod.glmrob.int <- suppressWarnings(robustbase::glmrob(y ~ 1,        family = binomial, data = df_glmrob))
+
+  test_that("lmrob: resi_pe produces correct estimates", {
+    pe <- suppressWarnings(resi_pe(mod.lmrob))
+    expect_equal(unname(pe$estimates),
+                 c(2.1317677, 0.0321117, 1.7228418, 0.5869813, -0.2935287,
+                   1.7298297, 0.9128559),
+                 tolerance = 1e-06)
+    expect_equal(unname(pe$anova$RESI),  c(1.7298297, 0.9128559), tolerance = 1e-06)
+    expect_equal(unname(pe$coefficients$RESI),
+                 c(0.0321117, 1.7228418, 0.5869813, -0.2935287), tolerance = 1e-06)
+  })
+
+  test_that("lmrob: resi() returns RESI within CI bounds", {
+    set.seed(1)
+    ro <- suppressWarnings(resi(mod.lmrob, nboot = 100))
+    expect_true(all(ro$coefficients$RESI >= ro$coefficients$`2.5%`))
+    expect_true(all(ro$coefficients$RESI <= ro$coefficients$`97.5%`))
+    expect_true(all(ro$anova$RESI >= ro$anova$`2.5%`))
+    expect_true(all(ro$anova$RESI <= ro$anova$`97.5%`))
+  })
+
+  test_that("lmrob: specifying a reduced model only changes overall output", {
+    ro  <- suppressWarnings(resi(mod.lmrob,   nboot = 1))
+    ror <- suppressWarnings(resi(mod.lmrob, model.reduced = mod.lmrob.r, nboot = 1))
+    expect_equal(ro$coefficients$RESI, ror$coefficients$RESI)
+    expect_equal(ro$anova$RESI,        ror$anova$RESI)
+    expect_false(ro$overall$RESI[2]   == ror$overall$RESI[2])
+  })
+
+  test_that("lmrob: intercept-only model has no overall element", {
+    expect_true(is.null(suppressWarnings(resi(mod.lmrob.int, nboot = 1, anova = FALSE))$overall))
+  })
+
+  test_that("glmrob: resi_pe produces correct estimates", {
+    pe2 <- suppressWarnings(resi_pe(mod.glmrob))
+    expect_equal(unname(pe2$estimates),
+                 c(0.4340252, -0.1257804, 0.4254354, 0.2549712, 0.0386988,
+                   0.4175268, 0.2551174),
+                 tolerance = 1e-06)
+    expect_equal(unname(pe2$anova$RESI), c(0.4175268, 0.2551174), tolerance = 1e-06)
+  })
+
+  test_that("glmrob: resi() returns RESI within CI bounds", {
+    set.seed(1)
+    ro2 <- suppressWarnings(resi(mod.glmrob, data = df_glmrob, nboot = 100))
+    expect_true(all(ro2$coefficients$RESI >= ro2$coefficients$`2.5%`))
+    expect_true(all(ro2$coefficients$RESI <= ro2$coefficients$`97.5%`))
+    expect_true(all(ro2$anova$RESI >= ro2$anova$`2.5%`))
+    expect_true(all(ro2$anova$RESI <= ro2$anova$`97.5%`))
+  })
+
+  test_that("glmrob: vcovHC redirects to stats::vcov with warning", {
+    expect_warning(
+      resi_pe(mod.glmrob, vcovfunc = sandwich::vcovHC),
+      "sandwich::vcovHC is not supported for glmrob"
+    )
+  })
+
+  test_that("glmrob: intercept-only model has no overall element", {
+    expect_true(is.null(suppressWarnings(resi(mod.glmrob.int, data = df_glmrob, nboot = 1, anova = FALSE))$overall))
+  })
+}
+
 
