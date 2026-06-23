@@ -326,17 +326,21 @@
   n       <- contrast$n
   m1      <- contrast$m1
 
-  if (Stilde <= 0) {
+  # df-corrected center: Shat = sqrt(max(0, Stilde^2 - m1/n))
+  # Aligns CI center with chisq2S point estimator; same correction as QF CI.
+  Shat <- sqrt(max(0, Stilde^2 - m1 / n))
+
+  if (Shat <= 0) {
     # On boundary: CI = [0, one-sided upper]
     return(c(LCI = 0, UCI = qnorm(1 - alpha) * sqrt(diag(Sigma_R)[1] / n)))
   }
 
-  u       <- R_beta / Stilde                              # unit direction
+  u       <- R_beta / Stilde                              # unit direction (uses Stilde for direction)
   sigma2S <- as.numeric(t(u) %*% Sigma_R %*% u)         # scalar variance
   se      <- sqrt(pmax(sigma2S, 0) / n)
 
-  # truncate_ci handles boundary
-  bounds <- .resi_truncate_ci(Stilde, se, n, m1, alpha)
+  # truncate_ci handles boundary; centered at Shat
+  bounds <- .resi_truncate_ci(Shat, se, n, m1, alpha)
   c(LCI = bounds[1], UCI = bounds[2])
 }
 
