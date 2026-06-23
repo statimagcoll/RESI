@@ -182,7 +182,9 @@ test_that("boot.method = 'bayes' only works for lm and nls", {
 
 test_that("data is needed for certain models", {
   expect_error(resi(mod.s, nboot = 1))
-  expect_error(resi(mod.lm.s, nboot = 1))
+  # mod.lm.s now uses ci.method='qf' by default, which succeeds without data;
+  # use ci.method='boot' to test that bootstrapping fails without data
+  expect_error(resi(mod.lm.s, nboot = 1, ci.method = "boot"))
   expect_error(resi(mod.nls, nboot = 1))
   if(requireNamespace("survival")){
   expect_error(resi(mod.surv, nboot = 1))
@@ -282,7 +284,9 @@ test_that("RESI estimates are in between the confidence limits", {
   expect_true(all(resi.obj$anova$RESI >= resi.obj$anova$`2.5%`) & all(resi.obj$anova$RESI <= resi.obj$anova$`97.5%`))
   An.obj = car::Anova(resi.obj, alpha = 0.01)
   expect_true(all(An.obj$RESI >= An.obj$`0.05%`) & all(An.obj$RESI <= An.obj$`99.5%`))
-  resi.obj = resi(mod.lm, nboot = 500, store.boot = TRUE)
+  # ci.method='boot' needed: resi.lm now defaults to 'qf' which skips bootstrap
+  # and store.boot=TRUE would have no effect, breaking Anova.resi at a new alpha
+  resi.obj = resi(mod.lm, nboot = 500, store.boot = TRUE, ci.method = "boot")
   expect_true(all(resi.obj$coefficients$RESI >= resi.obj$coefficients$`2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`97.5%`))
   expect_true(all(resi.obj$anova[1:5, "RESI"] >= resi.obj$anova[1:5, "2.5%"]) & all(resi.obj$anova[1:5, "RESI"] <= resi.obj$anova[1:5, "RESI"]))
   An.obj = car::Anova(resi.obj, alpha = 0.01)
