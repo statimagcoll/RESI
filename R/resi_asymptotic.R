@@ -331,8 +331,14 @@
   Shat <- sqrt(max(0, Stilde^2 - m1 / n))
 
   if (Shat <= 0) {
-    # On boundary: CI = [0, one-sided upper]
-    return(c(LCI = 0, UCI = qnorm(1 - alpha) * sqrt(diag(Sigma_R)[1] / n)))
+    # On boundary: CI = [0, one-sided upper based on null distribution of ||R||].
+    # Under H0, sqrt(n)*||R_hat|| ~ ||N(0, Sigma_R)||; the (1-alpha) quantile
+    # of ||N(0, Sigma_R)||/sqrt(n) is computed via the eigenvalues of Sigma_R.
+    # For m1=1 this reduces to qnorm(1-alpha)*sqrt(Sigma_R/n), identical to
+    # the old formula. For m1>1, uses the full weighted chi-square distribution.
+    eigB   <- eigen(Sigma_R, symmetric = TRUE)
+    lambda <- pmax(eigB$values, .Machine$double.eps)
+    return(c(LCI = 0, UCI = .resi_qf_null_upper(lambda, alpha, n, m1)))
   }
 
   u       <- R_beta / Stilde                              # unit direction (uses Stilde for direction)
@@ -341,6 +347,17 @@
 
   # truncate_ci handles boundary; centered at Shat
   bounds <- .resi_truncate_ci(Shat, se, n, m1, alpha)
+
+  # For multi-df terms where LCI clips to 0, the directional delta-method SE
+  # underestimates total uncertainty because u is estimated from noisy data.
+  # Ensure the UCI is at least the QF null upper bound, which integrates over
+  # all directions via the full eigenvalue distribution of Sigma_R.
+  if (bounds[1] == 0 && m1 > 1L) {
+    eigB_null   <- eigen(Sigma_R, symmetric = TRUE)
+    lambda_null <- pmax(eigB_null$values, .Machine$double.eps)
+    bounds[2]   <- max(bounds[2], .resi_qf_null_upper(lambda_null, alpha, n, m1))
+  }
+
   c(LCI = bounds[1], UCI = bounds[2])
 }
 
@@ -353,8 +370,8 @@
   n       <- contrast$n
   m1      <- contrast$m1
 
-  T2_obs  <- max(0, n * Stilde^2 - m1)   # df-corrected (Shat^2 * n)
-  Shat    <- sqrt(T2_obs / n)
+  T2_obs  <- n * Stilde^2                  # actual Wald chi-square test statistic
+  Shat    <- sqrt(max(0, T2_obs - m1) / n) # df-corrected point estimate (for search centering only)
 
   # EVD of Sigma_R
   eigR       <- eigen(Sigma_R, symmetric = TRUE)

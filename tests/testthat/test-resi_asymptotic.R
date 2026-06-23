@@ -136,18 +136,15 @@ test_that("Wider alpha gives narrower asymptotic CI", {
 # 6. Normal and QF CIs have similar widths for lm (large n = 1338)
 # ===========================================================================
 test_that("Normal and QF anova CIs are close for large n (lm)", {
-  # With n=1338, both methods should agree within ~50% of CI width.
-  # Single-df terms agree more tightly; multi-df interaction terms (e.g. region:age,
-  # 3 df) can differ up to ~45% because the normal approximation and exact QF
-  # inversion diverge more for wider non-centrality distributions.
+  # With n=1338, both methods should agree within ~30% of CI width.
   width_n <- asym_n$anova[, "97.5%"] - asym_n$anova[, "2.5%"]
   width_q <- asym_q$anova[, "97.5%"] - asym_q$anova[, "2.5%"]
 
-  # Relative difference in width should be < 50% for each term
+  # Relative difference in width should be < 30% for each term
   rel_diff <- abs(width_q - width_n) / pmax(width_n, 1e-6)
-  expect_true(all(rel_diff < 0.50),
+  expect_true(all(rel_diff < 0.30),
               info  = paste("Relative width differences:", round(rel_diff, 3)),
-              label = "normal vs QF CI widths agree within 50%")
+              label = "normal vs QF CI widths agree within 30%")
 })
 
 
