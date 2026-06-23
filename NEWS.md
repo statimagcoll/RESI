@@ -10,6 +10,13 @@
   clearly explains that either (a) bootstrapping is not supported for the model
   type, or (b) `resi()` was not run with `store.boot = TRUE`, and instructs the
   user to re-run `resi()` with the desired `alpha` directly (#53).
+* Fixed `resi()` failing to compute the overall Wald test when the model
+  response is a computed expression (e.g. `log10(charges)` or
+  `I(charges > 10000)`). Previously the intercept-only reduced model could not
+  be fitted inside forked parallel workers because `update()` tried to
+  re-evaluate the expression in an environment where the underlying variable was
+  not in scope. The fix constructs the reduced-model formula using the
+  already-evaluated column name from `model.frame()`, avoiding any re-evaluation.
 * Added an informative error when `vcov.args = list(type = "const")` is passed
   together with `vcovfunc = sandwich::vcovHC`. The message explains that
   `type = "const"` is the OLS sandwich (not robust) and directs users to use

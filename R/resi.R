@@ -201,7 +201,14 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
       form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
       if (!(form.reduced == formula(model.full))){
         if(!(is.null(model.full$model)) & !long){
-          model.reduced = try(update(model.full, formula = form.reduced,
+          # Use the column name from model.frame directly (backtick-quoted) so
+          # that update() finds the already-evaluated response in model.full$model
+          # rather than trying to re-evaluate the expression (e.g. log10(charges)
+          # or I(charges > 15000)). Re-evaluation fails in forked worker processes
+          # where the original data object may not be in scope.
+          resp_name <- colnames(model.full$model)[1]
+          form.reduced_eval <- as.formula(paste0("`", resp_name, "` ~ 1"))
+          model.reduced = try(update(model.full, formula = form.reduced_eval,
                                       data = model.full$model), silent = T)
         } else{
           model.reduced = try(update(model.full, formula = form.reduced,
