@@ -330,32 +330,29 @@
   # Aligns CI center with chisq2S point estimator; same correction as QF CI.
   Shat <- sqrt(max(0, Stilde^2 - m1 / n))
 
+  # Null upper bound: (1-alpha) quantile of Stilde under H0.
+  # Under H0, sqrt(n)*||R_hat|| ~ ||N(0, I_m1)|| = chi(m1) because Sigma_R -> I
+  # asymptotically. So P(Stilde >= UCI | S=0) = alpha gives
+  # UCI = sqrt(qchisq(1-alpha, df=m1) / n).
+  # For m1=1: sqrt(qchisq(1-alpha, 1)/n) = qnorm(1-alpha/2)/sqrt(n).
+  UCI_null <- sqrt(qchisq(1 - alpha, df = m1) / n)
+
   if (Shat <= 0) {
-    # On boundary: CI = [0, one-sided upper based on null distribution of ||R||].
-    # Under H0, sqrt(n)*||R_hat|| ~ ||N(0, Sigma_R)||; the (1-alpha) quantile
-    # of ||N(0, Sigma_R)||/sqrt(n) is computed via the eigenvalues of Sigma_R.
-    # For m1=1 this reduces to qnorm(1-alpha)*sqrt(Sigma_R/n), identical to
-    # the old formula. For m1>1, uses the full weighted chi-square distribution.
-    eigB   <- eigen(Sigma_R, symmetric = TRUE)
-    lambda <- pmax(eigB$values, .Machine$double.eps)
-    return(c(LCI = 0, UCI = .resi_qf_null_upper(lambda, alpha, n, m1)))
+    return(c(LCI = 0, UCI = UCI_null))
   }
 
-  u       <- R_beta / Stilde                              # unit direction (uses Stilde for direction)
+  u       <- R_beta / Stilde                              # unit direction
   sigma2S <- as.numeric(t(u) %*% Sigma_R %*% u)         # scalar variance
   se      <- sqrt(pmax(sigma2S, 0) / n)
 
   # truncate_ci handles boundary; centered at Shat
   bounds <- .resi_truncate_ci(Shat, se, n, m1, alpha)
 
-  # For multi-df terms where LCI clips to 0, the directional delta-method SE
-  # underestimates total uncertainty because u is estimated from noisy data.
-  # Ensure the UCI is at least the QF null upper bound, which integrates over
-  # all directions via the full eigenvalue distribution of Sigma_R.
-  if (bounds[1] == 0 && m1 > 1L) {
-    eigB_null   <- eigen(Sigma_R, symmetric = TRUE)
-    lambda_null <- pmax(eigB_null$values, .Machine$double.eps)
-    bounds[2]   <- max(bounds[2], .resi_qf_null_upper(lambda_null, alpha, n, m1))
+  # When LCI clips to 0, the directional delta-method UCI can underestimate
+  # spread for m1>1 (single-direction 1D normal vs chi(m1) null distribution).
+  # Use the chi(m1) null upper as a floor.
+  if (bounds[1] == 0) {
+    bounds[2] <- max(bounds[2], UCI_null)
   }
 
   c(LCI = bounds[1], UCI = bounds[2])
