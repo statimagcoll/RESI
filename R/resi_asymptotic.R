@@ -349,7 +349,8 @@
   n       <- contrast$n
   m1      <- contrast$m1
 
-  T2_obs  <- n * Stilde^2     # raw Wald statistic
+  T2_obs  <- max(0, n * Stilde^2 - m1)   # df-corrected (Shat^2 * n)
+  Shat    <- sqrt(T2_obs / n)
 
   # EVD of Sigma_R
   eigR       <- eigen(Sigma_R, symmetric = TRUE)
@@ -412,7 +413,7 @@
   if (p0 >= alpha / 2) {
     LCI <- 0
   } else {
-    lower_candidates <- Stilde * c(0.9, 0.7, 0.5, 0.3, 0.1)
+    lower_candidates <- Shat * c(0.9, 0.7, 0.5, 0.3, 0.1)
     bracket_lo <- NA_real_
     for (lo in lower_candidates) {
       plo <- tryCatch(prob_fn(lo), error = function(e) NA_real_)
@@ -425,7 +426,7 @@
 
     LCI <- tryCatch(
       uniroot(function(s) prob_fn(s) - alpha / 2,
-              lower = bracket_lo, upper = Stilde,
+              lower = bracket_lo, upper = Shat,
               tol = se_S * 1e-3, extendInt = "upX")$root,
       error = function(e) {
         warning("QF lower CI bound search failed; using 0.")
@@ -449,7 +450,7 @@
     UCI <- .resi_qf_null_upper(lambda, alpha, n, m1)
   } else {
     # Normal case: uniroot in (Stilde, bracket_up) where prob_fn crosses 1-alpha/2
-    upper_search <- Stilde + se_S * c(3, 6, 12, 25, 50, 100) * qnorm(1 - alpha / 2)
+    upper_search <- Shat + se_S * c(3, 6, 12, 25, 50, 100) * qnorm(1 - alpha / 2)
     bracket_up   <- NA_real_
     for (up in upper_search) {
       pup <- tryCatch(prob_fn(up), error = function(e) NA_real_)
@@ -466,7 +467,7 @@
           if (is.na(p) || !is.finite(p)) return(1 - (1 - alpha / 2))
           p - (1 - alpha / 2)
         },
-                lower = Stilde, upper = bracket_up,
+                lower = Shat, upper = bracket_up,
                 tol = se_S * 1e-3)$root,
         error = function(e) .resi_qf_null_upper(lambda, alpha, n, m1)
       )

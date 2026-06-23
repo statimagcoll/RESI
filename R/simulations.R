@@ -649,7 +649,7 @@ simFigures <- function(output.dir = "resiBootSim",
         )
 
         # --- Panel: Bias ---
-        bias_rows <- if (mtype == "glm") sub_tbl$n > 100 else rep(TRUE, nrow(sub_tbl))
+        bias_rows <- if (mtype == "glm") sub_tbl$n >= 500 else rep(TRUE, nrow(sub_tbl))
         ylim <- range(c(sub_tbl[bias_rows, "bias"], 0), na.rm = TRUE)
         graphics::par(mar = c(2.8, 2.8, 1.8, 0.4), mgp = c(1.7, 0.45, 0))
         graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
@@ -663,7 +663,7 @@ simFigures <- function(output.dir = "resiBootSim",
         draw_lines("bias")
 
         # --- Panel: MSE ---
-        mse_rows <- if (mtype == "glm") sub_tbl$n > 100 else rep(TRUE, nrow(sub_tbl))
+        mse_rows <- if (mtype == "glm") sub_tbl$n >= 500 else rep(TRUE, nrow(sub_tbl))
         ylim <- if (any(is.finite(sub_tbl[mse_rows, "mse"]))) range(sub_tbl[mse_rows, "mse"], na.rm = TRUE) else c(0, 1)
         graphics::par(mar = c(2.8, 2.8, 1.8, 0.4), mgp = c(1.7, 0.45, 0))
         graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
@@ -686,7 +686,7 @@ simFigures <- function(output.dir = "resiBootSim",
         draw_lines("upper_coverage")
 
         # --- Panel: Width ---
-        width_rows <- if (mtype == "glm") sub_tbl$n > 100 else rep(TRUE, nrow(sub_tbl))
+        width_rows <- if (mtype == "glm") sub_tbl$n >= 500 else rep(TRUE, nrow(sub_tbl))
         ylim <- if (any(is.finite(sub_tbl[width_rows, "width"]))) range(sub_tbl[width_rows, "width"], na.rm = TRUE) else c(0, 1)
         graphics::par(mar = c(2.8, 2.8, 1.8, 0.4), mgp = c(1.7, 0.45, 0))
         graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
@@ -731,6 +731,166 @@ simFigures <- function(output.dir = "resiBootSim",
   }
 
   invisible(summary_table)
+}
+
+
+# ============================================================
+#  simBiasWidthFigures
+# ============================================================
+
+#' Bias / CI Width Ratio Figures Across CI Methods
+#'
+#' Reads simulation summary tables from multiple output directories (one per CI
+#' method) and produces one PDF per (model type \eqn{\times} variance estimator)
+#' combination. Each figure has one row per CI method showing \code{bias / CI width}
+#' vs sample size for anova and coefficient tables. Values near \eqn{\pm 0.5}
+#' indicate that bias alone can shift the CI off the true value.
+#'
+#' @param output.dirs Named character vector mapping CI method labels to their
+#'   simulation output directories. Default:
+#'   \code{c(boot = "resiBootSim", normal = "resiAsympNormalSim", qf = "resiAsympQFSim")}.
+#'   Directories that do not exist are silently skipped.
+#' @param figures.dir Character, directory where figures are saved. Default:
+#'   \code{file.path(output.dirs[[1]], "figures")}.
+#' @param alpha Numeric, unused; kept for API consistency. Default 0.05.
+#'
+#' @return Invisibly returns the combined summary \code{data.frame}. Saves PDF
+#'   figures named \code{sim_biaswidth_<model>_<vcov>.pdf} to \code{figures.dir}.
+#' @seealso \code{\link{simFigures}}, \code{\link{simCompareMethodsFigures}}
+#' @importFrom grDevices pdf dev.off
+#' @importFrom graphics plot lines points abline legend par axis plot.new layout
+#' @export
+simBiasWidthFigures <- function(
+    output.dirs = c(boot   = "resiBootSim",
+                    normal = "resiAsympNormalSim",
+                    qf     = "resiAsympQFSim"),
+    figures.dir = NULL,
+    alpha       = 0.05) {
+
+  method_names <- names(output.dirs)
+  if (is.null(method_names) || any(method_names == ""))
+    stop("output.dirs must be a named vector (names = CI method labels)")
+
+  if (is.null(figures.dir))
+    figures.dir <- file.path(output.dirs[[1]], "figures")
+  dir.create(figures.dir, recursive = TRUE, showWarnings = FALSE)
+
+  .sim_pal <- c(
+    "#1F77B4", "#D62728", "#2CA02C", "#FF7F0E", "#9467BD",
+    "#8C564B", "#E377C2", "#17BECF", "#BCBD22", "#7F7F7F",
+    "#AEC7E8", "#98DF8A"
+  )
+
+  tables <- lapply(seq_along(output.dirs), function(i) {
+    f <- file.path(output.dirs[[i]], "summary_table.rds")
+    if (!file.exists(f)) {
+      warning("summary_table.rds not found in: ", output.dirs[[i]], " -- skipping")
+      return(NULL)
+    }
+    tbl <- readRDS(f)
+    tbl$ci_method <- method_names[[i]]
+    tbl
+  })
+  tables <- Filter(Negate(is.null), tables)
+  if (length(tables) == 0L) stop("No valid summary tables found")
+  combined <- do.call(rbind, tables)
+  combined$bias_width_ratio <- combined$bias / combined$width
+
+  avail_methods <- intersect(method_names, unique(combined$ci_method))
+  n_methods     <- length(avail_methods)
+  n_vals        <- sort(unique(combined$n))
+
+  for (mtype in c("lm", "glm")) {
+    for (vtype in c("parametric", "robust")) {
+      sub <- combined[combined$model == mtype & combined$vcov == vtype, ]
+      if (nrow(sub) == 0L) next
+
+      anova_terms <- unique(sub$term[sub$table == "anova"])
+      coef_terms  <- unique(sub$term[sub$table == "coefficients"])
+      anova_cols  <- setNames(.sim_pal[seq_along(anova_terms)], anova_terms)
+      coef_cols   <- setNames(.sim_pal[seq_along(coef_terms)],  coef_terms)
+      cex_anova   <- min(1.0, 9 / length(anova_terms))
+      cex_coef    <- min(1.0, 9 / length(coef_terms))
+
+      fig_path <- file.path(figures.dir,
+        paste0("sim_biaswidth_", mtype, "_", vtype, ".pdf"))
+
+      # Layout: n_methods rows x 4 cols [anova_plot, coef_plot, leg_anova, leg_coef]
+      # Cols 3-4 (legends) span all rows via repeated panel index.
+      leg_anova_idx <- n_methods * 2L + 1L
+      leg_coef_idx  <- n_methods * 2L + 2L
+      layout_mat <- matrix(0L, nrow = n_methods, ncol = 4L)
+      for (i in seq_len(n_methods)) {
+        layout_mat[i, 1L] <- (i - 1L) * 2L + 1L
+        layout_mat[i, 2L] <- (i - 1L) * 2L + 2L
+        layout_mat[i, 3L] <- leg_anova_idx
+        layout_mat[i, 4L] <- leg_coef_idx
+      }
+
+      grDevices::pdf(fig_path, width = 12, height = 3.5 * n_methods)
+      graphics::layout(layout_mat,
+                       widths  = c(4, 4, 1.8, 1.8),
+                       heights = rep(1, n_methods))
+
+      for (mi in seq_along(avail_methods)) {
+        meth  <- avail_methods[[mi]]
+        sub_m <- sub[sub$ci_method == meth, ]
+
+        for (tbl_info in list(
+          list(table = "anova",        terms = anova_terms, cols = anova_cols,
+               prefix = "Anova"),
+          list(table = "coefficients", terms = coef_terms,  cols = coef_cols,
+               prefix = "Coef")
+        )) {
+          sub_tbl <- sub_m[sub_m$table == tbl_info$table, ]
+
+          yr   <- range(sub_tbl$bias_width_ratio, na.rm = TRUE, finite = TRUE)
+          ylim <- range(c(yr, 0), na.rm = TRUE)
+
+          graphics::par(mar = c(3.2, 3.2, 2.0, 0.5), mgp = c(1.9, 0.5, 0))
+          graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
+                         xlab = "Sample Size", ylab = "Bias / CI Width",
+                         main = paste(toupper(mtype), tbl_info$prefix, "Bias/Width",
+                                      paste0("(", vtype, ", ", meth, ")")),
+                         log = "x", xaxt = "n", bty = "l")
+          graphics::axis(1, at = n_vals, labels = n_vals, las = 2L,
+                         mgp = c(1.7, 0.35, 0))
+          graphics::abline(h = 0,             lty = 2L, col = "gray40")
+          graphics::abline(h = c(-0.5, 0.5),  lty = 3L, col = "gray70")
+
+          for (term in tbl_info$terms) {
+            td <- sub_tbl[sub_tbl$term == term, ]
+            td <- td[order(td$n), ]
+            if (nrow(td) == 0L) next
+            graphics::lines(td$n,  td$bias_width_ratio,
+                            col = tbl_info$cols[term], lwd = 2L)
+            graphics::points(td$n, td$bias_width_ratio,
+                             col = tbl_info$cols[term], pch = 16L, cex = 0.8)
+          }
+        }
+      }
+
+      # Shared legends (drawn last; span all rows via layout)
+      graphics::par(mar = c(0.5, 0.3, 0.5, 0.3))
+      graphics::plot.new()
+      graphics::legend("center", legend = anova_terms,
+                       col = anova_cols[anova_terms],
+                       lwd = 2L, pch = 16L, bty = "n", cex = cex_anova,
+                       title = "Anova terms", title.font = 2L)
+
+      graphics::par(mar = c(0.5, 0.3, 0.5, 0.3))
+      graphics::plot.new()
+      graphics::legend("center", legend = coef_terms,
+                       col = coef_cols[coef_terms],
+                       lwd = 2L, pch = 16L, bty = "n", cex = cex_coef,
+                       title = "Coef terms", title.font = 2L)
+
+      grDevices::dev.off()
+      message("Saved: ", fig_path)
+    }
+  }
+
+  invisible(combined)
 }
 
 
