@@ -385,6 +385,7 @@ resi.glm = function(model.full, model.reduced = NULL, data, anova = TRUE,
                     vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
                     Anova.args = list(), vcov.args = list(), unbiased = TRUE,
                     parallel = c("no", "multicore", "snow"), ncpus = getOption("boot.ncpus", 1L),
+                    ci.method = "boot",
                     ...){
   dots = list(...)
   if ("boot.method" %in% names(dots)){
@@ -395,7 +396,7 @@ resi.glm = function(model.full, model.reduced = NULL, data, anova = TRUE,
                nboot = nboot, vcovfunc = vcovfunc, store.boot = store.boot,
                Anova.args = Anova.args, vcov.args = vcov.args,
                unbiased = unbiased, alpha = alpha, parallel = parallel,
-               ncpus = ncpus, ...)
+               ncpus = ncpus, ci.method = ci.method, ...)
 
 }
 
@@ -407,7 +408,9 @@ resi.lm = function(model.full, model.reduced = NULL, data, anova = TRUE,
                     alpha = 0.05, store.boot = FALSE, Anova.args = list(),
                     vcov.args = list(), unbiased = TRUE,
                     parallel = c("no", "multicore", "snow"),
-                    ncpus = getOption("boot.ncpus", 1L), ...){
+                    ncpus = getOption("boot.ncpus", 1L),
+                    ci.method = "qf",
+                    ...){
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
@@ -415,7 +418,7 @@ resi.lm = function(model.full, model.reduced = NULL, data, anova = TRUE,
                nboot = nboot, vcovfunc = vcovfunc, store.boot = store.boot,
                Anova.args = Anova.args, vcov.args = vcov.args, unbiased = unbiased,
                alpha = alpha, parallel = parallel, ncpus = ncpus,
-               boot.method = boot.method, ...)
+               boot.method = boot.method, ci.method = ci.method, ...)
 
 }
 

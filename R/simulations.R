@@ -162,6 +162,7 @@ insurancePlasmodeSim <- function(nsim              = 1000L,
                                   alpha             = 0.05,
                                   ci.method         = c("boot", "normal", "qf"),
                                   output.dir        = NULL,
+                                  fixed.knots       = FALSE,
                                   mc.cores.settings = 1L,
                                   mc.cores.reps     = 1L) {
 
@@ -184,8 +185,15 @@ insurancePlasmodeSim <- function(nsim              = 1000L,
   ci_lo <- paste0(alpha / 2 * 100, "%")
   ci_hi <- paste0((1 - alpha / 2) * 100, "%")
 
-  lm_formula  <- log10(charges) ~ splines::ns(age, df = 3) * sex + bmi + smoker + region
-  glm_formula <- I(charges > 15000) ~ splines::ns(age, df = 3) * sex + bmi + smoker + region
+  if (fixed.knots) {
+    .age_knots <- quantile(insurance$age, c(1/3, 2/3))
+    .age_bk    <- range(insurance$age)
+    lm_formula  <- eval(bquote(log10(charges) ~ splines::ns(age, knots = .(.age_knots), Boundary.knots = .(.age_bk)) * sex + bmi + smoker + region))
+    glm_formula <- eval(bquote(I(charges > 15000) ~ splines::ns(age, knots = .(.age_knots), Boundary.knots = .(.age_bk)) * sex + bmi + smoker + region))
+  } else {
+    lm_formula  <- log10(charges) ~ splines::ns(age, df = 3) * sex + bmi + smoker + region
+    glm_formula <- I(charges > 15000) ~ splines::ns(age, df = 3) * sex + bmi + smoker + region
+  }
 
   model_settings <- list(
     list(type = "lm",  label = "lm_parametric",
@@ -406,16 +414,24 @@ insurancePlasmodeSim <- function(nsim              = 1000L,
 #' @importFrom sandwich vcovHC
 #' @importFrom stats lm glm vcov binomial
 #' @export
-simRecomputeSummary <- function(output.dir = "resiBootSim",
-                                 alpha      = 0.05) {
+simRecomputeSummary <- function(output.dir  = "resiBootSim",
+                                 alpha       = 0.05,
+                                 fixed.knots = FALSE) {
 
   insurance <- RESI::insurance
 
   ci_lo <- paste0(alpha / 2 * 100, "%")
   ci_hi <- paste0((1 - alpha / 2) * 100, "%")
 
-  lm_formula  <- log10(charges) ~ splines::ns(age, df = 3) * sex + bmi + smoker + region
-  glm_formula <- I(charges > 15000) ~ splines::ns(age, df = 3) * sex + bmi + smoker + region
+  if (fixed.knots) {
+    .age_knots <- quantile(insurance$age, c(1/3, 2/3))
+    .age_bk    <- range(insurance$age)
+    lm_formula  <- eval(bquote(log10(charges) ~ splines::ns(age, knots = .(.age_knots), Boundary.knots = .(.age_bk)) * sex + bmi + smoker + region))
+    glm_formula <- eval(bquote(I(charges > 15000) ~ splines::ns(age, knots = .(.age_knots), Boundary.knots = .(.age_bk)) * sex + bmi + smoker + region))
+  } else {
+    lm_formula  <- log10(charges) ~ splines::ns(age, df = 3) * sex + bmi + smoker + region
+    glm_formula <- I(charges > 15000) ~ splines::ns(age, df = 3) * sex + bmi + smoker + region
+  }
 
   model_settings <- list(
     list(type = "lm",  label = "lm_parametric",
