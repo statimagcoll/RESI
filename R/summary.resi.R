@@ -30,8 +30,17 @@ summary.resi <- function(object, alpha = NULL, ...){
   }
   else{
     if (!(all(alpha %in% object$alpha))){
+      # Scenario 1: model type does not support bootstrapping (e.g. lme),
+      # OR store.boot was not used — in either case boot.results is NULL
+      # and we cannot recompute quantiles at a different alpha.
       if (is.null(object$boot.results)){
-        stop("\nresi function was not run with store.boot = TRUE option")}
+        stop(paste0(
+          "\nCannot compute CIs at a different alpha level. Either:\n",
+          "  (a) bootstrapping is not yet supported for this model type, or\n",
+          "  (b) resi() was not run with store.boot = TRUE.\n",
+          "Re-run resi() with the desired alpha value directly."
+        ))
+      }
     }
     if(is.null(object$boot.results)){
       output$coefficients = object$coefficients[c(1:(which(colnames(object$coefficients)

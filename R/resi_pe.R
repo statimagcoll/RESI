@@ -127,6 +127,18 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
           }}}
 
   # dealing with additional vcov args
+  # Guard: if vcovfunc is sandwich::vcovHC and vcov.args contains type = "const",
+  # the user likely intends the parametric (model-based) variance. "const" is not
+  # a valid HC type and will either error or silently give incorrect results.
+  # Users should pass vcovfunc = stats::vcov for parametric variance instead.
+  if (identical(vcovfunc, sandwich::vcovHC) && isTRUE(vcov.args[["type"]] == "const")) {
+    stop(paste0(
+      "\nvcov.args = list(type = \"const\") is not valid for sandwich::vcovHC.\n",
+      "For parametric (model-based) variance, use vcovfunc = stats::vcov instead.\n",
+      "For a heteroskedasticity-consistent estimator, use type = \"HC3\" (default),\n",
+      "  \"HC0\", \"HC1\", \"HC2\", \"HC4\", etc."
+    ))
+  }
   if (length(vcov.args) == 0){
     vcovfunc2 <- vcovfunc
   } else{

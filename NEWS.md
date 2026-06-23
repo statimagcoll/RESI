@@ -1,3 +1,20 @@
+## RESI 1.3.3 (in development)
+
+### Bug Fixes
+* Fixed error when passing a `data` argument containing `NA`s to `resi()` for
+  GEE models (`geeglm`). Rows with `NA` in any model variable are now silently
+  stripped before bootstrapping, matching the complete cases used to fit the
+  model and preventing cluster-size mismatches during re-fitting (#51).
+* Fixed misleading error in `summary.resi()` when a different `alpha` level is
+  requested but confidence intervals cannot be recomputed. The message now
+  clearly explains that either (a) bootstrapping is not supported for the model
+  type, or (b) `resi()` was not run with `store.boot = TRUE`, and instructs the
+  user to re-run `resi()` with the desired `alpha` directly (#53).
+* Added an informative error when `vcov.args = list(type = "const")` is passed
+  together with `vcovfunc = sandwich::vcovHC`. The message explains that
+  `type = "const"` is the OLS sandwich (not robust) and directs users to use
+  `vcovfunc = stats::vcov` for parametric variance estimation instead (#50).
+
 ## RESI 1.3.2
 
 * Added RESI estimation for `emmeans` objects

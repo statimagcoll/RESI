@@ -186,6 +186,16 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
     data = as.data.frame(data)
   }
 
+  # For clustered/GEE models, strip rows with NA in any model variable from data
+  # before constructing model.reduced or bootstrapping. geeglm may not populate
+  # na.action when the model was fitted on already-complete data but the user
+  # passes a data frame with NAs. Use only the columns that appear in model.frame()
+  # to avoid dropping rows with NAs in unrelated columns.
+  if (long) {
+    model_vars <- intersect(names(model.frame(model.full)), names(data))
+    data <- data[complete.cases(data[, model_vars, drop = FALSE]), , drop = FALSE]
+  }
+
   if (is.null(model.reduced) & overall){
     if(!("skip.red" %in% names(dots))){
       form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
@@ -567,6 +577,13 @@ resi.geeglm = function(model.full, model.reduced = NULL, data, anova = TRUE,
   else{
     data = as.data.frame(data)
   }
+
+  # Strip rows with NA in any model variable so that mod.dat passed to the
+  # bootstrap contains only the complete cases used in model fitting.
+  # This prevents cluster-size mismatches when geeglm is re-fitted in each
+  # bootstrap replicate.
+  model_vars_gee <- intersect(names(model.frame(model.full)), names(data))
+  data <- data[complete.cases(data[, model_vars_gee, drop = FALSE]), , drop = FALSE]
 
   # id variable name
   id_var = as.character(model.full$call$id)
