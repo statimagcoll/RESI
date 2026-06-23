@@ -253,9 +253,13 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
       anova.tab = anova.tab[which(rownames(anova.tab) != "Residuals"),]
       anova.tab[,"RESI"] = f2S(anova.tab[,"F"], anova.tab[,"Df"], res.df, nrow(data))
     } else {
+      # For most model types, pass test.statistic = "Wald" explicitly.
+      # For model types where car::Anova uses chi-square by default and does not
+      # accept test.statistic = "Wald" (e.g. lmrob), the caller can pass
+      # anovaChisq = TRUE via dots to skip that override.
+      test_stat_arg <- if ("anovaChisq" %in% names(dots)) list() else list(test.statistic = "Wald")
       tryCatch(suppressMessages(anova.tab <- do.call(car::Anova, c(list(mod = model.full,
-                                             test.statistic = "Wald",
-                                             vcov. = vcovmat), Anova.args))),
+                                             vcov. = vcovmat), test_stat_arg, Anova.args))),
                error = function(e){
           stop("car::Anova failed. Try rerunning with anova = FALSE")})
       anova.tab = anova.tab[which(rownames(anova.tab) != "Residuals"),]
@@ -422,6 +426,59 @@ resi_pe.hurdle = function(model.full, model.reduced = NULL, data, coefficients =
 #' @describeIn resi_pe RESI point estimation for zeroinfl models
 #' @export
 resi_pe.zeroinfl = resi_pe.hurdle
+
+#' @describeIn resi_pe RESI point estimation for lmrob objects (robustbase package)
+#' @export
+resi_pe.lmrob <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+                          coefficients = TRUE, vcovfunc = stats::vcov,
+                          Anova.args = list(), vcov.args = list(),
+                          unbiased = TRUE, overall = TRUE, ...) {
+  # lmrob (robustbase) has a built-in robust sandwich variance estimator
+  # returned by stats::vcov(), so that is the natural default. sandwich::vcovHC
+  # also works but is redundant. car::Anova() for lmrob returns chi-square
+  # statistics, so we use waldtype = 0 (chi-square Wald test).
+  output <- resi_pe.default(
+    model.full   = model.full,
+    model.reduced = model.reduced,
+    data         = data,
+    anova        = anova,
+    coefficients = coefficients,
+    vcovfunc     = vcovfunc,
+    Anova.args   = Anova.args,
+    vcov.args    = vcov.args,
+    unbiased     = unbiased,
+    overall      = overall,
+    waldtype     = 0, anovaChisq = TRUE, ...)
+  return(output)
+}
+
+#' @describeIn resi_pe RESI point estimation for glmrob objects (robustbase package)
+#' @export
+resi_pe.glmrob <- function(model.full, model.reduced = NULL, data, anova = TRUE,
+                           coefficients = TRUE, vcovfunc = stats::vcov,
+                           Anova.args = list(), vcov.args = list(),
+                           unbiased = TRUE, overall = TRUE, ...) {
+  # glmrob (robustbase) has a built-in robust sandwich variance estimator.
+  # sandwich::vcovHC does not support glmrob; redirect to stats::vcov.
+  if (identical(vcovfunc, sandwich::vcovHC)) {
+    vcovfunc <- stats::vcov
+    warning("sandwich::vcovHC is not supported for glmrob objects. ",
+            "Using the model's built-in robust variance (stats::vcov) instead.")
+  }
+  output <- resi_pe.default(
+    model.full   = model.full,
+    model.reduced = model.reduced,
+    data         = data,
+    anova        = anova,
+    coefficients = coefficients,
+    vcovfunc     = vcovfunc,
+    Anova.args   = Anova.args,
+    vcov.args    = vcov.args,
+    unbiased     = unbiased,
+    overall      = overall,
+    waldtype     = 0, ...)
+  return(output)
+}
 
 #' @describeIn resi_pe RESI point estimation for geeglm object
 #' @export

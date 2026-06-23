@@ -10,6 +10,8 @@
 \alias{resi_pe.coxph}
 \alias{resi_pe.hurdle}
 \alias{resi_pe.zeroinfl}
+\alias{resi_pe.lmrob}
+\alias{resi_pe.glmrob}
 \alias{resi_pe.geeglm}
 \alias{resi_pe.glmgee}
 \alias{resi_pe.gee}
@@ -124,6 +126,34 @@ resi_pe(...)
   coefficients = TRUE,
   anova = TRUE,
   vcovfunc = sandwich::sandwich,
+  vcov.args = list(),
+  unbiased = TRUE,
+  overall = TRUE,
+  ...
+)
+
+\method{resi_pe}{lmrob}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  vcovfunc = stats::vcov,
+  Anova.args = list(),
+  vcov.args = list(),
+  unbiased = TRUE,
+  overall = TRUE,
+  ...
+)
+
+\method{resi_pe}{glmrob}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  vcovfunc = stats::vcov,
+  Anova.args = list(),
   vcov.args = list(),
   unbiased = TRUE,
   overall = TRUE,
@@ -271,6 +301,10 @@ using a model where each measurement is its own cluster.
 \item \code{resi_pe(hurdle)}: RESI point estimation for hurdle models
 
 \item \code{resi_pe(zeroinfl)}: RESI point estimation for zeroinfl models
+
+\item \code{resi_pe(lmrob)}: RESI point estimation for lmrob objects (robustbase package)
+
+\item \code{resi_pe(glmrob)}: RESI point estimation for glmrob objects (robustbase package)
 
 \item \code{resi_pe(geeglm)}: RESI point estimation for geeglm object
 

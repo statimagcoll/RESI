@@ -4,7 +4,11 @@
 \alias{simRecomputeSummary}
 \title{Recompute Summary Table from Raw Simulation Output}
 \usage{
-simRecomputeSummary(output.dir = "resiBootSim", alpha = 0.05)
+simRecomputeSummary(
+  output.dir = "resiBootSim",
+  alpha = 0.05,
+  fixed.knots = FALSE
+)
 }
 \arguments{
 \item{output.dir}{Character, directory containing simulation output.

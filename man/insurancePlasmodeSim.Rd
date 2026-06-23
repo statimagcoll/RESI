@@ -11,6 +11,7 @@ insurancePlasmodeSim(
   alpha = 0.05,
   ci.method = c("boot", "normal", "qf"),
   output.dir = NULL,
+  fixed.knots = FALSE,
   mc.cores.settings = 1L,
   mc.cores.reps = 1L
 )

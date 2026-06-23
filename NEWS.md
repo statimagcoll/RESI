@@ -22,6 +22,13 @@
   `type = "const"` is the OLS sandwich (not robust) and directs users to use
   `vcovfunc = stats::vcov` for parametric variance estimation instead (#50).
 
+### New Features
+* Added support for `robustbase` models (`lmrob` and `glmrob`) via new
+  `resi_pe.lmrob`, `resi_pe.glmrob`, `resi.lmrob`, and `resi.glmrob` methods.
+  Both default to `vcovfunc = stats::vcov`, which uses the model's built-in
+  robust sandwich variance. `glmrob` redirects `sandwich::vcovHC` to
+  `stats::vcov` with a warning since `vcovHC` does not support `glmrob` (#12).
+
 ## RESI 1.3.2
 
 * Added RESI estimation for `emmeans` objects

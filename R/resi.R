@@ -439,6 +439,54 @@ resi.lm = function(model.full, model.reduced = NULL, data, anova = TRUE,
 
 }
 
+#' @describeIn resi RESI point and interval estimation for lmrob models (robustbase)
+#' @export
+resi.lmrob = function(model.full, model.reduced = NULL, data, anova = TRUE,
+                      coefficients = TRUE, overall = TRUE, nboot = 1000,
+                      boot.method = "nonparam", vcovfunc = stats::vcov,
+                      alpha = 0.05, store.boot = FALSE, Anova.args = list(),
+                      vcov.args = list(), unbiased = TRUE,
+                      parallel = c("no", "multicore", "snow"),
+                      ncpus = getOption("boot.ncpus", 1L),
+                      ci.method = "boot", ...) {
+  # lmrob has a built-in robust sandwich variance; stats::vcov is the natural
+  # default. sandwich::vcovHC also works but is redundant and can be unstable
+  # on bootstrap samples with near-degenerate design matrices.
+  boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
+  resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
+               anova = anova, coefficients = coefficients, overall = overall,
+               nboot = nboot, vcovfunc = vcovfunc, store.boot = store.boot,
+               Anova.args = Anova.args, vcov.args = vcov.args, unbiased = unbiased,
+               alpha = alpha, parallel = parallel, ncpus = ncpus,
+               boot.method = boot.method, ci.method = ci.method, ...)
+}
+
+#' @describeIn resi RESI point and interval estimation for glmrob models (robustbase)
+#' @export
+resi.glmrob = function(model.full, model.reduced = NULL, data, anova = TRUE,
+                       coefficients = TRUE, overall = TRUE, nboot = 1000,
+                       vcovfunc = stats::vcov, alpha = 0.05, store.boot = FALSE,
+                       Anova.args = list(), vcov.args = list(), unbiased = TRUE,
+                       parallel = c("no", "multicore", "snow"),
+                       ncpus = getOption("boot.ncpus", 1L),
+                       ci.method = "boot", ...) {
+  dots = list(...)
+  if ("boot.method" %in% names(dots)){
+    stop("\nOnly nonparametric bootstrap supported for model type")
+  }
+  if (identical(vcovfunc, sandwich::vcovHC)) {
+    vcovfunc <- stats::vcov
+    warning("sandwich::vcovHC is not supported for glmrob objects. ",
+            "Using the model's built-in robust variance (stats::vcov) instead.")
+  }
+  resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
+               anova = anova, coefficients = coefficients, overall = overall,
+               nboot = nboot, vcovfunc = vcovfunc, store.boot = store.boot,
+               Anova.args = Anova.args, vcov.args = vcov.args,
+               unbiased = unbiased, alpha = alpha, parallel = parallel,
+               ncpus = ncpus, ci.method = ci.method, ...)
+}
+
 #' @describeIn resi RESI point and interval estimation for nls models
 #' @export
 resi.nls = function(model.full, model.reduced = NULL, data, coefficients = TRUE,

@@ -5,6 +5,8 @@
 \alias{resi.default}
 \alias{resi.glm}
 \alias{resi.lm}
+\alias{resi.lmrob}
+\alias{resi.glmrob}
 \alias{resi.nls}
 \alias{resi.survreg}
 \alias{resi.coxph}
@@ -59,6 +61,7 @@ resi(model.full, ...)
   unbiased = TRUE,
   parallel = c("no", "multicore", "snow"),
   ncpus = getOption("boot.ncpus", 1L),
+  ci.method = "boot",
   ...
 )
 
@@ -79,6 +82,48 @@ resi(model.full, ...)
   unbiased = TRUE,
   parallel = c("no", "multicore", "snow"),
   ncpus = getOption("boot.ncpus", 1L),
+  ci.method = "qf",
+  ...
+)
+
+\method{resi}{lmrob}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  overall = TRUE,
+  nboot = 1000,
+  boot.method = "nonparam",
+  vcovfunc = stats::vcov,
+  alpha = 0.05,
+  store.boot = FALSE,
+  Anova.args = list(),
+  vcov.args = list(),
+  unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
+  ci.method = "boot",
+  ...
+)
+
+\method{resi}{glmrob}(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  overall = TRUE,
+  nboot = 1000,
+  vcovfunc = stats::vcov,
+  alpha = 0.05,
+  store.boot = FALSE,
+  Anova.args = list(),
+  vcov.args = list(),
+  unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
+  ci.method = "boot",
   ...
 )
 
@@ -348,6 +393,10 @@ and then try rerunning \code{resi}.
 \item \code{resi(glm)}: RESI point and interval estimation for models
 
 \item \code{resi(lm)}: RESI point and interval estimation for lm models
+
+\item \code{resi(lmrob)}: RESI point and interval estimation for lmrob models (robustbase)
+
+\item \code{resi(glmrob)}: RESI point and interval estimation for glmrob models (robustbase)
 
 \item \code{resi(nls)}: RESI point and interval estimation for nls models
 
