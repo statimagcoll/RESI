@@ -26,8 +26,36 @@ Anova.resi <- function(mod, alpha = NULL, ...){
   }
   else{
     if (!(all(alpha %in% mod$alpha))){
-      if (is.null(mod$boot.results)){
-      stop('\nresi function was not run with store.boot = TRUE option')}
+      if (!is.null(mod$ci.method) && mod$ci.method != "boot" &&
+          !is.null(mod$model.full)) {
+        # Asymptotic (qf/normal): recompute anova CIs analytically.
+        output <- mod$anova[, 1:(which(colnames(mod$anova) == 'RESI')), drop = FALSE]
+        for (a in alpha) {
+          asym_out <- tryCatch(
+            resi_pe_asymptotic(
+              model.full   = mod$model.full,
+              alpha        = a,
+              ci.method    = mod$ci.method,
+              vcovfunc     = if (!is.null(mod$vcovfunc)) mod$vcovfunc else sandwich::vcovHC,
+              vcov.args    = if (!is.null(mod$vcov.args)) mod$vcov.args else list(),
+              Anova.args   = if (!is.null(mod$Anova.args)) mod$Anova.args else list(),
+              unbiased     = if (!is.null(mod$unbiased)) mod$unbiased else TRUE,
+              coefficients = FALSE,
+              anova        = TRUE
+            ),
+            error = function(e) {
+              stop(paste0("\nFailed to recompute asymptotic CIs at alpha = ", a,
+                          ":\n", conditionMessage(e)))
+            }
+          )
+          ci_cols <- paste0(c(a / 2, 1 - a / 2) * 100, '%')
+          rn_match <- intersect(rownames(output), rownames(asym_out$anova))
+          output[rn_match, ci_cols] <- asym_out$anova[rn_match, ci_cols]
+        }
+        return(output)
+      } else if (is.null(mod$boot.results)) {
+        stop('\nresi function was not run with store.boot = TRUE option')
+      }
     }
     if(is.null(mod$boot.results)){
       output = mod$anova[c(1:(which(colnames(mod$anova) == 'RESI')),
@@ -79,8 +107,36 @@ anova.resi <- function(object, alpha = NULL, ...){
   }
   else{
     if (!(all(alpha %in% object$alpha))){
-      if (is.null(object$boot.results)){
-        stop("\nresi function was not run with store.boot = TRUE option")}
+      if (!is.null(object$ci.method) && object$ci.method != "boot" &&
+          !is.null(object$model.full)) {
+        # Asymptotic (qf/normal): recompute anova CIs analytically.
+        output <- object$anova[, 1:(which(colnames(object$anova) == "RESI")), drop = FALSE]
+        for (a in alpha) {
+          asym_out <- tryCatch(
+            resi_pe_asymptotic(
+              model.full   = object$model.full,
+              alpha        = a,
+              ci.method    = object$ci.method,
+              vcovfunc     = if (!is.null(object$vcovfunc)) object$vcovfunc else sandwich::vcovHC,
+              vcov.args    = if (!is.null(object$vcov.args)) object$vcov.args else list(),
+              Anova.args   = if (!is.null(object$Anova.args)) object$Anova.args else list(),
+              unbiased     = if (!is.null(object$unbiased)) object$unbiased else TRUE,
+              coefficients = FALSE,
+              anova        = TRUE
+            ),
+            error = function(e) {
+              stop(paste0("\nFailed to recompute asymptotic CIs at alpha = ", a,
+                          ":\n", conditionMessage(e)))
+            }
+          )
+          ci_cols <- paste0(c(a / 2, 1 - a / 2) * 100, "%")
+          rn_match <- intersect(rownames(output), rownames(asym_out$anova))
+          output[rn_match, ci_cols] <- asym_out$anova[rn_match, ci_cols]
+        }
+        return(output)
+      } else if (is.null(object$boot.results)) {
+        stop("\nresi function was not run with store.boot = TRUE option")
+      }
     }
     if(is.null(object$boot.results)){
       output = object$anova[c(1:(which(colnames(object$anova) == "RESI")),

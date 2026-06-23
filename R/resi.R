@@ -275,7 +275,14 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
           }
         }
       }
-      output$ci.method <- ci.method
+      output$ci.method  <- ci.method
+      # Store model and vcov settings so S3 methods can recompute CIs at a
+      # different alpha without re-running resi().
+      output$model.full <- model.full
+      output$vcovfunc   <- vcovfunc
+      output$vcov.args  <- vcov.args
+      output$Anova.args <- Anova.args
+      output$unbiased   <- unbiased
       class(output) <- "resi"
       return(output)
     }

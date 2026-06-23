@@ -32,12 +32,35 @@ ggplot.resi = function(data, mapping, alpha = NULL, error.bars = TRUE, ...,
         alpha = alpha[1]
       }
       if (!(alpha %in% data$alpha)){
-        if (is.null(data$boot.results)){
+        if (!is.null(data$ci.method) && data$ci.method != "boot" && !is.null(data$model.full)) {
+          # Asymptotic (qf/normal): recompute coefficient CIs at the new alpha.
+          asym_out <- tryCatch(
+            resi_pe_asymptotic(
+              model.full   = data$model.full,
+              alpha        = alpha,
+              ci.method    = data$ci.method,
+              vcovfunc     = if (!is.null(data$vcovfunc)) data$vcovfunc else sandwich::vcovHC,
+              vcov.args    = if (!is.null(data$vcov.args)) data$vcov.args else list(),
+              Anova.args   = if (!is.null(data$Anova.args)) data$Anova.args else list(),
+              unbiased     = if (!is.null(data$unbiased)) data$unbiased else TRUE,
+              coefficients = TRUE,
+              anova        = FALSE
+            ),
+            error = function(e) {
+              stop(paste0("\nFailed to recompute asymptotic CIs at alpha = ", alpha,
+                          ":\n", conditionMessage(e)))
+            }
+          )
+          ci_cols <- paste0(c(alpha / 2, 1 - alpha / 2) * 100, "%")
+          rn_match <- intersect(rownames(data$coefficients), rownames(asym_out$coefficients))
+          data$coefficients[rn_match, ci_cols] <- asym_out$coefficients[rn_match, ci_cols]
+        } else if (is.null(data$boot.results)) {
           stop("\nSpecified alpha not found in the resi object")
+        } else {
+          CIs = apply(data$boot.results$t[,2:(1+nrow(data$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+          CIs = t(CIs)
+          data$coefficients[1:nrow(CIs), c(paste(alpha/2*100, "%", sep=""), paste((1-rev(alpha)/2)*100, "%", sep=""))] = CIs
         }
-        CIs = apply(data$boot.results$t[,2:(1+nrow(data$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
-        CIs = t(CIs)
-        data$coefficients[1:nrow(CIs), c(paste(alpha/2*100, "%", sep=""), paste((1-rev(alpha)/2)*100, "%", sep=""))] = CIs
       }
     }
     ll = paste(alpha/2*100, "%", sep = "")

@@ -41,12 +41,35 @@ plot.resi = function(x, alpha = NULL, ycex.axis = NULL, yaxis.args = list(),
         alpha = alpha[1]
       }
       if (!(alpha %in% x$alpha)){
-        if (is.null(x$boot.results)){
+        if (!is.null(x$ci.method) && x$ci.method != "boot" && !is.null(x$model.full)) {
+          # Asymptotic (qf/normal): recompute coefficient CIs at the new alpha.
+          asym_out <- tryCatch(
+            resi_pe_asymptotic(
+              model.full   = x$model.full,
+              alpha        = alpha,
+              ci.method    = x$ci.method,
+              vcovfunc     = if (!is.null(x$vcovfunc)) x$vcovfunc else sandwich::vcovHC,
+              vcov.args    = if (!is.null(x$vcov.args)) x$vcov.args else list(),
+              Anova.args   = if (!is.null(x$Anova.args)) x$Anova.args else list(),
+              unbiased     = if (!is.null(x$unbiased)) x$unbiased else TRUE,
+              coefficients = TRUE,
+              anova        = FALSE
+            ),
+            error = function(e) {
+              stop(paste0("\nFailed to recompute asymptotic CIs at alpha = ", alpha,
+                          ":\n", conditionMessage(e)))
+            }
+          )
+          ci_cols <- paste0(c(alpha / 2, 1 - alpha / 2) * 100, "%")
+          rn_match <- intersect(rownames(x$coefficients), rownames(asym_out$coefficients))
+          x$coefficients[rn_match, ci_cols] <- asym_out$coefficients[rn_match, ci_cols]
+        } else if (is.null(x$boot.results)) {
           stop("\nSpecified alpha not found in the resi object")
+        } else {
+          CIs = apply(x$boot.results$t[,2:(1+nrow(x$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
+          CIs = t(CIs)
+          x$coefficients[1:nrow(CIs), c(paste(alpha/2*100, "%", sep=""), paste((1-rev(alpha)/2)*100, "%", sep=""))] = CIs
         }
-        CIs = apply(x$boot.results$t[,2:(1+nrow(x$coefficients))], 2,  quantile, probs = c(alpha/2, 1-alpha/2), na.rm = TRUE)
-        CIs = t(CIs)
-        x$coefficients[1:nrow(CIs), c(paste(alpha/2*100, "%", sep=""), paste((1-rev(alpha)/2)*100, "%", sep=""))] = CIs
       }
     }
     ll = paste(alpha/2*100, "%", sep = "")

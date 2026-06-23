@@ -30,10 +30,37 @@ summary.resi <- function(object, alpha = NULL, ...){
   }
   else{
     if (!(all(alpha %in% object$alpha))){
-      # Scenario 1: model type does not support bootstrapping (e.g. lme),
-      # OR store.boot was not used — in either case boot.results is NULL
-      # and we cannot recompute quantiles at a different alpha.
-      if (is.null(object$boot.results)){
+      if (!is.null(object$ci.method) && object$ci.method != "boot" &&
+          !is.null(object$model.full)) {
+        # Asymptotic (qf/normal): recompute CIs analytically at the new alpha(s).
+        output$coefficients <- object$coefficients[, 1:(which(colnames(object$coefficients) == "RESI")),
+                                                   drop = FALSE]
+        for (a in alpha) {
+          asym_out <- tryCatch(
+            resi_pe_asymptotic(
+              model.full   = object$model.full,
+              alpha        = a,
+              ci.method    = object$ci.method,
+              vcovfunc     = if (!is.null(object$vcovfunc)) object$vcovfunc else sandwich::vcovHC,
+              vcov.args    = if (!is.null(object$vcov.args)) object$vcov.args else list(),
+              Anova.args   = if (!is.null(object$Anova.args)) object$Anova.args else list(),
+              unbiased     = if (!is.null(object$unbiased)) object$unbiased else TRUE,
+              coefficients = TRUE,
+              anova        = FALSE
+            ),
+            error = function(e) {
+              stop(paste0("\nFailed to recompute asymptotic CIs at alpha = ", a,
+                          ":\n", conditionMessage(e)))
+            }
+          )
+          ci_cols <- paste0(c(a / 2, 1 - a / 2) * 100, "%")
+          rn_match <- intersect(rownames(output$coefficients), rownames(asym_out$coefficients))
+          output$coefficients[rn_match, ci_cols] <- asym_out$coefficients[rn_match, ci_cols]
+        }
+        class(output) <- "summary_resi"
+        return(output)
+      } else if (is.null(object$boot.results)) {
+        # No asymptotic recomputation possible and no stored bootstrap results.
         stop(paste0(
           "\nCannot compute CIs at a different alpha level. Either:\n",
           "  (a) bootstrapping is not yet supported for this model type, or\n",
