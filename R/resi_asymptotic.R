@@ -367,8 +367,10 @@
   n       <- contrast$n
   m1      <- contrast$m1
 
-  T2_obs  <- n * Stilde^2                  # actual Wald chi-square test statistic
-  Shat    <- sqrt(max(0, T2_obs - m1) / n) # df-corrected point estimate (for search centering only)
+  # T2_obs  <- max(0, n * Stilde^2 - m1)    # df-corrected test statistic (Shat^2 * n)
+  # Shat    <- sqrt(T2_obs / n)              # df-corrected point estimate (for search bounds only)
+  T2_obs <- n * Stilde^2                  # raw test statistic
+  Shat   <- sqrt(max(0, Stilde^2 - m1/n)) # (for search bounds only)
 
   # EVD of Sigma_R
   eigR       <- eigen(Sigma_R, symmetric = TRUE)
