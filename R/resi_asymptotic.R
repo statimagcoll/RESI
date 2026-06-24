@@ -314,7 +314,8 @@
   S_signed <- R_beta   # scalar
   # Floor SE at 1/sqrt(n): asymptotically Sigma_R -> 1 under H0, but near-null
   # sandwich estimates can collapse below 1, shrinking the CI inappropriately.
-  se       <- max(sqrt(as.numeric(Sigma_R) / n), 1 / sqrt(n))
+  # se       <- max(sqrt(as.numeric(Sigma_R) / n), 1 / sqrt(n))
+  se       <- sqrt(as.numeric(Sigma_R) / n)
   z        <- qnorm(1 - alpha / 2)
   c(LCI = S_signed - z * se, UCI = S_signed + z * se)
 }
@@ -347,7 +348,8 @@
   sigma2S <- as.numeric(t(u) %*% Sigma_R %*% u)         # scalar variance
   # Floor SE at sqrt(m1/n): asymptotically tr(Sigma_R) -> m1 under H0, but
   # near-null sandwich estimates can underestimate, shrinking the CI.
-  se      <- max(sqrt(pmax(sigma2S, 0) / n), sqrt(m1 / n))
+  # se      <- max(sqrt(pmax(sigma2S, 0) / n), sqrt(m1 / n))
+  se      <- sqrt(pmax(sigma2S, 0) / n)
 
   # truncate_ci handles boundary; centered at Shat
   bounds <- .resi_truncate_ci(Shat, se, n, m1, alpha)

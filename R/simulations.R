@@ -567,7 +567,10 @@ simRecomputeSummary <- function(output.dir  = "resiBootSim",
 #' @param alpha Numeric, nominal CI level used for the coverage reference line.
 #'   Default 0.05.
 #' @param ci.label Character, label for the CI method used in figure titles and file
-#'   names. Default \code{"bootstrap"}.
+#'   names. Default \code{NULL}, which auto-detects from \code{output.dir}:
+#'   \code{"boot"} if the directory name contains "Boot"/"boot",
+#'   \code{"normal"} if it contains "Normal"/"normal",
+#'   \code{"qf"} if it contains "QF"/"qf", otherwise \code{basename(output.dir)}.
 #'
 #' @return Invisibly returns the summary metrics \code{data.frame}. Saves PDF figures
 #'   to \code{file.path(output.dir, "figures")}, named
@@ -578,7 +581,15 @@ simRecomputeSummary <- function(output.dir  = "resiBootSim",
 #' @export
 simFigures <- function(output.dir = "resiBootSim",
                         alpha      = 0.05,
-                        ci.label   = "bootstrap") {
+                        ci.label   = NULL) {
+
+  # Auto-detect ci.label from output.dir when not supplied
+  if (is.null(ci.label)) {
+    ci.label <- if (grepl("[Bb]oot",   output.dir)) "boot" else
+                if (grepl("[Nn]ormal", output.dir)) "normal" else
+                if (grepl("[Qq][Ff]",  output.dir)) "qf" else
+                basename(output.dir)
+  }
 
   # High-contrast matte palette (matplotlib tab10 + extensions)
   .sim_pal <- c(
@@ -1007,11 +1018,19 @@ simCompareMethodsFigures <- function(
                    tbl_name, "_", safe_term, ".pdf")
           )
 
-          # Layout: 5 metric panels + 1 narrow legend panel
-          grDevices::pdf(fig_path, width = 15, height = 3.5)
+          # Gray palette for sample size (lighter = smaller n, darker = larger n)
+          n_gray    <- length(n_vals)
+          gray_pal  <- setNames(gray(seq(0.75, 0.1, length.out = n_gray)),
+                                as.character(n_vals))
+          meth_pch  <- setNames(c(16L, 17L, 15L, 18L, 7L)[seq_along(avail_methods)],
+                                avail_methods)
+          z_ref     <- qnorm(1 - alpha / 2)
+
+          # Layout: 5 metric panels + 1 SE comparison panel + 1 legend panel
+          grDevices::pdf(fig_path, width = 17.5, height = 3.5)
           graphics::layout(
-            matrix(seq_len(length(metrics) + 1L), nrow = 1L),
-            widths = c(rep(2.8, length(metrics)), 1.8)
+            matrix(seq_len(length(metrics) + 2L), nrow = 1L),
+            widths = c(rep(2.8, length(metrics)), 2.8, 2.2)
           )
           graphics::par(mar = c(3.2, 3.0, 2.2, 0.5), mgp = c(1.8, 0.5, 0))
 
@@ -1045,15 +1064,59 @@ simCompareMethodsFigures <- function(
             }
           }
 
-          # Legend panel
-          graphics::par(mar = c(0.5, 0.3, 0.5, 0.3))
+          # SE comparison panel
+          # x: sqrt(n) * empirical SD = sqrt(n * (MSE - bias^2))  [same across methods]
+          # y: sqrt(n) * estimated SE = sqrt(n) * (CI width / (2*z))  [per method]
+          # color: gray shade by sample size; shape: by CI method
+          se_comp <- do.call(rbind, lapply(avail_methods, function(meth) {
+            md <- term_data[term_data$ci_method == meth, ]
+            data.frame(
+              ci_method    = meth,
+              n            = md$n,
+              empirical_se = sqrt(md$n * pmax(md$mse - md$bias^2, 0)),
+              estimated_se = sqrt(md$n) * md$width / (2 * z_ref),
+              stringsAsFactors = FALSE
+            )
+          }))
+          lim_se <- range(c(se_comp$empirical_se, se_comp$estimated_se), na.rm = TRUE)
+          graphics::par(mar = c(3.2, 3.0, 2.2, 0.5), mgp = c(1.8, 0.5, 0))
+          graphics::plot(
+            NULL, xlim = lim_se, ylim = lim_se,
+            xlab = expression(sqrt(n) %*% "Empirical SE"),
+            ylab = expression(sqrt(n) %*% "Estimated SE"),
+            main = paste0(toupper(mtype), " ", tbl_name, " (", vtype, ")\nSE Comparison"),
+            bty  = "l", asp = 1
+          )
+          graphics::abline(0, 1, lty = 2L, col = "gray40")
+          for (meth in avail_methods) {
+            md_se <- se_comp[se_comp$ci_method == meth, ]
+            for (i in seq_len(nrow(md_se))) {
+              graphics::points(
+                md_se$empirical_se[i], md_se$estimated_se[i],
+                col = gray_pal[as.character(md_se$n[i])],
+                pch = meth_pch[[meth]], cex = 1.3
+              )
+            }
+          }
+
+          # Legend panel: CI method (color + shape) + sample size (gray shades)
+          graphics::par(mar = c(0.3, 0.3, 0.3, 0.3))
           graphics::plot.new()
           graphics::legend(
-            "center",
+            x = 0, y = 1, xjust = 0, yjust = 1,
             legend = avail_methods,
             col    = method_cols[avail_methods],
-            lwd    = 2L, pch = 16L, bty = "n", cex = 0.95,
-            title  = "CI method", title.font = 2L
+            pch    = meth_pch[avail_methods],
+            lwd    = 2L, lty   = 1L,
+            bty = "n", cex = 0.85,
+            title = "CI method", title.font = 2L
+          )
+          graphics::legend(
+            x = 0, y = 0.45, xjust = 0, yjust = 1,
+            legend = n_vals,
+            fill   = gray_pal[as.character(n_vals)],
+            border = NA, bty = "n", cex = 0.75,
+            title = "n", title.font = 2L
           )
 
           grDevices::dev.off()
