@@ -225,3 +225,34 @@ test_that("Signed coefficient CIs allow negative values", {
                 label = "Negative RESI should have negative LCI")
   }
 })
+
+
+# ===========================================================================
+# 12. RESI point estimates are identical across all CI methods
+# ===========================================================================
+test_that("RESI point estimates are identical across ci.method values", {
+  out_norm <- resi(mod.lm, ci.method = "normal")
+  out_qf   <- resi(mod.lm, ci.method = "qf")
+  set.seed(1L)
+  out_boot <- resi(mod.lm, nboot = 5L)
+
+  # anova table
+  expect_equal(out_norm$anova[, "RESI"], out_qf$anova[, "RESI"],
+               label = "anova RESI: normal == qf")
+  expect_equal(out_norm$anova[, "RESI"], out_boot$anova[, "RESI"],
+               label = "anova RESI: normal == boot")
+
+  # coefficients table
+  expect_equal(out_norm$coefficients[, "RESI"], out_qf$coefficients[, "RESI"],
+               label = "coeff RESI: normal == qf")
+  expect_equal(out_norm$coefficients[, "RESI"], out_boot$coefficients[, "RESI"],
+               label = "coeff RESI: normal == boot")
+
+  # GLM
+  out_gnorm <- resi(mod.glm, ci.method = "normal")
+  out_gqf   <- resi(mod.glm, ci.method = "qf")
+  expect_equal(out_gnorm$anova[, "RESI"], out_gqf$anova[, "RESI"],
+               label = "GLM anova RESI: normal == qf")
+  expect_equal(out_gnorm$coefficients[, "RESI"], out_gqf$coefficients[, "RESI"],
+               label = "GLM coeff RESI: normal == qf")
+})

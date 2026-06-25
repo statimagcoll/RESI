@@ -200,20 +200,15 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
     if(!("skip.red" %in% names(dots))){
       form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
       if (!(form.reduced == formula(model.full))){
-        if(!(is.null(model.full$model)) & !long){
-          # Use the column name from model.frame directly (backtick-quoted) so
-          # that update() finds the already-evaluated response in model.full$model
-          # rather than trying to re-evaluate the expression (e.g. log10(charges)
-          # or I(charges > 15000)). Re-evaluation fails in forked worker processes
-          # where the original data object may not be in scope.
-          resp_name <- colnames(model.full$model)[1]
-          form.reduced_eval <- as.formula(paste0("`", resp_name, "` ~ 1"))
-          model.reduced = try(update(model.full, formula = form.reduced_eval,
-                                      data = model.full$model), silent = T)
-        } else{
-          model.reduced = try(update(model.full, formula = form.reduced,
-                                      data = data), silent = T)
-        }
+        # Always use form.reduced (the expression formula, e.g. log10(charges) ~ 1)
+        # with data = data (the cleaned user-supplied data that has the raw columns
+        # like `charges`). Using the backtick-quoted model-frame column name
+        # (e.g. `log10(charges)` ~ 1) breaks bootstrap: resi_stat calls
+        # update(model.reduced, data = boot.data) where boot.data has `charges`
+        # but not a pre-computed `log10(charges)` column, causing all replicates
+        # to return NA. data is already stripped of NA rows at this point.
+        model.reduced = try(update(model.full, formula = form.reduced,
+                                    data = data), silent = T)
         if(inherits(model.reduced, "try-error")){
           warning("Fitting intercept-only model failed. No overall test computed")
           overall = FALSE

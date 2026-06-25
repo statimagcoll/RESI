@@ -156,6 +156,13 @@ if(requireNamespace("glmmTMB")){
   model_glmmTMB <- glmmTMB::glmmTMB(Reaction ~ Days + (1 | Subject), data = lme4::sleepstudy, family = gaussian())
 }
 
+# Models with transformed responses -- used to test that bootstrap (resi_stat)
+# can update() the reduced model on bootstrap data that has the raw columns
+# (e.g. 'charges') but NOT the pre-computed transformed column ('log10(charges)').
+mod.lm.log10  <- lm(log10(charges) ~ region + age + bmi + sex, data = data)
+mod.glm.I     <- glm(I(charges > 15000) ~ region + age + bmi + sex,
+                     data = data, family = binomial())
+
 ## tests
 test_that("Specifying non-allowed vcov produces warning",{
   expect_warning(resi(mod.nls, data = data.nls, nboot = 1, vcovfunc = sandwich::vcovHC),
@@ -306,6 +313,31 @@ test_that("RESI estimates are in between the confidence limits", {
   expect_true(all(resi.obj$coefficients$`CS-RESI` >= resi.obj$coefficients$`CS 2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`CS 97.5%`))
   expect_true(all(resi.obj$anova$`L-RESI` >= resi.obj$anova$`L 2.5%`) & all(resi.obj$anova$RESI <= resi.obj$anova$`L 97.5%`))
   expect_true(all(resi.obj$anova$`CS-RESI` >= resi.obj$anova$`CS 2.5%`) & all(resi.obj$anova$RESI <= resi.obj$anova$`CS 97.5%`))}
+})
+
+# Regression test: bootstrap must succeed for models with transformed responses.
+# Bug: resi.default previously fit the intercept-only reduced model using a
+# backtick-quoted column name (e.g. `log10(charges)` ~ 1) from model.frame,
+# which broke resi_stat's update(model.reduced, data = boot.data) because
+# boot.data has 'charges' but not a pre-computed 'log10(charges)' column.
+# Every replicate returned NA -> "Bootstrapping failed" error.
+test_that("bootstrap succeeds for models with transformed responses", {
+  set.seed(1)
+  # lm with log-transformed response
+  r.lm <- resi(mod.lm.log10, data = data, nboot = 20, ci.method = "boot")
+  expect_s3_class(r.lm, "resi")
+  expect_false(anyNA(r.lm$coefficients$RESI))
+  expect_true(all(r.lm$coefficients$RESI >= r.lm$coefficients$`2.5%`))
+  expect_true(all(r.lm$coefficients$RESI <= r.lm$coefficients$`97.5%`))
+
+  # glm with I() binary response
+  r.glm <- suppressWarnings(
+    resi(mod.glm.I, data = data, nboot = 20, ci.method = "boot")
+  )
+  expect_s3_class(r.glm, "resi")
+  expect_false(anyNA(r.glm$coefficients$RESI))
+  expect_true(all(r.glm$coefficients$RESI >= r.glm$coefficients$`2.5%`))
+  expect_true(all(r.glm$coefficients$RESI <= r.glm$coefficients$`97.5%`))
 })
 
 if(requireNamespace("gee") & requireNamespace("geepack")){

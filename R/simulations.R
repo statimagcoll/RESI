@@ -86,6 +86,7 @@
   data.frame(
     bias           = colMeans(diff_mat,           na.rm = TRUE),
     mse            = colMeans(diff_mat ^ 2L,      na.rm = TRUE),
+    empirical_sd   = apply(resi_mat, 2L, sd,      na.rm = TRUE),
     coverage       = colMeans(in_ci,              na.rm = TRUE),
     upper_coverage = colMeans(upper_cov_mat,      na.rm = TRUE),
     lower_coverage = colMeans(lower_cov_mat,      na.rm = TRUE),
@@ -599,6 +600,11 @@ simFigures <- function(output.dir = "resiBootSim",
   )
 
   summary_table <- readRDS(file.path(output.dir, "summary_table.rds"))
+  if (is.null(summary_table) || nrow(summary_table) == 0L)
+    stop("summary_table.rds in '", output.dir, "' is empty or NULL. ",
+         "Re-run insurancePlasmodeSim() (all simulation replicates may have ",
+         "failed -- check for 'All replicates failed' warnings).")
+
   figures_dir   <- file.path(output.dir, "figures")
   dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
 
@@ -611,7 +617,7 @@ simFigures <- function(output.dir = "resiBootSim",
 
       sub <- summary_table[summary_table$model == mtype &
                              summary_table$vcov  == vtype, ]
-      if (nrow(sub) == 0L) next
+      if (is.null(sub) || nrow(sub) == 0L) next
 
       fig_path <- file.path(
         figures_dir,
@@ -983,11 +989,13 @@ simCompareMethodsFigures <- function(
   # Keep only methods that were successfully loaded, in supplied order
   avail_methods <- intersect(method_names, unique(combined$ci_method))
 
-  # High-contrast palette per method
-  base_cols <- c("#1F77B4", "#D62728", "#2CA02C", "#FF7F0E", "#9467BD")
+  # High-contrast palette and shapes per method
+  base_cols   <- c("#1F77B4", "#D62728", "#2CA02C", "#FF7F0E", "#9467BD")
   method_cols <- setNames(base_cols[seq_along(avail_methods)], avail_methods)
+  n_vals <- sort(unique(combined$n))
+  z_ref  <- qnorm(1 - alpha / 2)
 
-  n_vals        <- sort(unique(combined$n))
+  # Panel order per row: Bias, MSE, SE comparison, Upper Cov, Lower Cov, Width
   metrics       <- c("bias", "mse", "upper_coverage", "lower_coverage", "width")
   metric_labels <- c("Bias", "MSE", "Upper Cov.", "Lower Cov.", "CI Width")
   metric_refs   <- list(
@@ -997,6 +1005,11 @@ simCompareMethodsFigures <- function(
     lower_coverage = list(h = 1 - alpha/2, col = "gray40"),
     width          = NULL
   )
+  # For GLM, truncate non-coverage y-axes to n >= 500
+  is_coverage <- c(bias = FALSE, mse = FALSE, upper_coverage = TRUE,
+                   lower_coverage = TRUE, width = FALSE)
+
+  n_data_panels <- 6L   # Bias, MSE, SE comparison, Upper Cov, Lower Cov, Width
 
   for (mtype in c("lm", "glm")) {
     for (vtype in c("parametric", "robust")) {
@@ -1008,52 +1021,143 @@ simCompareMethodsFigures <- function(
           combined$table == tbl_name, ]
         if (nrow(sub) == 0L) next
 
-        for (term in unique(sub$term)) {
+        terms   <- unique(sub$term)
+        n_terms <- length(terms)
+
+        # One PDF per (model x vcov x table), rows = terms
+        fig_path <- file.path(
+          figures.dir,
+          paste0("compare_", mtype, "_", vtype, "_", tbl_name, ".pdf")
+        )
+
+        # Layout: n_terms rows x (n_data_panels + 1) cols;
+        # last column is a single legend panel spanning all rows
+        legend_id <- n_data_panels * n_terms + 1L
+        lay_mat   <- matrix(0L, nrow = n_terms, ncol = n_data_panels + 1L)
+        for (ti in seq_len(n_terms))
+          lay_mat[ti, seq_len(n_data_panels)] <-
+            (ti - 1L) * n_data_panels + seq_len(n_data_panels)
+        lay_mat[, n_data_panels + 1L] <- legend_id   # shared legend column
+
+        row_h <- 3.2
+        grDevices::pdf(fig_path, width = 22, height = row_h * n_terms + 0.3)
+        graphics::layout(
+          lay_mat,
+          widths  = c(rep(2.8, n_data_panels), 2.0),
+          heights = rep(row_h, n_terms)
+        )
+
+        for (ti in seq_along(terms)) {
+          term      <- terms[[ti]]
           term_data <- sub[sub$term == term, ]
 
-          safe_term <- gsub("[^a-zA-Z0-9_]", "_", term)
-          fig_path  <- file.path(
-            figures.dir,
-            paste0("compare_", mtype, "_", vtype, "_",
-                   tbl_name, "_", safe_term, ".pdf")
-          )
+          # y-range helper: for GLM non-coverage metrics, use only n >= 500;
+          # for SE and width, ignore values > 10 when computing limits
+          ylim_for <- function(m) {
+            rows <- if (mtype == "glm" && !is_coverage[[m]])
+                      term_data$n >= 500 else rep(TRUE, nrow(term_data))
+            vals <- term_data[rows, m]
+            if (m == "width") vals <- vals[vals <= 10]
+            range(vals, na.rm = TRUE)
+          }
 
-          # Gray palette for sample size (lighter = smaller n, darker = larger n)
-          n_gray    <- length(n_vals)
-          gray_pal  <- setNames(gray(seq(0.75, 0.1, length.out = n_gray)),
-                                as.character(n_vals))
-          meth_pch  <- setNames(c(16L, 17L, 15L, 18L, 7L)[seq_along(avail_methods)],
-                                avail_methods)
-          z_ref     <- qnorm(1 - alpha / 2)
-
-          # Layout: 5 metric panels + 1 SE comparison panel + 1 legend panel
-          grDevices::pdf(fig_path, width = 17.5, height = 3.5)
-          graphics::layout(
-            matrix(seq_len(length(metrics) + 2L), nrow = 1L),
-            widths = c(rep(2.8, length(metrics)), 2.8, 2.2)
-          )
+          # ---- Panel 1: Bias (carries row title = term name) ----
+          m   <- "bias"
+          ref <- metric_refs[[m]]
+          ylim <- ylim_for(m)
+          if (!is.null(ref)) ylim <- range(c(ylim, ref$h - 0.02, ref$h + 0.01))
           graphics::par(mar = c(3.2, 3.0, 2.2, 0.5), mgp = c(1.8, 0.5, 0))
+          graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
+                         xlab = "Sample Size", ylab = "Bias",
+                         main = term, log = "x", xaxt = "n", bty = "l")
+          graphics::axis(1, at = n_vals, labels = n_vals, las = 2L,
+                         mgp = c(1.7, 0.35, 0))
+          graphics::abline(h = 0, lty = 2L, col = "gray40")
+          for (meth in avail_methods) {
+            md <- term_data[term_data$ci_method == meth, ]
+            md <- md[order(md$n), ]
+            if (nrow(md) == 0L) next
+            graphics::lines(md$n,  md$bias, col = method_cols[[meth]], lwd = 2L)
+            graphics::points(md$n, md$bias, col = method_cols[[meth]],
+                             pch = 16L, cex = 0.8)
+          }
 
-          for (mi in seq_along(metrics)) {
-            m   <- metrics[[mi]]
-            ref <- metric_refs[[m]]
+          # ---- Panel 2: MSE ----
+          m   <- "mse"
+          ylim <- ylim_for(m)
+          graphics::par(mar = c(3.2, 3.0, 2.2, 0.5), mgp = c(1.8, 0.5, 0))
+          graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
+                         xlab = "Sample Size", ylab = "MSE",
+                         main = "", log = "x", xaxt = "n", bty = "l")
+          graphics::axis(1, at = n_vals, labels = n_vals, las = 2L,
+                         mgp = c(1.7, 0.35, 0))
+          for (meth in avail_methods) {
+            md <- term_data[term_data$ci_method == meth, ]
+            md <- md[order(md$n), ]
+            if (nrow(md) == 0L) next
+            graphics::lines(md$n,  md$mse, col = method_cols[[meth]], lwd = 2L)
+            graphics::points(md$n, md$mse, col = method_cols[[meth]],
+                             pch = 16L, cex = 0.8)
+          }
 
-            ylim <- range(term_data[[m]], na.rm = TRUE)
-            if (!is.null(ref))
-              ylim <- range(c(ylim, ref$h - 0.02, ref$h + 0.01))
-
-            graphics::plot(
-              NULL,
-              xlim = range(n_vals), ylim = ylim,
-              xlab = "Sample Size", ylab = metric_labels[[mi]],
-              main = paste0(toupper(mtype), " ", tbl_name, " (", vtype, ")\n", term),
-              log  = "x", xaxt = "n", bty = "l"
+          # ---- Panel 3: SE comparison (method-colored arrows, sequential n) ----
+          se_comp <- do.call(rbind, lapply(avail_methods, function(meth) {
+            md <- term_data[term_data$ci_method == meth, ]
+            md <- md[order(md$n), ]
+            data.frame(
+              ci_method    = meth,
+              n            = md$n,
+              empirical_se = sqrt(md$n) * md$empirical_sd,
+              estimated_se = sqrt(md$n) * md$width / (2 * z_ref),
+              stringsAsFactors = FALSE
             )
+          }))
+          se_vals <- c(se_comp$empirical_se, se_comp$estimated_se)
+          lim_se  <- range(se_vals[se_vals <= 10], na.rm = TRUE)
+          se_title <- if (ti == 1L) "SE Calibration" else ""
+          graphics::par(mar = c(3.2, 3.0, 2.2, 0.5), mgp = c(1.8, 0.5, 0))
+          graphics::plot(
+            NULL, xlim = lim_se, ylim = lim_se,
+            xlab = expression(sqrt(n) %*% " Empirical SE"),
+            ylab = expression(sqrt(n) %*% " Estimated SE"),
+            main = se_title, bty = "l", asp = 1
+          )
+          graphics::abline(0, 1, lty = 2L, col = "gray40")
+          for (meth in avail_methods) {
+            md_se <- se_comp[se_comp$ci_method == meth, ]
+            md_se <- md_se[order(md_se$n), ]
+            if (nrow(md_se) == 0L) next
+            # Starting point marker
+            graphics::points(md_se$empirical_se[1L], md_se$estimated_se[1L],
+                             col = method_cols[[meth]], pch = 16L,
+                             cex = 1.1)
+            # Arrows connecting sequential n values
+            if (nrow(md_se) >= 2L) {
+              for (i in seq_len(nrow(md_se) - 1L)) {
+                graphics::arrows(
+                  md_se$empirical_se[i],   md_se$estimated_se[i],
+                  md_se$empirical_se[i+1L], md_se$estimated_se[i+1L],
+                  col = method_cols[[meth]], lwd = 1.5,
+                  length = 0.07, angle = 20L
+                )
+              }
+            }
+          }
+
+          # ---- Panels 4-6: Upper Cov, Lower Cov, Width ----
+          for (mi in 3:5) {
+            m    <- metrics[[mi]]
+            ref  <- metric_refs[[m]]
+            ylim <- ylim_for(m)
+            if (!is.null(ref)) ylim <- range(c(ylim, ref$h - 0.02, ref$h + 0.01))
+            graphics::par(mar = c(3.2, 3.0, 2.2, 0.5), mgp = c(1.8, 0.5, 0))
+            graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
+                           xlab = "Sample Size", ylab = metric_labels[[mi]],
+                           main = "", log = "x", xaxt = "n", bty = "l")
             graphics::axis(1, at = n_vals, labels = n_vals, las = 2L,
                            mgp = c(1.7, 0.35, 0))
             if (!is.null(ref))
               graphics::abline(h = ref$h, lty = 2L, col = ref$col)
-
             for (meth in avail_methods) {
               md <- term_data[term_data$ci_method == meth, ]
               md <- md[order(md$n), ]
@@ -1063,64 +1167,23 @@ simCompareMethodsFigures <- function(
                                pch = 16L, cex = 0.8)
             }
           }
+        }  # end term loop
 
-          # SE comparison panel
-          # x: sqrt(n) * empirical SD = sqrt(n * (MSE - bias^2))  [same across methods]
-          # y: sqrt(n) * estimated SE = sqrt(n) * (CI width / (2*z))  [per method]
-          # color: gray shade by sample size; shape: by CI method
-          se_comp <- do.call(rbind, lapply(avail_methods, function(meth) {
-            md <- term_data[term_data$ci_method == meth, ]
-            data.frame(
-              ci_method    = meth,
-              n            = md$n,
-              empirical_se = sqrt(md$n * pmax(md$mse - md$bias^2, 0)),
-              estimated_se = sqrt(md$n) * md$width / (2 * z_ref),
-              stringsAsFactors = FALSE
-            )
-          }))
-          lim_se <- range(c(se_comp$empirical_se, se_comp$estimated_se), na.rm = TRUE)
-          graphics::par(mar = c(3.2, 3.0, 2.2, 0.5), mgp = c(1.8, 0.5, 0))
-          graphics::plot(
-            NULL, xlim = lim_se, ylim = lim_se,
-            xlab = expression(sqrt(n) %*% "Empirical SE"),
-            ylab = expression(sqrt(n) %*% "Estimated SE"),
-            main = paste0(toupper(mtype), " ", tbl_name, " (", vtype, ")\nSE Comparison"),
-            bty  = "l", asp = 1
-          )
-          graphics::abline(0, 1, lty = 2L, col = "gray40")
-          for (meth in avail_methods) {
-            md_se <- se_comp[se_comp$ci_method == meth, ]
-            for (i in seq_len(nrow(md_se))) {
-              graphics::points(
-                md_se$empirical_se[i], md_se$estimated_se[i],
-                col = gray_pal[as.character(md_se$n[i])],
-                pch = meth_pch[[meth]], cex = 1.3
-              )
-            }
-          }
+        # Shared legend panel (drawn once after all rows, spans full column height)
+        graphics::par(mar = c(0.3, 0.3, 0.3, 0.3))
+        graphics::plot.new()
+        graphics::legend(
+          "center",
+          legend = avail_methods,
+          col    = method_cols[avail_methods],
+          pch    = 16L,
+          lwd    = 2L, lty = 1L,
+          bty = "n", cex = 0.95,
+          title = "CI method", title.font = 2L
+        )
 
-          # Legend panel: CI method (color + shape) + sample size (gray shades)
-          graphics::par(mar = c(0.3, 0.3, 0.3, 0.3))
-          graphics::plot.new()
-          graphics::legend(
-            x = 0, y = 1, xjust = 0, yjust = 1,
-            legend = avail_methods,
-            col    = method_cols[avail_methods],
-            pch    = meth_pch[avail_methods],
-            lwd    = 2L, lty   = 1L,
-            bty = "n", cex = 0.85,
-            title = "CI method", title.font = 2L
-          )
-          graphics::legend(
-            x = 0, y = 0.45, xjust = 0, yjust = 1,
-            legend = n_vals,
-            fill   = gray_pal[as.character(n_vals)],
-            border = NA, bty = "n", cex = 0.75,
-            title = "n", title.font = 2L
-          )
-
-          grDevices::dev.off()
-        }
+        grDevices::dev.off()
+        message("Saved: ", fig_path)
       }
     }
   }
