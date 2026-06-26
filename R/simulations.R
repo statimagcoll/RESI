@@ -138,6 +138,9 @@
 #'   Created if it does not exist. Defaults to \code{"resiBootSim"},
 #'   \code{"resiAsympNormalSim"}, or \code{"resiAsympQFSim"} based on
 #'   \code{ci.method} when \code{NULL}.
+#' @param fixed.knots Logical. If \code{TRUE}, spline knots are fixed at the
+#'   empirical tertiles of \code{age} in the full insurance dataset rather than
+#'   re-selected by \code{df = 3} in each bootstrap sample. Default \code{FALSE}.
 #' @param mc.cores.settings Integer, cores for the outer
 #'   \code{mclapply} over (setting \eqn{\times} sample size) combinations. Default 1.
 #' @param mc.cores.reps Integer, cores for the inner \code{mclapply} over simulation
@@ -161,7 +164,7 @@ insurancePlasmodeSim <- function(nsim              = 1000L,
                                   n.vec             = c(50, 100, 200, 500, 1000, 2000, 5000),
                                   nboot             = 500L,
                                   alpha             = 0.05,
-                                  ci.method         = c("boot", "normal", "qf"),
+                                  ci.method         = c("boot", "normal", "qf", "cf"),
                                   output.dir        = NULL,
                                   fixed.knots       = FALSE,
                                   mc.cores.settings = 1L,
@@ -172,7 +175,8 @@ insurancePlasmodeSim <- function(nsim              = 1000L,
     output.dir <- switch(ci.method,
       boot   = "resiBootSim",
       normal = "resiAsympNormalSim",
-      qf     = "resiAsympQFSim"
+      qf     = "resiAsympQFSim",
+      cf     = "resiAsympCFSim"
     )
   }
 
@@ -407,6 +411,9 @@ insurancePlasmodeSim <- function(nsim              = 1000L,
 #'   Default \code{"resiBootSim"}.
 #' @param alpha Numeric, CI significance level used in the original simulation.
 #'   Default 0.05.
+#' @param fixed.knots Logical. Must match the value used in the original
+#'   \code{\link{insurancePlasmodeSim}} call so that the true RESI values are
+#'   computed from the same model formula. Default \code{FALSE}.
 #'
 #' @return Invisibly returns the updated summary \code{data.frame}.
 #'   Overwrites \code{output.dir/summary_table.rds}.

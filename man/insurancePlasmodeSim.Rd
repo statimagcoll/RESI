@@ -9,7 +9,7 @@ insurancePlasmodeSim(
   n.vec = c(50, 100, 200, 500, 1000, 2000, 5000),
   nboot = 500L,
   alpha = 0.05,
-  ci.method = c("boot", "normal", "qf"),
+  ci.method = c("boot", "normal", "qf", "cf"),
   output.dir = NULL,
   fixed.knots = FALSE,
   mc.cores.settings = 1L,
@@ -37,6 +37,10 @@ or \code{"qf"} (asymptotic quadratic-form / Imhof). When \code{ci.method != "boo
 Created if it does not exist. Defaults to \code{"resiBootSim"},
 \code{"resiAsympNormalSim"}, or \code{"resiAsympQFSim"} based on
 \code{ci.method} when \code{NULL}.}
+
+\item{fixed.knots}{Logical. If \code{TRUE}, spline knots are fixed at the
+empirical tertiles of \code{age} in the full insurance dataset rather than
+re-selected by \code{df = 3} in each bootstrap sample. Default \code{FALSE}.}
 
 \item{mc.cores.settings}{Integer, cores for the outer
 \code{mclapply} over (setting \eqn{\times} sample size) combinations. Default 1.}

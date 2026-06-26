@@ -41,7 +41,7 @@ resi(model.full, ...)
   ncpus = getOption("boot.ncpus", 1L),
   long = FALSE,
   clvar = NULL,
-  ci.method = c("boot", "normal", "qf"),
+  ci.method = c("boot", "normal", "qf", "cf"),
   ...
 )
 

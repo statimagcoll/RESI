@@ -162,7 +162,7 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
                          parallel = c("no", "multicore", "snow"),
                          ncpus = getOption("boot.ncpus", 1L), long = FALSE,
                          clvar = NULL,
-                         ci.method = c("boot", "normal", "qf"),
+                         ci.method = c("boot", "normal", "qf", "cf"),
                          ...){
 
   ci.method <- match.arg(ci.method)

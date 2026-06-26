@@ -507,6 +507,132 @@
   c(LCI = max(LCI, 0), UCI = UCI)
 }
 
+#' Cornish-Fisher test-inversion CI (anova, m1 >= 1)
+#'
+#' Inverts the Cornish-Fisher approximation to the generalized non-central
+#' chi-square distribution of T^2 = n*Stilde^2.  Uses the exact cumulants of
+#' sum_k lambda_k (Z_k + delta_k)^2, with lambda_k the eigenvalues of
+#' Sigma_R and delta_k scaled so that sum delta_k^2 = n*S_b^2.
+#' @noRd
+.resi_ci_cf <- function(contrast, alpha = 0.05) {
+  Sigma_R <- contrast$Sigma_R
+  R_beta  <- contrast$R_beta
+  Stilde  <- contrast$Stilde
+  n       <- contrast$n
+  m1      <- contrast$m1
+
+  T2_obs <- n * Stilde^2
+  Shat   <- sqrt(max(0, Stilde^2 - m1 / n))   # df-corrected; used for bracket sizing only
+
+  # ---- Cumulant ingredients (matrix powers, no EVD needed) ----
+  # c_r = tr(Sigma_R^r),  v_r = R' Sigma_R^{r-1} R / Stilde^2
+  SigR2 <- Sigma_R %*% Sigma_R          # Sigma_R^2 (m1 x m1)
+  c1 <- sum(diag(Sigma_R))              # tr(Sigma_R)
+  c2 <- sum(Sigma_R * Sigma_R)          # tr(Sigma_R^2) = ||Sigma_R||_F^2 (symmetric)
+  c3 <- sum(diag(SigR2 %*% Sigma_R))   # tr(Sigma_R^3)
+  c4 <- sum(SigR2 * SigR2)             # tr(Sigma_R^4) = ||Sigma_R^2||_F^2
+
+  if (Stilde > 0) {
+    SigR_Rb  <- drop(Sigma_R %*% R_beta)       # Sigma_R   R
+    SigR2_Rb <- drop(SigR2   %*% R_beta)       # Sigma_R^2 R
+    SigR3_Rb <- drop(SigR2   %*% SigR_Rb)      # Sigma_R^3 R
+    v2 <- sum(R_beta * SigR_Rb)  / Stilde^2    # R' Sigma   R / Stilde^2
+    v3 <- sum(R_beta * SigR2_Rb) / Stilde^2    # R' Sigma^2 R / Stilde^2
+    v4 <- sum(R_beta * SigR3_Rb) / Stilde^2    # R' Sigma^3 R / Stilde^2
+  } else {
+    v2 <- v3 <- v4 <- 0
+  }
+
+  # ---- SE for bracket sizing ----
+  u_dir   <- if (Stilde > 0) R_beta / Stilde else c(1, rep(0, m1 - 1))
+  sigma2S <- as.numeric(t(u_dir) %*% Sigma_R %*% u_dir)
+  se_S    <- max(sqrt(pmax(sigma2S / n, .Machine$double.eps)), sqrt(m1 / n))
+
+  # ---- Cornish-Fisher quantile: q_p(S_b) ----
+  # p-th quantile of T^2 under S_true = S_b, using the 4-term CF expansion
+  # through the gamma1^2 correction (standard second-order accurate expansion).
+  #   kappa_r = 2^{r-1}(r-1)! * [c_r + r * n*S_b^2 * v_r]
+  #   gamma1 = kappa3 / sigma^3,  gamma2 = kappa4 / sigma^4
+  #   q_p = mu + sigma * [z + gamma1/6*(z^2-1) + gamma2/24*(z^3-3z) - gamma1^2/36*(2z^3-5z)]
+  cf_quant <- function(S_b, p) {
+    nSb2  <- n * S_b^2
+    mu    <- c1 + nSb2
+    var_q <- 2 * (c2 + 2 * nSb2 * v2)
+    if (!is.finite(var_q) || var_q <= 0) return(NA_real_)
+    sigma  <- sqrt(var_q)
+    kappa3 <- 8  * (c3 + 3 * nSb2 * v3)
+    kappa4 <- 48 * (c4 + 4 * nSb2 * v4)
+    gamma1 <- kappa3 / sigma^3
+    gamma2 <- kappa4 / sigma^4
+    z <- qnorm(p)
+    w <- z +
+      (gamma1 / 6)      * (z^2 - 1) +
+      (gamma2 / 24)     * (z^3 - 3 * z) -
+      (gamma1^2 / 36)   * (2 * z^3 - 5 * z)
+    mu + sigma * w
+  }
+
+  # ---- Null upper bound and boundary conditions ----
+  # Use chi-square tail probability for the boundary checks.  The CF series
+  # can diverge near S_b = 0 (gamma1 is large for the central distribution),
+  # so we use the exact chi-square approximation there -- the same approach
+  # as the QF CI.  CF is only applied for the inversion at nonzero S_b.
+  UCI_null <- sqrt(qchisq(1 - alpha, df = m1) / n)
+
+  # P(T2 >= T2_obs | S = 0) under chi^2_{m1} approximation
+  p0 <- pchisq(T2_obs, df = m1, lower.tail = FALSE)
+
+  # Degenerate: no signal at all
+  if (T2_obs == 0) return(c(LCI = 0, UCI = UCI_null))
+
+  # ---- Lower bound ----
+  # LCI = 0 when the null distribution already has >= alpha/2 probability above T2_obs.
+  if (p0 >= alpha / 2) {
+    LCI <- 0
+  } else {
+    # CF inversion: solve q_{1-alpha/2}(S_L) = T2_obs in (0, Stilde).
+    # At S_b = Stilde: q_{1-alpha/2}(Stilde) = c1 + T2_obs + sigma*(positive) > T2_obs.
+    LCI <- tryCatch(
+      uniroot(function(s) cf_quant(s, 1 - alpha / 2) - T2_obs,
+              lower = 0, upper = Stilde,
+              tol = se_S * 1e-3, extendInt = "upX")$root,
+      error = function(e) {
+        warning("CF lower CI bound search failed; using 0.")
+        0
+      }
+    )
+    LCI <- max(LCI, 0)
+  }
+
+  # ---- Upper bound ----
+  # UCI = UCI_null when T2_obs falls in the lower tail of the null distribution.
+  if (p0 >= 1 - alpha / 2) {
+    UCI <- UCI_null
+  } else {
+    # Bracket upper: find S_b where q_{alpha/2}(S_b) first exceeds T2_obs
+    upper_search <- Shat + se_S * c(3, 6, 12, 25, 50, 100) * qnorm(1 - alpha / 2)
+    bracket_up   <- NA_real_
+    for (up in upper_search) {
+      q_up <- tryCatch(cf_quant(up, alpha / 2), error = function(e) NA_real_)
+      if (!is.na(q_up) && is.finite(q_up) && q_up >= T2_obs) {
+        bracket_up <- up; break
+      }
+    }
+    if (is.na(bracket_up)) {
+      UCI <- UCI_null
+    } else {
+      UCI <- tryCatch(
+        uniroot(function(s) cf_quant(s, alpha / 2) - T2_obs,
+                lower = Stilde, upper = bracket_up,
+                tol = se_S * 1e-3)$root,
+        error = function(e) UCI_null
+      )
+    }
+  }
+
+  c(LCI = max(LCI, 0), UCI = UCI)
+}
+
 
 # ============================================================
 #  Contrast-matrix helpers
@@ -582,8 +708,9 @@
 #' @param coefficients Logical; include coefficient table. Default \code{TRUE}.
 #' @param anova Logical; include anova table. Default \code{TRUE}.
 #' @param alpha Numeric; significance level. Default \code{0.05}.
-#' @param ci.method Character; \code{"normal"} (truncated normal) or
-#'   \code{"qf"} (quadratic-form Imhof). Default \code{"normal"}.
+#' @param ci.method Character; \code{"normal"} (truncated normal),
+#'   \code{"qf"} (quadratic-form Imhof), or \code{"cf"} (Cornish-Fisher
+#'   test inversion). Default \code{"normal"}.
 #' @param type Character; HC type for the M-estimator sandwich used in CI
 #'   construction. Default \code{"HC3"}.
 #' @param unbiased Logical; use bias-corrected RESI point estimate. Default
@@ -606,7 +733,7 @@ resi_pe_asymptotic <- function(model.full,
                                 coefficients = TRUE,
                                 anova        = TRUE,
                                 alpha        = 0.05,
-                                ci.method    = c("normal", "qf"),
+                                ci.method    = c("normal", "qf", "cf"),
                                 type         = "HC3",
                                 unbiased     = TRUE,
                                 Anova.args   = list(),
@@ -730,6 +857,9 @@ resi_pe_asymptotic <- function(model.full,
       if (ci.method == "qf") {
         tryCatch(.resi_ci_qf(contr, alpha = alpha),
                  error = function(e) c(LCI = NA_real_, UCI = NA_real_))
+      } else if (ci.method == "cf") {
+        tryCatch(.resi_ci_cf(contr, alpha = alpha),
+                 error = function(e) .resi_ci_normal_unsigned(contr, alpha = alpha))
       } else {
         .resi_ci_normal_unsigned(contr, alpha = alpha)
       }

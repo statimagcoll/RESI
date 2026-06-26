@@ -4,7 +4,7 @@
 \alias{simFigures}
 \title{Simulation Performance Figures for RESI Evaluation}
 \usage{
-simFigures(output.dir = "resiBootSim", alpha = 0.05, ci.label = "bootstrap")
+simFigures(output.dir = "resiBootSim", alpha = 0.05, ci.label = NULL)
 }
 \arguments{
 \item{output.dir}{Character, directory containing simulation output from
@@ -14,7 +14,10 @@ simFigures(output.dir = "resiBootSim", alpha = 0.05, ci.label = "bootstrap")
 Default 0.05.}
 
 \item{ci.label}{Character, label for the CI method used in figure titles and file
-names. Default \code{"bootstrap"}.}
+names. Default \code{NULL}, which auto-detects from \code{output.dir}:
+\code{"boot"} if the directory name contains "Boot"/"boot",
+\code{"normal"} if it contains "Normal"/"normal",
+\code{"qf"} if it contains "QF"/"qf", otherwise \code{basename(output.dir)}.}
 }
 \value{
 Invisibly returns the summary metrics \code{data.frame}. Saves PDF figures

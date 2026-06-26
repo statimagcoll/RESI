@@ -26,8 +26,8 @@ the user can specify a different alpha level for this function's confidence inte
 # fit a model
 mod = lm(charges ~ bmi + sex, data = RESI::insurance)
 
-# run resi with the store.boot = TRUE option
-resi_obj = resi(mod, nboot = 100, store.boot = TRUE, alpha = 0.01)
+# run resi with the store.boot = TRUE option (ci.method must be "boot")
+resi_obj = resi(mod, nboot = 100, store.boot = TRUE, alpha = 0.01, ci.method = "boot")
 
 # run summary, specifying a different alpha level if desired
 omnibus(resi_obj, alpha = 0.05)

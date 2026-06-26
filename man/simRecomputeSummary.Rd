@@ -16,6 +16,10 @@ Default \code{"resiBootSim"}.}
 
 \item{alpha}{Numeric, CI significance level used in the original simulation.
 Default 0.05.}
+
+\item{fixed.knots}{Logical. Must match the value used in the original
+\code{\link{insurancePlasmodeSim}} call so that the true RESI values are
+computed from the same model formula. Default \code{FALSE}.}
 }
 \value{
 Invisibly returns the updated summary \code{data.frame}.
