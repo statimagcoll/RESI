@@ -195,7 +195,9 @@
     dA_dtheta  = dA_dtheta,
     dB_dtheta  = dB_dtheta,
     is_const   = is_const,
-    type       = type
+    type       = type,
+    psi_list   = psi_list,   # per-observation scores (1 x m each); used for CF skewness
+    sqrtw      = sqrtw       # HC weights (length n)
   )
 }
 
@@ -285,6 +287,24 @@
   Sigma_R <- dR_dtheta %*% Sig %*% t(dR_dtheta)   # m1 x m1
   Sigma_R <- .resi_sym(Sigma_R)
 
+  # ---- HC-weighted influence values (for CF skewness; m1=1 only) ----
+  # phi_tilde_i = (dR_dtheta %*% A_inv) %*% psi_tilde_i  (scalar when m1=1)
+  # where psi_tilde applies HC weights consistent with B_full.
+  phi_tilde <- NULL
+  if (m1 == 1L && !is.null(precomp$psi_list)) {
+    c_vec <- drop(dR_dtheta %*% A_inv)   # length-m row vector
+    phi_tilde <- vapply(seq_len(n), function(i) {
+      psi_i <- drop(precomp$psi_list[[i]])   # length m
+      if (precomp$lm_model) {
+        # phi (element 1) unweighted; beta rows (2:m) weighted
+        psi_i[seq(2L, precomp$m)] <- psi_i[seq(2L, precomp$m)] * precomp$sqrtw[i]
+      } else {
+        psi_i <- psi_i * precomp$sqrtw[i]
+      }
+      sum(c_vec * psi_i)
+    }, numeric(1L))
+  }
+
   list(
     m1         = m1,
     n          = n,
@@ -293,7 +313,8 @@
     R_beta     = R_beta,
     Stilde     = Stilde,
     dR_dtheta  = dR_dtheta,
-    Sigma_R    = Sigma_R
+    Sigma_R    = Sigma_R,
+    phi_tilde  = phi_tilde
   )
 }
 
@@ -301,6 +322,54 @@
 # ============================================================
 #  CI functions
 # ============================================================
+
+#' Signed Cornish-Fisher CI for a single coefficient (m1 = 1)
+#'
+#' Uses the closed-form CF inversion: since q_p(s) is linear in s, the CI
+#' S_pm ± se * w_p inverts to exact bounds without root-finding.
+#' gamma1 and gamma2 are estimated from the HC-weighted influence functions
+#' phi_tilde stored in `contrast$phi_tilde`.
+#' @noRd
+.resi_ci_cf_signed <- function(contrast, alpha = 0.05) {
+  Sigma_R   <- as.numeric(contrast$Sigma_R)   # scalar
+  n         <- contrast$n
+  R_beta    <- drop(contrast$R_beta)           # signed scalar S_pm
+  phi_tilde <- contrast$phi_tilde              # n-vector, NULL if unavailable
+
+  se <- sqrt(max(Sigma_R, .Machine$double.eps) / n)
+
+  if (is.null(phi_tilde) || length(phi_tilde) != n) {
+    # phi_tilde not available (shouldn't happen in normal use)
+    return(.resi_ci_normal_signed(contrast, alpha = alpha))
+  }
+
+  # Standardized cumulants of Z_n = sqrt(n) * (S_pm - S_true) / sqrt(Sigma_R)
+  # where phi_tilde are the HC-weighted influence values and Sigma_R = mean(phi^2).
+  #
+  # gamma1 = kappa_3(Z_n) = n^{-1/2} * mean(phi^3) / Sigma_R^{3/2}
+  # gamma2 = kappa_4(Z_n) = n^{-1}   * (mean(phi^4) / Sigma_R^2 - 3)
+  #
+  # Both are O(n^{-1/2}) and O(n^{-1}) respectively, and -> 0 as n -> inf
+  # for any distribution with finite fourth moment (CLT rate).
+  m3     <- mean(phi_tilde^3)
+  m4     <- mean(phi_tilde^4)
+  gamma1 <- m3 / (sqrt(n) * Sigma_R^(3 / 2))
+  gamma2 <- (m4 / Sigma_R^2 - 3) / n
+
+  cf_w <- function(p) {
+    z <- qnorm(p)
+    z +
+      (gamma1      / 6 ) * (z^2 - 1) +
+      (gamma2      / 24) * (z^3 - 3 * z) -
+      (gamma1^2    / 36) * (2 * z^3 - 5 * z)
+  }
+
+  # Closed-form: LCI = S_pm - se * w_{1-alpha/2},  UCI = S_pm - se * w_{alpha/2}
+  LCI <- R_beta - se * cf_w(1 - alpha / 2)
+  UCI <- R_beta - se * cf_w(    alpha / 2)
+
+  c(LCI = LCI, UCI = UCI)
+}
 
 #' Signed normal CI for a single coefficient (m1 = 1)
 #' @noRd
@@ -590,18 +659,29 @@
   if (p0 >= alpha / 2) {
     LCI <- 0
   } else {
-    # CF inversion: solve q_{1-alpha/2}(S_L) = T2_obs in (0, Stilde).
-    # At S_b = Stilde: q_{1-alpha/2}(Stilde) = c1 + T2_obs + sigma*(positive) > T2_obs.
-    LCI <- tryCatch(
-      uniroot(function(s) cf_quant(s, 1 - alpha / 2) - T2_obs,
-              lower = 0, upper = Stilde,
-              tol = se_S * 1e-3, extendInt = "upX")$root,
-      error = function(e) {
-        warning("CF lower CI bound search failed; using 0.")
-        0
-      }
-    )
-    LCI <- max(LCI, 0)
+    # Before calling uniroot, verify that the CF quantile at S_b = 0 is actually
+    # below T2_obs.  The chi-square boundary check (p0 < alpha/2) guarantees this
+    # for the exact chi-square distribution, but the CF expansion can overestimate
+    # the null quantile (large gamma1 for small m1 / small n), giving
+    # cf_quant(0, 1-alpha/2) > T2_obs even when p0 < alpha/2.  In that case the
+    # root does not exist in [0, Stilde] and LCI = 0 by the CF approximation.
+    q0_cf <- tryCatch(cf_quant(0, 1 - alpha / 2), error = function(e) NA_real_)
+    if (is.na(q0_cf) || q0_cf >= T2_obs) {
+      LCI <- 0
+    } else {
+      # CF inversion: solve q_{1-alpha/2}(S_L) = T2_obs in (0, Stilde).
+      # At S_b = Stilde: q_{1-alpha/2}(Stilde) = c1 + T2_obs + sigma*(positive) > T2_obs.
+      LCI <- tryCatch(
+        uniroot(function(s) cf_quant(s, 1 - alpha / 2) - T2_obs,
+                lower = 0, upper = Stilde,
+                tol = se_S * 1e-3, extendInt = "upX")$root,
+        error = function(e) {
+          warning("CF lower CI bound search failed; using 0.")
+          0
+        }
+      )
+      LCI <- max(LCI, 0)
+    }
   }
 
   # ---- Upper bound ----
@@ -805,7 +885,11 @@ resi_pe_asymptotic <- function(model.full,
       contr  <- tryCatch(.resi_contrast(precomp, L_mod, vcovmat_n = n * vcovmat),
                          error = function(e) NULL)
       if (is.null(contr)) return(c(LCI = NA_real_, UCI = NA_real_))
-      .resi_ci_normal_signed(contr, alpha = alpha)
+      if (ci.method == "cf") {
+        .resi_ci_cf_signed(contr, alpha = alpha)
+      } else {
+        .resi_ci_normal_signed(contr, alpha = alpha)
+      }
     }))
 
     coef_df[, paste0(c(alpha / 2, 1 - alpha / 2) * 100, "%")] <- ci_mat
@@ -859,7 +943,7 @@ resi_pe_asymptotic <- function(model.full,
                  error = function(e) c(LCI = NA_real_, UCI = NA_real_))
       } else if (ci.method == "cf") {
         tryCatch(.resi_ci_cf(contr, alpha = alpha),
-                 error = function(e) .resi_ci_normal_unsigned(contr, alpha = alpha))
+                 error = function(e) c(LCI = NA_real_, UCI = NA_real_))
       } else {
         .resi_ci_normal_unsigned(contr, alpha = alpha)
       }

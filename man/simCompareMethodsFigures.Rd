@@ -6,15 +6,17 @@
 \usage{
 simCompareMethodsFigures(
   output.dirs = c(boot = "resiBootSim", normal = "resiAsympNormalSim", qf =
-    "resiAsympQFSim"),
+    "resiAsympQFSim", cf = "resiAsympCFSim"),
   figures.dir = NULL,
-  alpha = 0.05
+  alpha = 0.05,
+  fixed.knots = FALSE
 )
 }
 \arguments{
 \item{output.dirs}{Named character vector mapping CI method labels to their
 simulation output directories. Default:
-\code{c(boot = "resiBootSim", normal = "resiAsympNormalSim", qf = "resiAsympQFSim")}.
+\code{c(boot = "resiBootSim", normal = "resiAsympNormalSim",
+qf = "resiAsympQFSim", cf = "resiAsympCFSim")}.
 Directories that do not exist are silently skipped.}
 
 \item{figures.dir}{Character, directory where comparison figures are saved.
@@ -22,12 +24,22 @@ Default: \code{file.path(output.dirs[1], "figures", "method_comparison")}.}
 
 \item{alpha}{Numeric, nominal CI level used for coverage reference lines.
 Default 0.05.}
+
+\item{fixed.knots}{Logical. Must match the value used in the original
+\code{\link{insurancePlasmodeSim}} call; controls how the true RESI values
+are re-computed from the full dataset for the coverage-quantile figures.
+Default \code{FALSE}.}
 }
 \value{
-Invisibly returns the combined summary \code{data.frame}. Saves one PDF
-  per (model \eqn{\times} vcov \eqn{\times} table \eqn{\times} term) to
-  \code{figures.dir}, named
-  \code{compare_<model>_<vcov>_<table>_<term>.pdf}.
+Invisibly returns the combined summary \code{data.frame}. Saves to
+  \code{figures.dir}:
+\itemize{
+  \item \code{compare_<model>_<vcov>_<table>.pdf} — per-metric lines across
+    sample sizes, all terms in one PDF (rows = terms).
+  \item \code{covquant_<model>_<vcov>_<table>.pdf} — coverage-quantile density
+    curves, \eqn{(S_{\rm true} - \rm LCI)/(\rm UCI - \rm LCI)}, rows = terms,
+    columns = sample sizes.
+}
 }
 \description{
 Reads simulation summary tables from multiple output directories (one per CI

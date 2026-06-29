@@ -174,10 +174,13 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
   }
   dots = list(...)
 
-  if (missing(data)){
+  data_from_model_frame <- missing(data)
+  if (data_from_model_frame){
     data = model.full$model
-    tryCatch(update(model.full, data = data), error = function(e){
-      message("Updating model fit failed. Try running with providing data argument")})
+    if (ci.method == "boot") {
+      tryCatch(update(model.full, data = data), error = function(e){
+        message("Updating model fit failed. Try running with providing data argument")})
+    }
   }
   else{
     if (!(is.null(model.full$na.action))){
@@ -200,15 +203,27 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
     if(!("skip.red" %in% names(dots))){
       form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
       if (!(form.reduced == formula(model.full))){
-        # Always use form.reduced (the expression formula, e.g. log10(charges) ~ 1)
-        # with data = data (the cleaned user-supplied data that has the raw columns
-        # like `charges`). Using the backtick-quoted model-frame column name
-        # (e.g. `log10(charges)` ~ 1) breaks bootstrap: resi_stat calls
-        # update(model.reduced, data = boot.data) where boot.data has `charges`
-        # but not a pre-computed `log10(charges)` column, causing all replicates
-        # to return NA. data is already stripped of NA rows at this point.
-        model.reduced = try(update(model.full, formula = form.reduced,
-                                    data = data), silent = T)
+        # How we fit the intercept-only reduced model depends on the data source:
+        #
+        # (a) data was supplied by the user (raw columns, e.g. 'charges'): use the
+        #     expression formula (e.g. log10(charges) ~ 1) so that bootstrap
+        #     replicates (which also have raw columns) can update() successfully.
+        #
+        # (b) data came from model.full$model (the model frame, e.g. column named
+        #     'log10(charges)'): use the backtick-quoted pre-computed column name
+        #     so that update() finds the response without re-evaluating the
+        #     expression on columns that don't exist in the model frame.
+        #     This path is only reached for asymptotic CIs (ci.method != "boot"),
+        #     since bootstrap with a model-frame data warns and is expected to fail.
+        if (data_from_model_frame && !is.null(model.full$model) && !long) {
+          resp_name <- colnames(model.full$model)[1]
+          form.reduced_fit <- as.formula(paste0("`", resp_name, "` ~ 1"))
+          model.reduced = try(update(model.full, formula = form.reduced_fit,
+                                      data = data), silent = T)
+        } else {
+          model.reduced = try(update(model.full, formula = form.reduced,
+                                      data = data), silent = T)
+        }
         if(inherits(model.reduced, "try-error")){
           warning("Fitting intercept-only model failed. No overall test computed")
           overall = FALSE

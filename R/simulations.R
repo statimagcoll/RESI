@@ -775,166 +775,6 @@ simFigures <- function(output.dir = "resiBootSim",
 
 
 # ============================================================
-#  simBiasWidthFigures
-# ============================================================
-
-#' Bias / CI Width Ratio Figures Across CI Methods
-#'
-#' Reads simulation summary tables from multiple output directories (one per CI
-#' method) and produces one PDF per (model type \eqn{\times} variance estimator)
-#' combination. Each figure has one row per CI method showing \code{bias / CI width}
-#' vs sample size for anova and coefficient tables. Values near \eqn{\pm 0.5}
-#' indicate that bias alone can shift the CI off the true value.
-#'
-#' @param output.dirs Named character vector mapping CI method labels to their
-#'   simulation output directories. Default:
-#'   \code{c(boot = "resiBootSim", normal = "resiAsympNormalSim", qf = "resiAsympQFSim")}.
-#'   Directories that do not exist are silently skipped.
-#' @param figures.dir Character, directory where figures are saved. Default:
-#'   \code{file.path(output.dirs[[1]], "figures")}.
-#' @param alpha Numeric, unused; kept for API consistency. Default 0.05.
-#'
-#' @return Invisibly returns the combined summary \code{data.frame}. Saves PDF
-#'   figures named \code{sim_biaswidth_<model>_<vcov>.pdf} to \code{figures.dir}.
-#' @seealso \code{\link{simFigures}}, \code{\link{simCompareMethodsFigures}}
-#' @importFrom grDevices pdf dev.off
-#' @importFrom graphics plot lines points abline legend par axis plot.new layout
-#' @export
-simBiasWidthFigures <- function(
-    output.dirs = c(boot   = "resiBootSim",
-                    normal = "resiAsympNormalSim",
-                    qf     = "resiAsympQFSim"),
-    figures.dir = NULL,
-    alpha       = 0.05) {
-
-  method_names <- names(output.dirs)
-  if (is.null(method_names) || any(method_names == ""))
-    stop("output.dirs must be a named vector (names = CI method labels)")
-
-  if (is.null(figures.dir))
-    figures.dir <- file.path(output.dirs[[1]], "figures")
-  dir.create(figures.dir, recursive = TRUE, showWarnings = FALSE)
-
-  .sim_pal <- c(
-    "#1F77B4", "#D62728", "#2CA02C", "#FF7F0E", "#9467BD",
-    "#8C564B", "#E377C2", "#17BECF", "#BCBD22", "#7F7F7F",
-    "#AEC7E8", "#98DF8A"
-  )
-
-  tables <- lapply(seq_along(output.dirs), function(i) {
-    f <- file.path(output.dirs[[i]], "summary_table.rds")
-    if (!file.exists(f)) {
-      warning("summary_table.rds not found in: ", output.dirs[[i]], " -- skipping")
-      return(NULL)
-    }
-    tbl <- readRDS(f)
-    tbl$ci_method <- method_names[[i]]
-    tbl
-  })
-  tables <- Filter(Negate(is.null), tables)
-  if (length(tables) == 0L) stop("No valid summary tables found")
-  combined <- do.call(rbind, tables)
-  combined$bias_width_ratio <- combined$bias / combined$width
-
-  avail_methods <- intersect(method_names, unique(combined$ci_method))
-  n_methods     <- length(avail_methods)
-  n_vals        <- sort(unique(combined$n))
-
-  for (mtype in c("lm", "glm")) {
-    for (vtype in c("parametric", "robust")) {
-      sub <- combined[combined$model == mtype & combined$vcov == vtype, ]
-      if (nrow(sub) == 0L) next
-
-      anova_terms <- unique(sub$term[sub$table == "anova"])
-      coef_terms  <- unique(sub$term[sub$table == "coefficients"])
-      anova_cols  <- setNames(.sim_pal[seq_along(anova_terms)], anova_terms)
-      coef_cols   <- setNames(.sim_pal[seq_along(coef_terms)],  coef_terms)
-      cex_anova   <- min(1.0, 9 / length(anova_terms))
-      cex_coef    <- min(1.0, 9 / length(coef_terms))
-
-      fig_path <- file.path(figures.dir,
-        paste0("sim_biaswidth_", mtype, "_", vtype, ".pdf"))
-
-      # Layout: n_methods rows x 4 cols [anova_plot, coef_plot, leg_anova, leg_coef]
-      # Cols 3-4 (legends) span all rows via repeated panel index.
-      leg_anova_idx <- n_methods * 2L + 1L
-      leg_coef_idx  <- n_methods * 2L + 2L
-      layout_mat <- matrix(0L, nrow = n_methods, ncol = 4L)
-      for (i in seq_len(n_methods)) {
-        layout_mat[i, 1L] <- (i - 1L) * 2L + 1L
-        layout_mat[i, 2L] <- (i - 1L) * 2L + 2L
-        layout_mat[i, 3L] <- leg_anova_idx
-        layout_mat[i, 4L] <- leg_coef_idx
-      }
-
-      grDevices::pdf(fig_path, width = 12, height = 3.5 * n_methods)
-      graphics::layout(layout_mat,
-                       widths  = c(4, 4, 1.8, 1.8),
-                       heights = rep(1, n_methods))
-
-      for (mi in seq_along(avail_methods)) {
-        meth  <- avail_methods[[mi]]
-        sub_m <- sub[sub$ci_method == meth, ]
-
-        for (tbl_info in list(
-          list(table = "anova",        terms = anova_terms, cols = anova_cols,
-               prefix = "Anova"),
-          list(table = "coefficients", terms = coef_terms,  cols = coef_cols,
-               prefix = "Coef")
-        )) {
-          sub_tbl <- sub_m[sub_m$table == tbl_info$table, ]
-
-          yr   <- range(sub_tbl$bias_width_ratio, na.rm = TRUE, finite = TRUE)
-          ylim <- range(c(yr, 0), na.rm = TRUE)
-
-          graphics::par(mar = c(3.2, 3.2, 2.0, 0.5), mgp = c(1.9, 0.5, 0))
-          graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
-                         xlab = "Sample Size", ylab = "Bias / CI Width",
-                         main = paste(toupper(mtype), tbl_info$prefix, "Bias/Width",
-                                      paste0("(", vtype, ", ", meth, ")")),
-                         log = "x", xaxt = "n", bty = "l")
-          graphics::axis(1, at = n_vals, labels = n_vals, las = 2L,
-                         mgp = c(1.7, 0.35, 0))
-          graphics::abline(h = 0,             lty = 2L, col = "gray40")
-          graphics::abline(h = c(-0.5, 0.5),  lty = 3L, col = "gray70")
-
-          for (term in tbl_info$terms) {
-            td <- sub_tbl[sub_tbl$term == term, ]
-            td <- td[order(td$n), ]
-            if (nrow(td) == 0L) next
-            graphics::lines(td$n,  td$bias_width_ratio,
-                            col = tbl_info$cols[term], lwd = 2L)
-            graphics::points(td$n, td$bias_width_ratio,
-                             col = tbl_info$cols[term], pch = 16L, cex = 0.8)
-          }
-        }
-      }
-
-      # Shared legends (drawn last; span all rows via layout)
-      graphics::par(mar = c(0.5, 0.3, 0.5, 0.3))
-      graphics::plot.new()
-      graphics::legend("center", legend = anova_terms,
-                       col = anova_cols[anova_terms],
-                       lwd = 2L, pch = 16L, bty = "n", cex = cex_anova,
-                       title = "Anova terms", title.font = 2L)
-
-      graphics::par(mar = c(0.5, 0.3, 0.5, 0.3))
-      graphics::plot.new()
-      graphics::legend("center", legend = coef_terms,
-                       col = coef_cols[coef_terms],
-                       lwd = 2L, pch = 16L, bty = "n", cex = cex_coef,
-                       title = "Coef terms", title.font = 2L)
-
-      grDevices::dev.off()
-      message("Saved: ", fig_path)
-    }
-  }
-
-  invisible(combined)
-}
-
-
-# ============================================================
 #  simCompareMethodsFigures
 # ============================================================
 
@@ -948,27 +788,42 @@ simBiasWidthFigures <- function(
 #'
 #' @param output.dirs Named character vector mapping CI method labels to their
 #'   simulation output directories. Default:
-#'   \code{c(boot = "resiBootSim", normal = "resiAsympNormalSim", qf = "resiAsympQFSim")}.
+#'   \code{c(boot = "resiBootSim", normal = "resiAsympNormalSim",
+#'   qf = "resiAsympQFSim", cf = "resiAsympCFSim")}.
 #'   Directories that do not exist are silently skipped.
 #' @param figures.dir Character, directory where comparison figures are saved.
 #'   Default: \code{file.path(output.dirs[1], "figures", "method_comparison")}.
 #' @param alpha Numeric, nominal CI level used for coverage reference lines.
 #'   Default 0.05.
+#' @param fixed.knots Logical. Must match the value used in the original
+#'   \code{\link{insurancePlasmodeSim}} call; controls how the true RESI values
+#'   are re-computed from the full dataset for the coverage-quantile figures.
+#'   Default \code{FALSE}.
 #'
-#' @return Invisibly returns the combined summary \code{data.frame}. Saves one PDF
-#'   per (model \eqn{\times} vcov \eqn{\times} table \eqn{\times} term) to
-#'   \code{figures.dir}, named
-#'   \code{compare_<model>_<vcov>_<table>_<term>.pdf}.
+#' @return Invisibly returns the combined summary \code{data.frame}. Saves to
+#'   \code{figures.dir}:
+#' \itemize{
+#'   \item \code{compare_<model>_<vcov>_<table>.pdf} — per-metric lines across
+#'     sample sizes, all terms in one PDF (rows = terms).
+#'   \item \code{covquant_<model>_<vcov>_<table>.pdf} — coverage-quantile density
+#'     curves, \eqn{(S_{\rm true} - \rm LCI)/(\rm UCI - \rm LCI)}, rows = terms,
+#'     columns = sample sizes.
+#' }
 #' @seealso \code{\link{insurancePlasmodeSim}}, \code{\link{simFigures}}
 #' @importFrom grDevices pdf dev.off
-#' @importFrom graphics plot lines points abline legend par axis plot.new
+#' @importFrom graphics plot lines points abline legend par axis plot.new mtext
+#' @importFrom splines ns
+#' @importFrom sandwich vcovHC
+#' @importFrom stats lm glm vcov binomial density
 #' @export
 simCompareMethodsFigures <- function(
     output.dirs = c(boot   = "resiBootSim",
                     normal = "resiAsympNormalSim",
-                    qf     = "resiAsympQFSim"),
+                    qf     = "resiAsympQFSim",
+                    cf     = "resiAsympCFSim"),
     figures.dir = NULL,
-    alpha       = 0.05) {
+    alpha       = 0.05,
+    fixed.knots = FALSE) {
 
   method_names <- names(output.dirs)
   if (is.null(method_names) || any(method_names == ""))
@@ -1191,6 +1046,216 @@ simCompareMethodsFigures <- function(
 
         grDevices::dev.off()
         message("Saved: ", fig_path)
+      }
+    }
+  }
+
+  # ============================================================
+  #  Coverage-quantile figures
+  #  (S_true - LCI) / (UCI - LCI) density curves
+  #  One PDF per (model × vcov × table): rows = terms, columns = n values
+  # ============================================================
+  message("Generating coverage-quantile figures...")
+
+  insurance    <- RESI::insurance
+  ci_lo_col_cq <- paste0(alpha / 2 * 100, "%")
+  ci_hi_col_cq <- paste0((1 - alpha / 2) * 100, "%")
+
+  if (fixed.knots) {
+    .age_knots    <- stats::quantile(insurance$age, c(1/3, 2/3))
+    .age_bk       <- range(insurance$age)
+    lm_formula_cq  <- eval(bquote(
+      log10(charges) ~ splines::ns(age, knots = .(.age_knots),
+                                   Boundary.knots = .(.age_bk)) *
+        sex + bmi + smoker + region))
+    glm_formula_cq <- eval(bquote(
+      I(charges > 15000) ~ splines::ns(age, knots = .(.age_knots),
+                                       Boundary.knots = .(.age_bk)) *
+        sex + bmi + smoker + region))
+  } else {
+    lm_formula_cq  <- log10(charges) ~ splines::ns(age, df = 3) *
+      sex + bmi + smoker + region
+    glm_formula_cq <- I(charges > 15000) ~ splines::ns(age, df = 3) *
+      sex + bmi + smoker + region
+  }
+
+  cq_settings <- list(
+    list(type = "lm",  key = "lm_parametric",
+         formula = lm_formula_cq,  family = NULL,
+         vcovfunc = stats::vcov,         robust = FALSE),
+    list(type = "lm",  key = "lm_robust",
+         formula = lm_formula_cq,  family = NULL,
+         vcovfunc = sandwich::vcovHC,    robust = TRUE),
+    list(type = "glm", key = "glm_parametric",
+         formula = glm_formula_cq, family = stats::binomial(),
+         vcovfunc = stats::vcov,         robust = FALSE),
+    list(type = "glm", key = "glm_robust",
+         formula = glm_formula_cq, family = stats::binomial(),
+         vcovfunc = sandwich::vcovHC,    robust = TRUE)
+  )
+
+  # Compute true RESI from full insurance dataset
+  cq_true <- lapply(cq_settings, function(s) {
+    full_mod <- tryCatch({
+      if (s$type == "lm") {
+        m <- stats::lm(s$formula, data = insurance)
+        m$call[["formula"]] <- s$formula; m
+      } else {
+        m <- stats::glm(s$formula, data = insurance, family = s$family)
+        m$call[["formula"]] <- s$formula
+        m$call[["family"]]  <- s$family; m
+      }
+    }, error = function(e) NULL)
+    if (is.null(full_mod)) return(NULL)
+    # Use HC0 for robust (no hat-value correction at full n)
+    tv_vcov <- if (s$robust) function(x) sandwich::vcovHC(x, type = "HC0")
+               else s$vcovfunc
+    tryCatch(resi_pe(full_mod, vcovfunc = tv_vcov, unbiased = TRUE),
+             error = function(e) NULL)
+  })
+  names(cq_true) <- vapply(cq_settings, `[[`, character(1L), "key")
+
+  for (mtype_cq in c("lm", "glm")) {
+    for (vtype_cq in c("parametric", "robust")) {
+      key_cq  <- paste0(mtype_cq, "_", vtype_cq)
+      pe_true <- cq_true[[key_cq]]
+      if (is.null(pe_true)) next
+
+      for (tbl_cq in c("anova", "coefficients")) {
+        true_t <- pe_true[[tbl_cq]]
+        if (is.null(true_t) || nrow(true_t) == 0L) next
+
+        terms_cq <- rownames(true_t)
+        terms_cq <- setdiff(terms_cq, c("(Intercept)", "Residuals"))
+        if (length(terms_cq) == 0L) next
+
+        n_vals_cq <- sort(unique(combined$n))
+
+        # Load per-replicate (LCI, UCI) for every (method, n, term)
+        cq_dat <- lapply(setNames(avail_methods, avail_methods), function(meth) {
+          raw_dir <- file.path(output.dirs[[meth]], "sim_raw")
+          if (!dir.exists(raw_dir)) return(NULL)
+          lapply(setNames(n_vals_cq, as.character(n_vals_cq)), function(n_val) {
+            f <- file.path(raw_dir, paste0(key_cq, "_n", n_val, ".rds"))
+            if (!file.exists(f)) return(NULL)
+            reps <- tryCatch(readRDS(f), error = function(e) NULL)
+            if (is.null(reps) || length(reps) == 0L) return(NULL)
+            lapply(setNames(terms_cq, terms_cq), function(term) {
+              s_true <- true_t[term, "RESI"]
+              lci_v <- vapply(reps, function(r) {
+                tbl_r <- r[[tbl_cq]]
+                if (is.null(tbl_r) || !(term %in% rownames(tbl_r))) return(NA_real_)
+                if (!(ci_lo_col_cq %in% colnames(tbl_r)))           return(NA_real_)
+                tbl_r[term, ci_lo_col_cq]
+              }, numeric(1L))
+              uci_v <- vapply(reps, function(r) {
+                tbl_r <- r[[tbl_cq]]
+                if (is.null(tbl_r) || !(term %in% rownames(tbl_r))) return(NA_real_)
+                if (!(ci_hi_col_cq %in% colnames(tbl_r)))           return(NA_real_)
+                tbl_r[term, ci_hi_col_cq]
+              }, numeric(1L))
+              cq_v <- (s_true - lci_v) / (uci_v - lci_v)
+              cq_v[!is.finite(cq_v)] <- NA_real_
+              cq_v
+            })
+          })
+        })
+
+        # Build PDF
+        n_terms_cq  <- length(terms_cq)
+        n_sizes_cq  <- length(n_vals_cq)
+        n_panels_cq <- n_terms_cq * n_sizes_cq
+        lay_cq      <- matrix(seq_len(n_panels_cq),
+                              nrow = n_terms_cq, ncol = n_sizes_cq,
+                              byrow = TRUE)
+        lay_cq      <- cbind(lay_cq, n_panels_cq + 1L)
+
+        col_w_cq <- 2.4
+        row_h_cq <- 2.4
+
+        fig_path_cq <- file.path(
+          figures.dir,
+          paste0("covquant_", mtype_cq, "_", vtype_cq, "_", tbl_cq, ".pdf")
+        )
+        grDevices::pdf(fig_path_cq,
+                       width  = col_w_cq * n_sizes_cq + 2.2,
+                       height = row_h_cq * n_terms_cq + 0.5)
+        graphics::layout(lay_cq,
+                         widths  = c(rep(col_w_cq, n_sizes_cq), 2.2),
+                         heights = rep(row_h_cq, n_terms_cq))
+
+        for (ti in seq_along(terms_cq)) {
+          term_cq      <- terms_cq[[ti]]
+          is_first_row <- (ti == 1L)
+          is_last_row  <- (ti == n_terms_cq)
+
+          for (ni in seq_along(n_vals_cq)) {
+            n_cq         <- n_vals_cq[[ni]]
+            is_first_col <- (ni == 1L)
+
+            # Compute density for each method
+            dens_list_cq <- lapply(setNames(avail_methods, avail_methods), function(meth) {
+              vals <- cq_dat[[meth]][[as.character(n_cq)]][[term_cq]]
+              vals <- vals[is.finite(vals)]
+              if (length(vals) < 5L) return(NULL)
+              tryCatch(stats::density(vals, n = 256L), error = function(e) NULL)
+            })
+
+            xlim_cq <- {
+              all_x <- unlist(c(
+                lapply(dens_list_cq, function(d) if (!is.null(d)) range(d$x)),
+                list(c(0, 1))))
+              c(min(all_x) - 0.05, max(all_x) + 0.05)
+            }
+            max_y_cq <- max(
+              vapply(dens_list_cq,
+                     function(d) if (!is.null(d)) max(d$y) else 0, numeric(1L)),
+              1.0)
+            ylim_cq <- c(0, max_y_cq * 1.1)
+
+            t_mar <- if (is_first_row) 1.8 else 0.4
+            b_mar <- if (is_last_row)  2.5 else 0.4
+            l_mar <- if (is_first_col) 3.2 else 1.2
+
+            graphics::par(mar = c(b_mar, l_mar, t_mar, 0.3), mgp = c(1.5, 0.4, 0))
+            graphics::plot(NULL, xlim = xlim_cq, ylim = ylim_cq,
+                           xlab = if (is_last_row)  "(S_true - LCI) / Width" else "",
+                           ylab = if (is_first_col) "Density" else "",
+                           main = if (is_first_row) paste0("n = ", n_cq) else "",
+                           bty  = "l",
+                           xaxt = if (is_last_row)  "s" else "n",
+                           yaxt = if (is_first_col) "s" else "n")
+
+            # Row label (term name) on left margin of first column
+            if (is_first_col)
+              graphics::mtext(term_cq, side = 2L, line = 2.0,
+                              cex = 0.65, las = 0, font = 2L)
+
+            # Reference lines: 0/1 = CI boundaries, 0.5 = midpoint, y=1 = uniform
+            graphics::abline(v = c(0, 1), lty = 2L, col = "gray50", lwd = 0.8)
+            graphics::abline(v = 0.5,     lty = 3L, col = "gray70", lwd = 0.8)
+            graphics::abline(h = 1.0,     lty = 3L, col = "gray80", lwd = 0.8)
+
+            for (meth in avail_methods) {
+              d <- dens_list_cq[[meth]]
+              if (is.null(d)) next
+              graphics::lines(d, col = method_cols[[meth]], lwd = 1.8)
+            }
+          }
+        }
+
+        # Shared legend
+        graphics::par(mar = c(0.3, 0.3, 0.3, 0.3))
+        graphics::plot.new()
+        graphics::legend("center",
+                         legend = avail_methods,
+                         col    = method_cols[avail_methods],
+                         lwd = 2L, lty = 1L,
+                         bty = "n", cex = 0.9,
+                         title = "CI method", title.font = 2L)
+
+        grDevices::dev.off()
+        message("Saved: ", fig_path_cq)
       }
     }
   }
