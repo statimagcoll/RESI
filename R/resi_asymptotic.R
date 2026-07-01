@@ -338,10 +338,10 @@
 
   se <- sqrt(max(Sigma_R, .Machine$double.eps) / n)
 
-  if (is.null(phi_tilde) || length(phi_tilde) != n) {
-    # phi_tilde not available (shouldn't happen in normal use)
-    return(.resi_ci_normal_signed(contrast, alpha = alpha))
-  }
+  # if (is.null(phi_tilde) || length(phi_tilde) != n) {
+  #   # phi_tilde not available (shouldn't happen in normal use)
+  #   return(.resi_ci_normal_signed(contrast, alpha = alpha))
+  # }
 
   # Standardized cumulants of Z_n = sqrt(n) * (S_pm - S_true) / sqrt(Sigma_R)
   # where phi_tilde are the HC-weighted influence values and Sigma_R = mean(phi^2).
@@ -364,9 +364,14 @@
       (gamma1^2    / 36) * (2 * z^3 - 5 * z)
   }
 
+  # These are the correct intervals
   # Closed-form: LCI = S_pm - se * w_{1-alpha/2},  UCI = S_pm - se * w_{alpha/2}
-  LCI <- R_beta - se * cf_w(1 - alpha / 2)
-  UCI <- R_beta - se * cf_w(    alpha / 2)
+  # LCI <- R_beta - se * cf_w(1 - alpha / 2)
+  # UCI <- R_beta - se * cf_w(    alpha / 2)
+  # these are incorrect, but more align with the percentile bootstrap, which seems to do better for some reason
+  # this code was just to investigate if this is more similar to that.
+  UCI <- R_beta + se * cf_w(1 - alpha / 2)
+  LCI <- R_beta + se * cf_w(    alpha / 2)
 
   c(LCI = LCI, UCI = UCI)
 }
