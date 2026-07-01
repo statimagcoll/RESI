@@ -366,12 +366,12 @@
 
   # These are the correct intervals
   # Closed-form: LCI = S_pm - se * w_{1-alpha/2},  UCI = S_pm - se * w_{alpha/2}
-  # LCI <- R_beta - se * cf_w(1 - alpha / 2)
-  # UCI <- R_beta - se * cf_w(    alpha / 2)
+  LCI <- R_beta - se * cf_w(1 - alpha / 2)
+  UCI <- R_beta - se * cf_w(    alpha / 2)
   # these are incorrect, but more align with the percentile bootstrap, which seems to do better for some reason
   # this code was just to investigate if this is more similar to that.
-  UCI <- R_beta + se * cf_w(1 - alpha / 2)
-  LCI <- R_beta + se * cf_w(    alpha / 2)
+  # UCI <- R_beta + se * cf_w(1 - alpha / 2)
+  # LCI <- R_beta + se * cf_w(    alpha / 2)
 
   c(LCI = LCI, UCI = UCI)
 }
