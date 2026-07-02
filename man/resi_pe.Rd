@@ -199,6 +199,7 @@ resi_pe(...)
   vcovfunc = clubSandwich::vcovCR,
   Anova.args = list(),
   vcov.args = list(),
+  unbiased = TRUE,
   ...
 )
 

@@ -50,7 +50,7 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   # if(nzchar(mess <- naprint(x$na.action))) cat("  (",mess, ")\n", sep = "")
   # report number of failed bootstraps for nls model
   if (!(is.null(x$nfail))) cat("3. The bootstrap was successful in", x$nboot - x$nfail, "out of", x$nboot, "attempts. \n" )
-
+  cat('\n')
   invisible(x)
 }
 

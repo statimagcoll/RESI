@@ -277,7 +277,7 @@ test_that("resi produces the correct estimates", {
   expect_equal(unname(suppressWarnings(resi(mod.lme, nboot = 10)$coefficients[,'RESI'])),
                c(3.659090, 1.739166, 0.512371), tolerance = 1e-07)
   if(requireNamespace("lme4")){
-  expect_equal(unname(suppressWarnings(resi(mod.lmerMod, nboot = 10)$coefficients[,'RESI'])),
+  expect_equal(unname(suppressWarnings(resi(mod.lmerMod, nboot = 10)$coefficients[,'L-RESI'])),
                c(8.434942, 1.533073), tolerance = 1e-07)}
   if(requireNamespace("glmmTMB")){
     expect_equal(unname(suppressWarnings(resi(model_glmmTMB, nboot = 10)$coefficients[,'RESI'])),
@@ -339,6 +339,35 @@ test_that("bootstrap succeeds for models with transformed responses", {
   expect_true(all(r.glm$coefficients$RESI >= r.glm$coefficients$`2.5%`))
   expect_true(all(r.glm$coefficients$RESI <= r.glm$coefficients$`97.5%`))
 })
+
+if(requireNamespace("lme4")){
+test_that("lmerMod: L-RESI and CS-RESI point estimates are correct", {
+  pe = suppressWarnings(resi_pe(mod.lmerMod))
+  expect_equal(unname(pe$coefficients[,'L-RESI']),
+               c(8.434942, 1.533073), tolerance = 1e-07)
+  expect_equal(unname(pe$coefficients[,'CS-RESI']),
+               c(3.6680844, 0.6185898), tolerance = 1e-06)
+  expect_equal(unname(pe$anova[,'L-RESI']),  1.533073, tolerance = 1e-06)
+  expect_equal(unname(pe$anova[,'CS-RESI']), 0.5719247, tolerance = 1e-06)
+})
+
+if(requireNamespace("geepack")){
+test_that("geeglm (exchangeable, positive rho) L-RESI matches lmerMod (CR0) L-RESI", {
+  sdata = lme4::sleepstudy
+  sdata$subjid = as.integer(sdata$Subject)
+  mod_lmer_ri  = lme4::lmer(Reaction ~ Days + (1 | Subject), sdata)
+  mod_gee_exch = geepack::geeglm(Reaction ~ Days, data = sdata, id = subjid,
+                                  family = gaussian, corstr = "exchangeable")
+  pe_lmer = suppressWarnings(resi_pe(mod_lmer_ri, vcov.args = list(type = "CR0")))
+  pe_gee  = resi_pe(mod_gee_exch)
+  # for positive exchangeable correlation (alpha ~ 0.58), GEE and CR0 sandwich
+  # give the same L-RESI up to finite-sample differences
+  expect_equal(unname(pe_lmer$coefficients[,'L-RESI']),
+               unname(pe_gee$coefficients[,'L-RESI']), tolerance = 0.05)
+  # CS-RESI is identical: both compute the same weighted independence lm + HC0
+  expect_equal(unname(pe_lmer$coefficients[,'CS-RESI']),
+               unname(pe_gee$coefficients[,'CS-RESI']), tolerance = 1e-07)
+})}}
 
 if(requireNamespace("gee") & requireNamespace("geepack")){
 test_that("vcov methods same for gee and geeglm",{
@@ -456,7 +485,7 @@ test_that("tibbles work", {
   #   expect_equal(unname(resi(mod.glmgee.tib, nboot = 10)$coefficients[,'L-RESI']), c(-0.02585617, -0.48811210, 0.01414410, 0.56177861, -0.29398258), tolerance = 1e-07)
   # }
   if(requireNamespace("lme4")){
-  expect_equal(unname(suppressWarnings(resi(mod.lmerMod.tib, nboot = 10))$coefficients[,'RESI']),c(8.434942, 1.533073), tolerance = 1e-07)
+  expect_equal(unname(suppressWarnings(resi(mod.lmerMod.tib, nboot = 10))$coefficients[,'L-RESI']),c(8.434942, 1.533073), tolerance = 1e-07)
   }
 })}
 

@@ -106,7 +106,11 @@ resi_pe.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
   if (is.null(model.reduced) & overall){
     if(!("skip.red.pe" %in% names(dots))){
       form.reduced = as.formula(paste(format(formula(model.full)[[2]]), "~ 1"))
-      if ((form.reduced == formula(model.full))){
+      if(!all(all.vars(form.reduced) %in% names(data)) ){
+        form.reduced = as.formula( paste0('`', format(formula(model.full)[[2]]), '`', "~1"))
+        if (length(attr(terms(formula(model.full)), "term.labels")) == 0) overall = FALSE
+      }
+      if (overall & (form.reduced == formula(model.full))){
         overall = FALSE} else{
           if (is.null(model.full$na.action)){
             model.reduced <- try(update(model.full, formula = form.reduced,
@@ -827,15 +831,31 @@ resi_pe.lme <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::vcovC
 #' @describeIn resi_pe RESI point estimation for lmerMod object
 #' @export
 resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::vcovCR,
-                            Anova.args = list(), vcov.args = list(), ...){
+                            Anova.args = list(), vcov.args = list(), unbiased = TRUE, ...){
   x = as.matrix(summary(model.full)$coefficients)
-  #sample size
-  N = summary(model.full)$ngrps
+  # sample size (number of clusters from primary grouping factor)
+  N = summary(model.full)$ngrps[[1]]
 
-  # robust se
+  # CS-RESI: extract primary cluster variable and compute per-observation weights
+  id_var <- names(lme4::ranef(model.full))[[1]]
+  data_mf <- as.data.frame(model.frame(model.full))
+  n_i <- table(data_mf[[id_var]])
+  data_mf$w_cs <- 1 / as.numeric(n_i[match(as.character(data_mf[[id_var]]), names(n_i))])
+  # weighted independence lm (fixed effects only, random effects stripped)
+  fix_form <- lme4::nobars(formula(model.full))
+  mod_ind_lm <- lm(fix_form, data = data_mf, weights = w_cs)
+  # rescale residuals to undo the weight transformation (mirrors geeglm CS approach)
+  mod_ind_lm$residuals <- mod_ind_lm$residuals / sqrt(mod_ind_lm$weights)
+  # HC0 sandwich variance for CS model
+  cov_ind <- sandwich::vcovHC(mod_ind_lm, type = "HC0")
+  cs_coef_tab <- lmtest::coeftest(mod_ind_lm, vcov. = cov_ind)
+
+  # robust se (L-RESI)
   if (identical(vcovfunc, stats::vcov)) {
-    coefficients.tab = cbind(x, 'Wald' = x[, 't value']^2, RESI = RESI::chisq2S(x[, 't value']^2, 1, N))
-    output = list(estimates = coefficients.tab[,"RESI"], coefficients = coefficients.tab, naive.var = TRUE)
+    coefficients.tab = cbind(x, 'Wald' = x[, 't value']^2,
+                             'L-RESI' = RESI::chisq2S(x[, 't value']^2, 1, N),
+                             'CS-RESI' = z2S(cs_coef_tab[, 't value'], N, unbiased))
+    output = list(estimates = coefficients.tab[,"L-RESI"], coefficients = coefficients.tab, naive.var = TRUE)
     vcovfunc2 = vcovfunc
   } else {
     if (length(vcov.args) == 0){
@@ -854,9 +874,9 @@ resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::v
     robust_se = sqrt(robust_var)
     coefficients.tab = cbind(x, 'Robust.SE' = robust_se,
                              'Robust Wald' = (x[, 'Estimate']^2/robust_var),
-                             RESI = RESI::chisq2S(x[, 'Estimate']^2/robust_var, 1, N))
-    # model full is not the same process as others, so print method is missing the call
-    output = list(estimates = coefficients.tab[,"RESI"], coefficients = coefficients.tab,
+                             'L-RESI' = RESI::chisq2S(x[, 'Estimate']^2/robust_var, 1, N),
+                             'CS-RESI' = z2S(cs_coef_tab[, 't value'], N, unbiased))
+    output = list(estimates = coefficients.tab[,"L-RESI"], coefficients = coefficients.tab,
                   naive.var = FALSE)
   }
   names(output$estimates) = rownames(coefficients.tab)
@@ -864,10 +884,14 @@ resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::v
   if (anova){
     suppressMessages(anova.tab <- do.call(car::Anova,
                                           c(list(mod = model.full, vcov. = vcovfunc2), Anova.args)))
-    anova.tab[,'RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], N)
+    anova.tab[,'L-RESI'] = chisq2S(anova.tab[,'Chisq'], anova.tab[,'Df'], N)
+    # CS-RESI anova table: car::Anova on lm returns F-stats; F * Df = Wald Chisq
+    anova.tabcs <- suppressMessages(car::Anova(mod_ind_lm, vcov. = cov_ind))
+    anova.tabcs <- anova.tabcs[!is.na(anova.tabcs[, "F"]), , drop = FALSE]
+    anova.tab[,'CS-RESI'] = chisq2S(anova.tabcs[,'F'] * anova.tabcs[,'Df'], anova.tabcs[,'Df'], N)
     names.est = names(output$estimates)
-    output$estimates = c(output$estimates, anova.tab$RESI)
-    names.est = c(names.est, rownames(anova.tab))
+    output$estimates = c(output$estimates, anova.tab$`L-RESI`, anova.tab$`CS-RESI`)
+    names.est = c(names.est, rownames(anova.tab), rownames(anova.tab))
     names(output$estimates) = names.est
     output$anova = anova.tab
     class(output$anova) = c("anova_resi", class(output$anova))
