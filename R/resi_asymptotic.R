@@ -271,20 +271,10 @@
   Achain <- matrix(0, m1, m)
   Bchain <- matrix(0, m1, m)
   for (k in seq_len(m)) {
-    # (b) A-chain: derivative of Sigma_beta w.r.t. theta_k
-    # When vcovmat_n is supplied for an LM, Sigma_beta = L_model * vcovmat_n * L_model^T
-    # (model-based).  For LM, vcovmat_n = n * phi * (X'X/n)^{-1}, so:
-    #   d(Sigma_beta)/d_phi   = Sigma_beta / phi    (k = 1, the phi column)
-    #   d(Sigma_beta)/d_beta  = 0                   (k >= 2)
-    # Using the HC3-based d(L Sig L^T)/d_phi here instead would be inconsistent
-    # with Sigma_beta and leads to severely inflated Sigma_R for large-signal terms.
-    if (vcov_is_model) {
-      dSigB_A <- if (k == 1L) Sigma_beta / precomp$phi else matrix(0, m1, m1)
-    } else {
-      dA_k    <- matrix(dA[, k], m, m)
-      dSig_A  <- -(A_inv %*% dA_k %*% Sig + Sig %*% dA_k %*% A_inv)
-      dSigB_A <- L %*% dSig_A %*% t(L)
-    }
+    # (b) A-chain
+    dA_k     <- matrix(dA[, k], m, m)
+    dSig_A   <- -(A_inv %*% dA_k %*% Sig + Sig %*% dA_k %*% A_inv)
+    dSigB_A  <- L %*% dSig_A %*% t(L)
     M_A      <- t(V) %*% dSigB_A %*% V  # m1 x m1 in V-basis
     Achain[, k] <- -V %*% (W * M_A) %*% VT_beta
 
@@ -383,12 +373,12 @@
 
   # These are the correct intervals
   # Closed-form: LCI = S_pm - se * w_{1-alpha/2},  UCI = S_pm - se * w_{alpha/2}
-  # LCI <- R_beta - se * cf_w(1 - alpha / 2)
-  # UCI <- R_beta - se * cf_w(    alpha / 2)
+  LCI <- R_beta - se * cf_w(1 - alpha / 2)
+  UCI <- R_beta - se * cf_w(    alpha / 2)
   # these are incorrect, but more align with the percentile bootstrap, which seems to do better for some reason
   # this code was just to investigate if this is more similar to that.
-  UCI <- R_beta + se * cf_w(1 - alpha / 2)
-  LCI <- R_beta + se * cf_w(    alpha / 2)
+  # UCI <- R_beta + se * cf_w(1 - alpha / 2)
+  # LCI <- R_beta + se * cf_w(    alpha / 2)
 
   c(LCI = LCI, UCI = UCI)
 }
