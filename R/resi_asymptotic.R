@@ -258,16 +258,33 @@
 
   VT_beta <- drop(t(V) %*% beta_hat)   # m1-vector (V-basis projection of beta_hat)
 
+  # Detect whether vcovmat_n is the model-based (parametric) covariance.
+  # For LM, n * vcov(model) = A_inv_bb exactly, while n * vcovHC differs.
+  # This flag gates the parametric-specific A-chain gradient correction below.
+  vcov_is_model <- !is.null(vcovmat_n) && precomp$lm_model &&
+    isTRUE(all.equal(vcovmat_n, A_inv[seq(2L, m), seq(2L, m)],
+                     check.attributes = FALSE, tolerance = 1e-6))
+
   # ---- dR_dtheta: m1 x m matrix ----
   direct <- Phat %*% L                   # (a) direct term: m1 x m
 
   Achain <- matrix(0, m1, m)
   Bchain <- matrix(0, m1, m)
   for (k in seq_len(m)) {
-    # (b) A-chain
-    dA_k     <- matrix(dA[, k], m, m)
-    dSig_A   <- -(A_inv %*% dA_k %*% Sig + Sig %*% dA_k %*% A_inv)
-    dSigB_A  <- L %*% dSig_A %*% t(L)
+    # (b) A-chain: derivative of Sigma_beta w.r.t. theta_k
+    # When vcovmat_n is supplied for an LM, Sigma_beta = L_model * vcovmat_n * L_model^T
+    # (model-based).  For LM, vcovmat_n = n * phi * (X'X/n)^{-1}, so:
+    #   d(Sigma_beta)/d_phi   = Sigma_beta / phi    (k = 1, the phi column)
+    #   d(Sigma_beta)/d_beta  = 0                   (k >= 2)
+    # Using the HC3-based d(L Sig L^T)/d_phi here instead would be inconsistent
+    # with Sigma_beta and leads to severely inflated Sigma_R for large-signal terms.
+    if (vcov_is_model) {
+      dSigB_A <- if (k == 1L) Sigma_beta / precomp$phi else matrix(0, m1, m1)
+    } else {
+      dA_k    <- matrix(dA[, k], m, m)
+      dSig_A  <- -(A_inv %*% dA_k %*% Sig + Sig %*% dA_k %*% A_inv)
+      dSigB_A <- L %*% dSig_A %*% t(L)
+    }
     M_A      <- t(V) %*% dSigB_A %*% V  # m1 x m1 in V-basis
     Achain[, k] <- -V %*% (W * M_A) %*% VT_beta
 

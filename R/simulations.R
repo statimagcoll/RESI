@@ -554,6 +554,268 @@ simRecomputeSummary <- function(output.dir  = "resiBootSim",
 
 
 # ============================================================
+#  simEstimatorFigures
+# ============================================================
+
+#' Estimator Comparison Figures: t2S/f2S vs z2S/chisq2S
+#'
+#' Reads the per-replicate raw \code{.rds} files from one simulation directory and
+#' produces Bias + MSE comparison figures contrasting the RESI estimators actually
+#' used for \code{lm} models against the simpler z-statistic / chi-squared alternatives:
+#' \itemize{
+#'   \item \strong{Coefficients table}: \code{\link{t2S}} (used) vs \code{\link{z2S}} (alternative)
+#'   \item \strong{Anova table}: \code{\link{f2S}} (used) vs \code{\link{chisq2S}} (alternative)
+#' }
+#' Only \code{lm} models are included; GLM models are skipped because z2S and
+#' chisq2S are the natural estimators there.
+#'
+#' @param sim.dir Character, directory containing simulation output with a
+#'   \code{sim_raw/} sub-directory.  Default \code{"resiBootSim"}.
+#' @param figures.dir Character, output directory for PDFs.
+#'   Default \code{file.path(sim.dir, "figures", "estimator_compare")}.
+#' @param alpha Numeric, nominal level (used only in figure titles). Default 0.05.
+#' @param fixed.knots Logical. Must match the value used in the original
+#'   \code{\link{insurancePlasmodeSim}} call. Default \code{FALSE}.
+#'
+#' @return Invisibly returns the combined estimator-comparison \code{data.frame}.
+#' @seealso \code{\link{simCompareMethodsFigures}}, \code{\link{simRecomputeSummary}}
+#' @importFrom grDevices pdf dev.off
+#' @importFrom graphics plot lines points abline legend par axis plot.new layout
+#' @importFrom stats lm vcov
+#' @importFrom sandwich vcovHC
+#' @importFrom splines ns
+#' @export
+simEstimatorFigures <- function(
+    sim.dir     = "resiBootSim",
+    figures.dir = NULL,
+    alpha       = 0.05,
+    fixed.knots = FALSE
+) {
+  if (is.null(figures.dir))
+    figures.dir <- file.path(sim.dir, "figures", "estimator_compare")
+  dir.create(figures.dir, recursive = TRUE, showWarnings = FALSE)
+
+  insurance <- RESI::insurance
+
+  # ---- Formula ---------------------------------------------------------------
+  if (fixed.knots) {
+    .age_knots <- quantile(insurance$age, c(1/3, 2/3))
+    .age_bk    <- range(insurance$age)
+    lm_formula <- eval(bquote(
+      log10(charges) ~ splines::ns(age, knots = .(.age_knots),
+                                   Boundary.knots = .(.age_bk)) * sex + bmi + smoker + region))
+  } else {
+    lm_formula <- log10(charges) ~ splines::ns(age, df = 3) * sex + bmi + smoker + region
+  }
+
+  # ---- lm settings only ------------------------------------------------------
+  model_settings <- list(
+    list(label = "lm_parametric", vcov_name = "parametric",
+         vcovfunc = stats::vcov),
+    list(label = "lm_robust",     vcov_name = "robust",
+         vcovfunc = sandwich::vcovHC)
+  )
+
+  # ---- True S from full insurance dataset ------------------------------------
+  message("Computing true RESI values from full insurance dataset...")
+  true_vals <- lapply(model_settings, function(s) {
+    m <- lm(lm_formula, data = insurance)
+    m$call[["formula"]] <- lm_formula
+    tv_vcov <- if (s$vcov_name == "robust") {
+      function(x) sandwich::vcovHC(x, type = "HC0")
+    } else {
+      s$vcovfunc
+    }
+    rdf_tv <- if (s$vcov_name == "parametric") m$df.residual else NULL
+    .simDirectRESI(resi_pe(m, data = insurance, vcovfunc = tv_vcov),
+                   n = nrow(insurance), rdf = rdf_tv)
+  })
+  names(true_vals) <- sapply(model_settings, `[[`, "label")
+
+  # ---- Colours / layout constants --------------------------------------------
+  est_cols <- c("t2S / f2S" = "#1B6CA8", "z2S / chisq2S" = "#CC5500")
+  row_h    <- 3.2
+  leg_h    <- 0.55
+  raw_dir  <- file.path(sim.dir, "sim_raw")
+
+  # ---- Helper: extract one column from anova/coef table per replicate --------
+  .extract_col <- function(reps, tbl_name, terms, col) {
+    m <- matrix(NA_real_, nrow = length(reps), ncol = length(terms),
+                dimnames = list(NULL, terms))
+    for (ri in seq_along(reps)) {
+      tab <- reps[[ri]][[tbl_name]]
+      idx <- match(terms, rownames(tab))
+      ok  <- !is.na(idx)
+      if (any(ok)) m[ri, ok] <- tab[idx[ok], col]
+    }
+    m
+  }
+
+  # ---- Loop over lm settings -------------------------------------------------
+  all_combined <- list()
+
+  for (s in model_settings) {
+    lbl   <- s$label
+    vtype <- s$vcov_name
+    tv    <- true_vals[[lbl]]
+
+    raw_files <- list.files(raw_dir,
+                            pattern = paste0("^", lbl, "_n[0-9]+\\.rds$"),
+                            full.names = TRUE)
+    if (length(raw_files) == 0L) {
+      message("No raw files found for: ", lbl, " — skipping")
+      next
+    }
+
+    # -- Per-n summaries -------------------------------------------------------
+    per_n <- lapply(raw_files, function(f) {
+      n_sim <- as.integer(sub(".*_n([0-9]+)\\.rds$", "\\1", basename(f)))
+      reps  <- readRDS(f)
+      if (length(reps) == 0L) return(NULL)
+
+      rows <- list()
+
+      # Anova: f2S (RESI col) vs chisq2S(F*Df, Df, n)
+      a_terms <- setdiff(rownames(tv$anova), "Residuals")
+      if (length(a_terms) > 0L) {
+        resi_f <- .extract_col(reps, "anova", a_terms, "RESI")
+        resi_c <- matrix(NA_real_, nrow = length(reps), ncol = length(a_terms),
+                         dimnames = list(NULL, a_terms))
+        for (ri in seq_along(reps)) {
+          tab <- reps[[ri]]$anova
+          idx <- match(a_terms, rownames(tab))
+          ok  <- !is.na(idx)
+          if (any(ok)) {
+            F_i  <- tab[idx[ok], "F"]
+            Df_i <- tab[idx[ok], "Df"]
+            resi_c[ri, ok] <- chisq2S(F_i * Df_i, Df_i, n_sim)
+          }
+        }
+        tv_a <- tv$anova[a_terms, "RESI"]
+        diff_f <- sweep(resi_f, 2L, tv_a, "-")
+        diff_c <- sweep(resi_c, 2L, tv_a, "-")
+        rows$anova <- rbind(
+          data.frame(model = "lm", vcov = vtype, n = n_sim, table = "anova",
+                     term = a_terms, estimator = "t2S / f2S",
+                     bias = colMeans(diff_f, na.rm = TRUE),
+                     mse  = colMeans(diff_f^2, na.rm = TRUE),
+                     row.names = NULL, stringsAsFactors = FALSE),
+          data.frame(model = "lm", vcov = vtype, n = n_sim, table = "anova",
+                     term = a_terms, estimator = "z2S / chisq2S",
+                     bias = colMeans(diff_c, na.rm = TRUE),
+                     mse  = colMeans(diff_c^2, na.rm = TRUE),
+                     row.names = NULL, stringsAsFactors = FALSE)
+        )
+      }
+
+      # Coefficients: t2S (RESI col) vs z2S(t, n)
+      c_terms <- setdiff(rownames(tv$coefficients), "(Intercept)")
+      if (length(c_terms) > 0L) {
+        coef_col <- "t value"
+        resi_t <- .extract_col(reps, "coefficients", c_terms, "RESI")
+        t_mat  <- .extract_col(reps, "coefficients", c_terms, coef_col)
+        resi_z <- matrix(z2S(t_mat, n_sim), nrow = nrow(t_mat), ncol = ncol(t_mat),
+                         dimnames = dimnames(t_mat))
+        tv_c   <- tv$coefficients[c_terms, "RESI"]
+        diff_t <- sweep(resi_t, 2L, tv_c, "-")
+        diff_z <- sweep(resi_z, 2L, tv_c, "-")
+        rows$coef <- rbind(
+          data.frame(model = "lm", vcov = vtype, n = n_sim, table = "coefficients",
+                     term = c_terms, estimator = "t2S / f2S",
+                     bias = colMeans(diff_t, na.rm = TRUE),
+                     mse  = colMeans(diff_t^2, na.rm = TRUE),
+                     row.names = NULL, stringsAsFactors = FALSE),
+          data.frame(model = "lm", vcov = vtype, n = n_sim, table = "coefficients",
+                     term = c_terms, estimator = "z2S / chisq2S",
+                     bias = colMeans(diff_z, na.rm = TRUE),
+                     mse  = colMeans(diff_z^2, na.rm = TRUE),
+                     row.names = NULL, stringsAsFactors = FALSE)
+        )
+      }
+
+      do.call(rbind, rows)
+    })
+
+    combined <- do.call(rbind, Filter(Negate(is.null), per_n))
+    if (is.null(combined) || nrow(combined) == 0L) next
+    all_combined[[lbl]] <- combined
+
+    n_vals <- sort(unique(combined$n))
+
+    # -- Figures ---------------------------------------------------------------
+    for (tbl_name in c("anova", "coefficients")) {
+      sub <- combined[combined$table == tbl_name, ]
+      if (nrow(sub) == 0L) next
+
+      terms   <- unique(sub$term)
+      n_terms <- length(terms)
+      tv_tbl  <- if (tbl_name == "anova") tv$anova else tv$coefficients
+
+      fig_path <- file.path(figures.dir,
+                            paste0("estimator_compare_", lbl, "_", tbl_name, ".pdf"))
+      grDevices::pdf(fig_path, width = 7, height = row_h * n_terms + leg_h)
+
+      # Layout: n_terms rows × 2 cols + 1 legend row
+      n_panels <- 2L * n_terms
+      lay_mat  <- matrix(c(seq_len(n_panels),
+                           rep(n_panels + 1L, 2L)),
+                         nrow = n_terms + 1L, ncol = 2L, byrow = TRUE)
+      graphics::layout(lay_mat,
+                       widths  = c(3.2, 3.2),
+                       heights = c(rep(row_h, n_terms), leg_h))
+
+      for (ti in seq_along(terms)) {
+        term      <- terms[[ti]]
+        tdata     <- sub[sub$term == term, ]
+        true_s    <- if (term %in% rownames(tv_tbl)) tv_tbl[term, "RESI"] else NA_real_
+        term_title <- if (is.finite(true_s)) sprintf("%s: S=%.3f", term, true_s) else term
+
+        for (metric in c("bias", "mse")) {
+          ylab <- if (metric == "bias") "Bias" else "MSE"
+          ylim <- range(tdata[[metric]], na.rm = TRUE)
+          if (metric == "bias") ylim <- range(c(ylim, 0), na.rm = TRUE)
+          ylim <- ylim + diff(ylim) * c(-0.05, 0.05)
+
+          graphics::par(mar = c(3.2, 3.0, 2.2, 0.5), mgp = c(1.8, 0.5, 0))
+          graphics::plot(NULL, xlim = range(n_vals), ylim = ylim,
+                         xlab = "Sample Size", ylab = ylab,
+                         main = if (metric == "bias") term_title else "",
+                         log = "x", xaxt = "n", bty = "l")
+          graphics::axis(1, at = n_vals, labels = n_vals, las = 2L,
+                         mgp = c(1.7, 0.35, 0))
+          if (metric == "bias") graphics::abline(h = 0, lty = 2L, col = "gray40")
+
+          for (est in names(est_cols)) {
+            ed <- tdata[tdata$estimator == est, ]
+            ed <- ed[order(ed$n), ]
+            if (nrow(ed) == 0L) next
+            graphics::lines(ed$n, ed[[metric]], col = est_cols[[est]], lwd = 2L)
+            graphics::points(ed$n, ed[[metric]], col = est_cols[[est]], pch = 16L, cex = 0.9)
+          }
+        }
+      }
+
+      # Bottom legend
+      est_labels <- if (tbl_name == "anova") c("f2S (used)", "chisq2S") else c("t2S (used)", "z2S")
+      graphics::par(mar = c(0.2, 0.2, 0.2, 0.2))
+      graphics::plot.new()
+      graphics::legend("center",
+                       legend = paste0(est_labels, "    "),
+                       col    = unname(est_cols),
+                       pch    = 16L, lwd = 2L, lty = 1L,
+                       bty    = "n", cex = 0.9, ncol = 2L,
+                       title  = "Estimator", title.font = 2L)
+      grDevices::dev.off()
+      message("Saved: ", fig_path)
+    }
+  }
+
+  message("Estimator comparison figures saved to: ", figures.dir)
+  invisible(do.call(rbind, all_combined))
+}
+
+
+# ============================================================
 #  simFigures
 # ============================================================
 
@@ -1011,12 +1273,11 @@ simCompareMethodsFigures <- function(
         graphics::plot.new()
         graphics::legend(
           "center",
-          legend = avail_methods,
+          legend = paste0(avail_methods, "    "),
           col    = method_cols[avail_methods],
           pch    = 16L, lwd = 2L, lty = 1L,
           bty    = "n", cex = 0.9,
           ncol   = length(avail_methods),
-          x.intersp = 1.5,
           title  = "CI method", title.font = 2L
         )
         grDevices::dev.off()
@@ -1153,12 +1414,11 @@ simCompareMethodsFigures <- function(
         graphics::plot.new()
         graphics::legend(
           "center",
-          legend = avail_methods,
+          legend = paste0(avail_methods, "    "),
           col    = method_cols[avail_methods],
           pch    = 16L, lwd = 2L, lty = 1L,
           bty    = "n", cex = 0.9,
           ncol   = length(avail_methods),
-          x.intersp = 1.5,
           title  = "CI method", title.font = 2L
         )
         grDevices::dev.off()
