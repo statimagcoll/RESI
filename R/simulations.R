@@ -1123,20 +1123,16 @@ simFigures <- function(output.dir = "resiBootSim",
 #' @importFrom grDevices pdf dev.off
 #' @importFrom graphics plot lines points abline legend par axis plot.new layout
 #' @export
-simCalibrationFigures <- function(
+simCalibrationSim <- function(
     nsim          = 500L,
     n.vec         = c(100L, 200L, 500L, 1000L, 2000L, 5000L),
     alpha         = 0.05,
     output.dir    = "resiCalibrationSim",
-    figures.dir   = NULL,
     fixed.knots   = FALSE,
     mc.cores.reps = 1L
 ) {
-  if (is.null(figures.dir))
-    figures.dir <- file.path(output.dir, "figures")
   raw_dir <- file.path(output.dir, "raw")
   dir.create(raw_dir,      recursive = TRUE, showWarnings = FALSE)
-  dir.create(figures.dir,  recursive = TRUE, showWarnings = FALSE)
 
   insurance <- RESI::insurance
   n_full    <- nrow(insurance)
@@ -1384,8 +1380,56 @@ simCalibrationFigures <- function(
 
   summary_df <- do.call(rbind, all_metrics)
   saveRDS(summary_df, file.path(output.dir, "calibration_summary.rds"))
+  saveRDS(true_vals,  file.path(output.dir, "calibration_truevals.rds"))
+  message("Simulation complete. Results saved to: ", output.dir)
+  invisible(summary_df)
+}
+
+#' @importFrom splines ns
+#' @importFrom sandwich vcovHC
+#' @importFrom stats lm glm vcov binomial
+#' @importFrom grDevices pdf dev.off
+#' @importFrom graphics plot lines points abline legend par axis plot.new layout
+#' @export
+simCalibrationFigures <- function(
+    output.dir  = "resiCalibrationSim",
+    figures.dir = NULL,
+    alpha       = 0.05
+) {
+  if (is.null(figures.dir))
+    figures.dir <- file.path(output.dir, "figures")
+  dir.create(figures.dir, recursive = TRUE, showWarnings = FALSE)
+
+  summary_path  <- file.path(output.dir, "calibration_summary.rds")
+  truevals_path <- file.path(output.dir, "calibration_truevals.rds")
+  if (!file.exists(summary_path))
+    stop("'", summary_path, "' not found. Run simCalibrationSim() first.")
+  if (!file.exists(truevals_path))
+    stop("'", truevals_path, "' not found. Run simCalibrationSim() first.")
+
+  summary_df <- readRDS(summary_path)
+  true_vals  <- readRDS(truevals_path)
+
+  # Reconstruct minimal model_settings from true_vals names (label -> type/vcov_name)
+  model_settings <- lapply(names(true_vals), function(lbl) {
+    parts <- strsplit(lbl, "_", fixed = TRUE)[[1L]]
+    list(type      = parts[1L],
+         label     = lbl,
+         vcov_name = parts[2L])
+  })
 
   # ---- Figures ---------------------------------------------------------------
+  # Abbreviate long term names for display in legends
+  .abbrev <- function(x) {
+    x <- sub("splines::ns\\(age, df = [0-9]+\\)", "ns(age)", x)
+    x <- sub("regionnorthwest", "reg:NW", x)
+    x <- sub("regionsoutheast", "reg:SE", x)
+    x <- sub("regionsouthwest", "reg:SW", x)
+    x <- sub("regionnortheast", "reg:NE", x)
+    x <- sub(":sexmale$",       ":sex",   x)
+    x
+  }
+
   .sim_pal <- c("#1F77B4", "#D62728", "#2CA02C", "#FF7F0E", "#9467BD",
                 "#8C564B", "#E377C2", "#17BECF", "#BCBD22", "#7F7F7F",
                 "#AEC7E8", "#98DF8A")
@@ -1411,11 +1455,11 @@ simCalibrationFigures <- function(
     # Panel 3: Bias of R_k
     # Panel 4: sigma2S ratios (solid=A, dashed=B)
     # Panel 5: legend (spans full width)
-    grDevices::pdf(fig_path, width = 9, height = 7.5)
+    grDevices::pdf(fig_path, width = 9, height = 8.5)
     graphics::layout(
       matrix(c(1, 2, 3, 4, 5, 5), nrow = 3L, byrow = TRUE),
       widths  = c(4.0, 4.0),
-      heights = c(3.0, 3.0, 1.5)
+      heights = c(3.0, 3.0, 2.0)
     )
 
     # --- Panel 1: Bias(theta) ---
@@ -1433,7 +1477,7 @@ simCalibrationFigures <- function(
     graphics::par(mar = c(3.2, 3.5, 2.2, 0.5), mgp = c(2.0, 0.5, 0))
     graphics::plot(NULL, xlim = range(n_vals_plot), ylim = ylim1,
                    xlab = "n", ylab = "Bias",
-                   main = paste(lbl, "— Bias of theta"),
+                   main = paste0(lbl, ": Bias of theta"),
                    log = "x", xaxt = "n", bty = "l")
     graphics::axis(1L, at = n_vals_plot, labels = n_vals_plot, las = 2L,
                    mgp = c(1.7, 0.35, 0))
@@ -1464,7 +1508,7 @@ simCalibrationFigures <- function(
     graphics::plot(NULL, xlim = range(n_vals_plot), ylim = ylim2,
                    xlab = "n",
                    ylab = "Ratio  (target = 1)",
-                   main = paste(lbl, "— vcov calibration"),
+                   main = paste0(lbl, ": vcov calibration"),
                    log = "x", xaxt = "n", bty = "l")
     graphics::axis(1L, at = n_vals_plot, labels = n_vals_plot, las = 2L,
                    mgp = c(1.7, 0.35, 0))
@@ -1487,7 +1531,7 @@ simCalibrationFigures <- function(
     graphics::par(mar = c(3.2, 3.5, 2.2, 0.5), mgp = c(2.0, 0.5, 0))
     graphics::plot(NULL, xlim = range(n_vals_plot), ylim = ylim3,
                    xlab = "n", ylab = "Bias",
-                   main = paste(lbl, "— Bias of R"),
+                   main = paste0(lbl, ": Bias of R"),
                    log = "x", xaxt = "n", bty = "l")
     graphics::axis(1L, at = n_vals_plot, labels = n_vals_plot, las = 2L,
                    mgp = c(1.7, 0.35, 0))
@@ -1528,20 +1572,22 @@ simCalibrationFigures <- function(
     }
 
     # --- Panel 5: Legend ---
-    cex_leg <- min(0.85, 10 / n_terms)
-    phi_leg  <- if (is_lm) list(
-      legend = c(coef_terms, "phi (sigma^2)"),
-      col    = c(term_cols[coef_terms], "#000000"),
+    short_terms <- .abbrev(coef_terms)
+    phi_leg <- if (is_lm) list(
+      legend = c(short_terms, "phi (sigma^2)"),
+      col    = c(unname(term_cols[coef_terms]), "#000000"),
       pch    = c(rep(16L, n_terms), 17L),
       lty    = c(rep(1L, n_terms), 3L)
     ) else list(
-      legend = coef_terms,
-      col    = term_cols[coef_terms],
+      legend = short_terms,
+      col    = unname(term_cols[coef_terms]),
       pch    = rep(16L, n_terms),
       lty    = rep(1L, n_terms)
     )
+    # Target ~3 rows; ceiling(n/3) gives the needed number of columns
+    leg_ncol <- ceiling(length(phi_leg$legend) / 3L)
 
-    graphics::par(mar = c(0.2, 0.2, 0.2, 0.2))
+    graphics::par(mar = c(0.2, 0.5, 0.2, 0.5))
     graphics::plot.new()
 
     # Two sub-legends: term colors (left) + line type key (right)
@@ -1551,8 +1597,8 @@ simCalibrationFigures <- function(
                      pch    = phi_leg$pch,
                      lty    = phi_leg$lty,
                      lwd    = 1.5,
-                     bty    = "n", cex = cex_leg,
-                     ncol   = ceiling(length(phi_leg$legend) / 2),
+                     bty    = "n", cex = 0.80,
+                     ncol   = leg_ncol,
                      title  = "Term", title.font = 2L)
     graphics::legend("right",
                      legend = c("Analytical estimator (A)", "Empirical variance (B)"),
