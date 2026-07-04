@@ -258,13 +258,6 @@
 
   VT_beta <- drop(t(V) %*% beta_hat)   # m1-vector (V-basis projection of beta_hat)
 
-  # Detect whether vcovmat_n is the model-based (parametric) covariance.
-  # For LM, n * vcov(model) = A_inv_bb exactly, while n * vcovHC differs.
-  # This flag gates the parametric-specific A-chain gradient correction below.
-  vcov_is_model <- !is.null(vcovmat_n) && precomp$lm_model &&
-    isTRUE(all.equal(vcovmat_n, A_inv[seq(2L, m), seq(2L, m)],
-                     check.attributes = FALSE, tolerance = 1e-6))
-
   # ---- dR_dtheta: m1 x m matrix ----
   direct <- Phat %*% L                   # (a) direct term: m1 x m
 

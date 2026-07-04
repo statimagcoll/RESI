@@ -1072,6 +1072,567 @@ simFigures <- function(output.dir = "resiBootSim",
 #'     columns = sample sizes.
 #' }
 #' @seealso \code{\link{insurancePlasmodeSim}}, \code{\link{simFigures}}
+# ============================================================
+#  simCalibrationFigures
+# ============================================================
+
+#' Asymptotic Calibration Check for RESI Variance Estimates
+#'
+#' Runs a plasmode simulation to verify that the asymptotic normal CI machinery
+#' is correctly calibrated for all four model settings (lm/glm ×
+#' parametric/robust).  For each (setting, sample size) cell the function
+#' checks:
+#' \enumerate{
+#'   \item \strong{Bias(theta)}: \eqn{\hat\theta \to \theta_{\rm true}} —
+#'     raw coefficients (and \eqn{\phi = \hat\sigma^2} for \code{lm}) converge
+#'     to the full-dataset values.
+#'   \item \strong{vcov check A} (estimator consistency):
+#'     \eqn{n \cdot \bar V_{\rm analytic} / (n_{\rm full} \cdot V_{\rm true}) \to 1}.
+#'   \item \strong{vcov check B} (calibration):
+#'     \eqn{n \cdot \widehat{\rm Var}(\hat\beta) / (n_{\rm full} \cdot V_{\rm true}) \to 1}.
+#'   \item \strong{Bias(R)}: RESI point estimates converge to the full-dataset
+#'     values.
+#'   \item \strong{sigma2S check A} (estimator consistency):
+#'     \eqn{\bar{\hat\sigma}^2_S / \sigma^2_{S,\rm true} \to 1}.
+#'   \item \strong{sigma2S check B} (CI calibration):
+#'     \eqn{n \cdot \widehat{\rm Var}(\hat R) / \sigma^2_{S,\rm true} \to 1}.
+#' }
+#' True values are taken from the full \code{\link{insurance}} dataset using the
+#' same definitions as \code{\link{insurancePlasmodeSim}}.  \eqn{\sigma^2_S} is
+#' extracted from the asymptotic-normal CI half-width:
+#' \eqn{\hat\sigma^2_S = n \cdot ({\rm hw}/z_{\alpha/2})^2}.
+#'
+#' @param nsim Integer, replicates per (setting, \eqn{n}) cell. Default 500.
+#' @param n.vec Integer vector of sample sizes.
+#'   Default \code{c(100, 200, 500, 1000, 2000, 5000)}.
+#' @param alpha Numeric, nominal CI level. Default 0.05.
+#' @param output.dir Character, directory for raw per-cell RDS files.
+#'   Default \code{"resiCalibrationSim"}.
+#' @param figures.dir Character, directory for PDF figures.
+#'   Default \code{file.path(output.dir, "figures")}.
+#' @param fixed.knots Logical. Fix spline knots at full-dataset quantiles.
+#'   Default \code{FALSE}.
+#' @param mc.cores.reps Integer, cores for within-cell parallelism. Default 1.
+#'
+#' @return Invisibly returns the combined metrics \code{data.frame}.
+#' @seealso \code{\link{insurancePlasmodeSim}}, \code{\link{simCompareMethodsFigures}}
+#' @importFrom parallel mclapply
+#' @importFrom splines ns
+#' @importFrom sandwich vcovHC
+#' @importFrom stats lm glm vcov binomial qnorm coef
+#' @importFrom grDevices pdf dev.off
+#' @importFrom graphics plot lines points abline legend par axis plot.new layout
+#' @export
+simCalibrationFigures <- function(
+    nsim          = 500L,
+    n.vec         = c(100L, 200L, 500L, 1000L, 2000L, 5000L),
+    alpha         = 0.05,
+    output.dir    = "resiCalibrationSim",
+    figures.dir   = NULL,
+    fixed.knots   = FALSE,
+    mc.cores.reps = 1L
+) {
+  if (is.null(figures.dir))
+    figures.dir <- file.path(output.dir, "figures")
+  raw_dir <- file.path(output.dir, "raw")
+  dir.create(raw_dir,      recursive = TRUE, showWarnings = FALSE)
+  dir.create(figures.dir,  recursive = TRUE, showWarnings = FALSE)
+
+  insurance <- RESI::insurance
+  n_full    <- nrow(insurance)
+  z_ref     <- stats::qnorm(1 - alpha / 2)
+  ci_lo_col <- paste0(alpha / 2 * 100,       "%")
+  ci_hi_col <- paste0((1 - alpha / 2) * 100, "%")
+
+  .fvars   <- c("sex", "smoker", "region")
+  .flevels <- lapply(.fvars, function(v) unique(insurance[[v]]))
+  names(.flevels) <- .fvars
+
+  # ---- Formulas ---------------------------------------------------------------
+  if (fixed.knots) {
+    .age_knots <- stats::quantile(insurance$age, c(1/3, 2/3))
+    .age_bk    <- range(insurance$age)
+    lm_formula  <- eval(bquote(log10(charges) ~
+      splines::ns(age, knots = .(.age_knots), Boundary.knots = .(.age_bk)) *
+        sex + bmi + smoker + region))
+    glm_formula <- eval(bquote(I(charges > 15000) ~
+      splines::ns(age, knots = .(.age_knots), Boundary.knots = .(.age_bk)) *
+        sex + bmi + smoker + region))
+  } else {
+    lm_formula  <- log10(charges) ~
+      splines::ns(age, df = 3) * sex + bmi + smoker + region
+    glm_formula <- I(charges > 15000) ~
+      splines::ns(age, df = 3) * sex + bmi + smoker + region
+  }
+
+  model_settings <- list(
+    list(type = "lm",  label = "lm_parametric",
+         formula = lm_formula,  family = NULL,
+         vcov_name = "parametric", vcovfunc = stats::vcov),
+    list(type = "lm",  label = "lm_robust",
+         formula = lm_formula,  family = NULL,
+         vcov_name = "robust",     vcovfunc = sandwich::vcovHC),
+    list(type = "glm", label = "glm_parametric",
+         formula = glm_formula, family = stats::binomial(),
+         vcov_name = "parametric", vcovfunc = stats::vcov),
+    list(type = "glm", label = "glm_robust",
+         formula = glm_formula, family = stats::binomial(),
+         vcov_name = "robust",     vcovfunc = sandwich::vcovHC)
+  )
+
+  # ---- True values from full dataset ------------------------------------------
+  message("Computing true values from full dataset (n = ", n_full, ")...")
+  true_vals <- lapply(model_settings, function(s) {
+    .formula <- s$formula; .family <- s$family
+    full_mod <- if (s$type == "lm") {
+      m <- stats::lm(.formula, data = insurance)
+      m$call[["formula"]] <- .formula; m
+    } else {
+      m <- stats::glm(.formula, data = insurance, family = .family)
+      m$call[["formula"]] <- .formula
+      m$call[["family"]]  <- .family; m
+    }
+
+    # theta_true: phi = sigma^2 = summary()$sigma^2 (same as .resi_precompute)
+    phi_true  <- if (s$type == "lm") summary(full_mod)$sigma^2 else NULL
+    beta_true <- stats::coef(full_mod)
+
+    # n_full * vcov_true (diagonal, all terms incl. intercept)
+    vcov_diag_true <- n_full * diag(s$vcovfunc(full_mod))
+
+    # R_true using the same population definition as insurancePlasmodeSim:
+    #   - robust: HC0 (no hat-value correction)
+    #   - parametric lm: divide by sqrt(rdf) = sqrt(n-p), not sqrt(n)
+    true_vcovfunc_r <- if (s$vcov_name == "robust") {
+      function(x) sandwich::vcovHC(x, type = "HC0")
+    } else {
+      s$vcovfunc
+    }
+    rdf_true_r <- if (s$type == "lm" && s$vcov_name == "parametric") {
+      full_mod$df.residual
+    } else {
+      NULL
+    }
+    pe_true_raw <- resi_pe(full_mod, data = insurance, vcovfunc = true_vcovfunc_r)
+    pe_true     <- .simDirectRESI(pe_true_raw, n = n_full, rdf = rdf_true_r)
+    coef_tab_true   <- pe_true$coefficients
+    coef_terms_true <- rownames(coef_tab_true)[rownames(coef_tab_true) != "(Intercept)"]
+    R_true <- coef_tab_true[coef_terms_true, "RESI"]
+    names(R_true) <- coef_terms_true   # data.frame[rows,col] drops names
+
+    # sigma2S_true: n_full * (hw / z_ref)^2 from the normal asymptotic CI
+    asym_true <- tryCatch(
+      resi_pe_asymptotic(full_mod, vcovfunc = s$vcovfunc, ci.method = "normal"),
+      error = function(e) NULL
+    )
+    if (!is.null(asym_true)) {
+      tab_a <- asym_true$coefficients
+      tab_a <- tab_a[rownames(tab_a) != "(Intercept)", , drop = FALSE]
+      hw_true <- (tab_a[, ci_hi_col] - tab_a[, ci_lo_col]) / 2
+      names(hw_true) <- rownames(tab_a)   # data.frame[,col] drops names
+      sigma2S_true <- n_full * (hw_true / z_ref)^2
+    } else {
+      sigma2S_true <- setNames(rep(NA_real_, length(R_true)), names(R_true))
+    }
+
+    list(phi_true       = phi_true,
+         beta_true      = beta_true,
+         vcov_diag_true = vcov_diag_true,
+         R_true         = R_true,
+         sigma2S_true   = sigma2S_true,
+         coef_terms     = coef_terms_true)
+  })
+  names(true_vals) <- sapply(model_settings, `[[`, "label")
+
+  # ---- Per-setting, per-n simulations -----------------------------------------
+  all_metrics <- list()
+
+  for (s in model_settings) {
+    lbl      <- s$label
+    tv       <- true_vals[[lbl]]
+    is_lm    <- (s$type == "lm")
+    .formula <- s$formula; .family <- s$family
+    coef_terms <- tv$coef_terms
+    message("\nSetting: ", lbl)
+
+    for (n_s in n.vec) {
+      cell_label <- paste0(lbl, "_n", n_s)
+      rds_path   <- file.path(raw_dir, paste0(cell_label, ".rds"))
+
+      if (file.exists(rds_path)) {
+        message("  n = ", n_s, " (loading cached)")
+        cell_data <- readRDS(rds_path)
+      } else {
+        message("  n = ", n_s, " ...")
+        reps_raw <- parallel::mclapply(seq_len(nsim), function(i) {
+          repeat {
+            dat <- insurance[sample(n_full, n_s, replace = TRUE), ]
+            ok  <- all(vapply(.fvars, function(v)
+              all(.flevels[[v]] %in% dat[[v]]), logical(1L)))
+            if (ok && !is_lm) {
+              biny <- as.integer(dat$charges > 15000)
+              ok   <- length(unique(biny)) > 1L &&
+                all(tapply(biny, dat$smoker,
+                           function(x) length(unique(x)) > 1L))
+            }
+            if (ok) break
+          }
+
+          mod <- tryCatch({
+            m <- if (is_lm) stats::lm(.formula, data = dat)
+                 else stats::glm(.formula, data = dat, family = .family)
+            m$call[["formula"]] <- .formula
+            if (!is_lm) m$call[["family"]] <- .family
+            m
+          }, error = function(e) NULL)
+          if (is.null(mod)) return(NULL)
+
+          tryCatch({
+            # theta_hat
+            phi_hat  <- if (is_lm) summary(mod)$sigma^2 else NULL
+            beta_hat <- stats::coef(mod)[coef_terms]
+
+            # n_s * diag(vcov_hat) for non-intercept terms
+            vcov_hat_diag <- n_s * diag(s$vcovfunc(mod))[coef_terms]
+
+            # R_hat and sigma2S_hat via asymptotic normal CI
+            asym <- resi_pe_asymptotic(mod, vcovfunc = s$vcovfunc,
+                                       ci.method = "normal")
+            tab  <- asym$coefficients
+            tab  <- tab[rownames(tab) != "(Intercept)", , drop = FALSE]
+            hw   <- (tab[coef_terms, ci_hi_col] - tab[coef_terms, ci_lo_col]) / 2
+            names(hw)   <- coef_terms   # data.frame[rows,col] drops names
+            R_hat       <- tab[coef_terms, "RESI"]
+            names(R_hat) <- coef_terms
+            sigma2S_hat <- n_s * (hw / z_ref)^2
+            names(sigma2S_hat) <- coef_terms
+
+            list(phi_hat       = phi_hat,
+                 beta_hat      = beta_hat,
+                 vcov_hat_diag = vcov_hat_diag,
+                 R_hat         = R_hat,
+                 sigma2S_hat   = sigma2S_hat)
+          }, error = function(e) NULL)
+        }, mc.cores = mc.cores.reps)
+
+        reps <- Filter(Negate(is.null), reps_raw)
+
+        # Store matrices
+        cell_data <- list(
+          n         = n_s,
+          n_success = length(reps),
+          phi_vec   = if (is_lm) sapply(reps, `[[`, "phi_hat") else NULL,
+          beta_mat  = do.call(rbind, lapply(reps, `[[`, "beta_hat")),
+          vcov_mat  = do.call(rbind, lapply(reps, `[[`, "vcov_hat_diag")),
+          R_mat     = do.call(rbind, lapply(reps, `[[`, "R_hat")),
+          sig2S_mat = do.call(rbind, lapply(reps, `[[`, "sigma2S_hat"))
+        )
+        saveRDS(cell_data, rds_path)
+      }
+
+      if (cell_data$n_success == 0L) next
+
+      # ---- Compute metrics ---------------------------------------------------
+      n_s_eff <- cell_data$n  # actual n used
+
+      # (1) Bias(phi) for lm
+      phi_bias <- if (!is.null(cell_data$phi_vec))
+        mean(cell_data$phi_vec, na.rm = TRUE) - tv$phi_true else NA_real_
+
+      # (2) Bias(beta_k)
+      beta_bias <- colMeans(cell_data$beta_mat, na.rm = TRUE) -
+        tv$beta_true[coef_terms]
+
+      # (3) vcov check A: mean(n_s * vcov_hat_kk) / (n_full * vcov_true_kk)
+      vcov_A <- colMeans(cell_data$vcov_mat, na.rm = TRUE) /
+        tv$vcov_diag_true[coef_terms]
+
+      # (4) vcov check B: n_s * Var_empirical(beta_k) / (n_full * vcov_true_kk)
+      vcov_B <- (n_s_eff * apply(cell_data$beta_mat, 2L, stats::var, na.rm = TRUE)) /
+        tv$vcov_diag_true[coef_terms]
+
+      # (5) Bias(R_k)
+      R_bias <- colMeans(cell_data$R_mat, na.rm = TRUE) - tv$R_true[coef_terms]
+
+      # (6) sigma2S check A: mean(sigma2S_hat_k) / sigma2S_true_k
+      sig2S_A <- colMeans(cell_data$sig2S_mat, na.rm = TRUE) /
+        tv$sigma2S_true[coef_terms]
+
+      # (7) sigma2S check B: n_s * Var_empirical(R_k) / sigma2S_true_k
+      sig2S_B <- (n_s_eff * apply(cell_data$R_mat, 2L, stats::var, na.rm = TRUE)) /
+        tv$sigma2S_true[coef_terms]
+
+      row <- data.frame(
+        model     = s$type,
+        vcov      = s$vcov_name,
+        n         = n_s_eff,
+        n_success = cell_data$n_success,
+        term      = coef_terms,
+        phi_bias  = phi_bias,   # scalar, same for all rows
+        beta_bias = beta_bias,
+        vcov_A    = vcov_A,
+        vcov_B    = vcov_B,
+        R_bias    = R_bias,
+        sig2S_A   = sig2S_A,
+        sig2S_B   = sig2S_B,
+        row.names = NULL,
+        stringsAsFactors = FALSE
+      )
+      all_metrics[[length(all_metrics) + 1L]] <- row
+    }
+  }
+
+  summary_df <- do.call(rbind, all_metrics)
+  saveRDS(summary_df, file.path(output.dir, "calibration_summary.rds"))
+
+  # ---- Figures ---------------------------------------------------------------
+  .sim_pal <- c("#1F77B4", "#D62728", "#2CA02C", "#FF7F0E", "#9467BD",
+                "#8C564B", "#E377C2", "#17BECF", "#BCBD22", "#7F7F7F",
+                "#AEC7E8", "#98DF8A")
+  n_vals_plot <- sort(unique(summary_df$n))
+
+  for (s in model_settings) {
+    lbl      <- s$label
+    is_lm    <- (s$type == "lm")
+    tv       <- true_vals[[lbl]]
+    coef_terms <- tv$coef_terms
+    n_terms    <- length(coef_terms)
+    term_cols  <- setNames(.sim_pal[seq_len(n_terms)], coef_terms)
+
+    sub <- summary_df[summary_df$model == s$type &
+                        summary_df$vcov  == s$vcov_name, ]
+    if (nrow(sub) == 0L) next
+
+    fig_path <- file.path(figures.dir, paste0("calibration_", lbl, ".pdf"))
+
+    # Layout: [bias_theta | vcov_ratios] / [bias_R | sig2S_ratios] / [legend]
+    # Panel 1: Bias of theta (phi + beta_k lines; phi as a special dotted line)
+    # Panel 2: vcov ratios  (solid=A, dashed=B, one color per term)
+    # Panel 3: Bias of R_k
+    # Panel 4: sigma2S ratios (solid=A, dashed=B)
+    # Panel 5: legend (spans full width)
+    grDevices::pdf(fig_path, width = 9, height = 7.5)
+    graphics::layout(
+      matrix(c(1, 2, 3, 4, 5, 5), nrow = 3L, byrow = TRUE),
+      widths  = c(4.0, 4.0),
+      heights = c(3.0, 3.0, 1.5)
+    )
+
+    # --- Panel 1: Bias(theta) ---
+    # Collect bias range for beta + phi
+    all_bias_theta <- unlist(lapply(coef_terms, function(tm) {
+      sub[sub$term == tm, "beta_bias"]
+    }))
+    if (is_lm) {
+      phi_biases <- sub[sub$term == coef_terms[1L], "phi_bias"]
+      all_bias_theta <- c(all_bias_theta, phi_biases)
+    }
+    ylim1 <- range(c(all_bias_theta, 0), na.rm = TRUE)
+    ylim1 <- ylim1 + diff(ylim1) * c(-0.06, 0.06)
+
+    graphics::par(mar = c(3.2, 3.5, 2.2, 0.5), mgp = c(2.0, 0.5, 0))
+    graphics::plot(NULL, xlim = range(n_vals_plot), ylim = ylim1,
+                   xlab = "n", ylab = "Bias",
+                   main = paste(lbl, "— Bias of theta"),
+                   log = "x", xaxt = "n", bty = "l")
+    graphics::axis(1L, at = n_vals_plot, labels = n_vals_plot, las = 2L,
+                   mgp = c(1.7, 0.35, 0))
+    graphics::abline(h = 0, lty = 2L, col = "gray40")
+
+    for (tm in coef_terms) {
+      d <- sub[sub$term == tm, ]
+      d <- d[order(d$n), ]
+      graphics::lines(d$n,  d$beta_bias, col = term_cols[[tm]], lwd = 1.5)
+      graphics::points(d$n, d$beta_bias, col = term_cols[[tm]], pch = 16L, cex = 0.7)
+    }
+    if (is_lm) {
+      d <- sub[sub$term == coef_terms[1L], ]
+      d <- d[order(d$n), ]
+      graphics::lines(d$n,  d$phi_bias, col = "#000000", lwd = 2L, lty = 3L)
+      graphics::points(d$n, d$phi_bias, col = "#000000", pch = 17L, cex = 0.8)
+    }
+
+    # --- Panel 2: vcov ratios (A solid, B dashed) ---
+    all_vcov <- unlist(lapply(coef_terms, function(tm) {
+      d <- sub[sub$term == tm, ]
+      c(d$vcov_A, d$vcov_B)
+    }))
+    ylim2 <- range(c(all_vcov, 1), na.rm = TRUE)
+    ylim2 <- ylim2 + diff(ylim2) * c(-0.06, 0.06)
+
+    graphics::par(mar = c(3.2, 3.5, 2.2, 0.5), mgp = c(2.0, 0.5, 0))
+    graphics::plot(NULL, xlim = range(n_vals_plot), ylim = ylim2,
+                   xlab = "n",
+                   ylab = "Ratio  (target = 1)",
+                   main = paste(lbl, "— vcov calibration"),
+                   log = "x", xaxt = "n", bty = "l")
+    graphics::axis(1L, at = n_vals_plot, labels = n_vals_plot, las = 2L,
+                   mgp = c(1.7, 0.35, 0))
+    graphics::abline(h = 1, lty = 2L, col = "gray40")
+
+    for (tm in coef_terms) {
+      d <- sub[sub$term == tm, ]
+      d <- d[order(d$n), ]
+      graphics::lines(d$n, d$vcov_A, col = term_cols[[tm]], lwd = 1.5, lty = 1L)
+      graphics::lines(d$n, d$vcov_B, col = term_cols[[tm]], lwd = 1.5, lty = 2L)
+      graphics::points(d$n, d$vcov_A, col = term_cols[[tm]], pch = 16L, cex = 0.7)
+      graphics::points(d$n, d$vcov_B, col = term_cols[[tm]], pch = 1L,  cex = 0.7)
+    }
+
+    # --- Panel 3: Bias(R) ---
+    all_R_bias <- unlist(lapply(coef_terms, function(tm) sub[sub$term == tm, "R_bias"]))
+    ylim3 <- range(c(all_R_bias, 0), na.rm = TRUE)
+    ylim3 <- ylim3 + diff(ylim3) * c(-0.06, 0.06)
+
+    graphics::par(mar = c(3.2, 3.5, 2.2, 0.5), mgp = c(2.0, 0.5, 0))
+    graphics::plot(NULL, xlim = range(n_vals_plot), ylim = ylim3,
+                   xlab = "n", ylab = "Bias",
+                   main = paste(lbl, "— Bias of R"),
+                   log = "x", xaxt = "n", bty = "l")
+    graphics::axis(1L, at = n_vals_plot, labels = n_vals_plot, las = 2L,
+                   mgp = c(1.7, 0.35, 0))
+    graphics::abline(h = 0, lty = 2L, col = "gray40")
+
+    for (tm in coef_terms) {
+      d <- sub[sub$term == tm, ]
+      d <- d[order(d$n), ]
+      graphics::lines(d$n,  d$R_bias, col = term_cols[[tm]], lwd = 1.5)
+      graphics::points(d$n, d$R_bias, col = term_cols[[tm]], pch = 16L, cex = 0.7)
+    }
+
+    # --- Panel 4: sigma2S ratios (A solid, B dashed) ---
+    all_sig2S <- unlist(lapply(coef_terms, function(tm) {
+      d <- sub[sub$term == tm, ]
+      c(d$sig2S_A, d$sig2S_B)
+    }))
+    ylim4 <- range(c(all_sig2S, 1), na.rm = TRUE)
+    ylim4 <- ylim4 + diff(ylim4) * c(-0.06, 0.06)
+
+    graphics::par(mar = c(3.2, 3.5, 2.2, 0.5), mgp = c(2.0, 0.5, 0))
+    graphics::plot(NULL, xlim = range(n_vals_plot), ylim = ylim4,
+                   xlab = "n",
+                   ylab = "Ratio  (target = 1)",
+                   main = paste(lbl, expression(sigma[S]^2), "calibration"),
+                   log = "x", xaxt = "n", bty = "l")
+    graphics::axis(1L, at = n_vals_plot, labels = n_vals_plot, las = 2L,
+                   mgp = c(1.7, 0.35, 0))
+    graphics::abline(h = 1, lty = 2L, col = "gray40")
+
+    for (tm in coef_terms) {
+      d <- sub[sub$term == tm, ]
+      d <- d[order(d$n), ]
+      graphics::lines(d$n, d$sig2S_A, col = term_cols[[tm]], lwd = 1.5, lty = 1L)
+      graphics::lines(d$n, d$sig2S_B, col = term_cols[[tm]], lwd = 1.5, lty = 2L)
+      graphics::points(d$n, d$sig2S_A, col = term_cols[[tm]], pch = 16L, cex = 0.7)
+      graphics::points(d$n, d$sig2S_B, col = term_cols[[tm]], pch = 1L,  cex = 0.7)
+    }
+
+    # --- Panel 5: Legend ---
+    cex_leg <- min(0.85, 10 / n_terms)
+    phi_leg  <- if (is_lm) list(
+      legend = c(coef_terms, "phi (sigma^2)"),
+      col    = c(term_cols[coef_terms], "#000000"),
+      pch    = c(rep(16L, n_terms), 17L),
+      lty    = c(rep(1L, n_terms), 3L)
+    ) else list(
+      legend = coef_terms,
+      col    = term_cols[coef_terms],
+      pch    = rep(16L, n_terms),
+      lty    = rep(1L, n_terms)
+    )
+
+    graphics::par(mar = c(0.2, 0.2, 0.2, 0.2))
+    graphics::plot.new()
+
+    # Two sub-legends: term colors (left) + line type key (right)
+    graphics::legend("left",
+                     legend = phi_leg$legend,
+                     col    = phi_leg$col,
+                     pch    = phi_leg$pch,
+                     lty    = phi_leg$lty,
+                     lwd    = 1.5,
+                     bty    = "n", cex = cex_leg,
+                     ncol   = ceiling(length(phi_leg$legend) / 2),
+                     title  = "Term", title.font = 2L)
+    graphics::legend("right",
+                     legend = c("Analytical estimator (A)", "Empirical variance (B)"),
+                     col    = "gray30",
+                     lty    = c(1L, 2L),
+                     pch    = c(16L, 1L),
+                     lwd    = 1.5,
+                     bty    = "n", cex = 0.85,
+                     title  = "Variance check", title.font = 2L)
+
+    grDevices::dev.off()
+    message("Saved: ", fig_path)
+  }
+
+  message("Calibration figures saved to: ", figures.dir)
+
+  # ---- Structured return value -----------------------------------------------
+  # For each setting: matrices of size (n_vals x terms) for each metric,
+  # plus a phi_bias vector (length n_vals) for lm settings.
+  structured <- lapply(model_settings, function(s) {
+    lbl <- s$label
+    sub <- summary_df[summary_df$model == s$type &
+                        summary_df$vcov  == s$vcov_name, ]
+    if (nrow(sub) == 0L) return(NULL)
+    tv         <- true_vals[[lbl]]
+    terms_here <- tv$coef_terms
+    n_here     <- sort(unique(sub$n))
+
+    # Helper: reshape one metric column into a (n_vals x terms) matrix
+    .mat <- function(col) {
+      m <- matrix(NA_real_, nrow = length(n_here), ncol = length(terms_here),
+                  dimnames = list(n = as.character(n_here), term = terms_here))
+      for (ni in seq_along(n_here)) {
+        for (tm in terms_here) {
+          v <- sub[sub$n == n_here[ni] & sub$term == tm, col]
+          if (length(v) == 1L) m[ni, tm] <- v
+        }
+      }
+      m
+    }
+
+    out <- list(
+      n              = n_here,
+      n_success      = setNames(
+        vapply(n_here, function(ni) {
+          v <- sub[sub$n == ni & sub$term == terms_here[1L], "n_success"]
+          if (length(v)) v[1L] else NA_integer_
+        }, integer(1L)), as.character(n_here)),
+      # (1) Bias of raw coefficients
+      beta_bias      = .mat("beta_bias"),
+      # (2) vcov: analytical estimator ratio
+      vcov_A         = .mat("vcov_A"),
+      # (3) vcov: empirical-variance calibration ratio
+      vcov_B         = .mat("vcov_B"),
+      # (4) Bias of R
+      R_bias         = .mat("R_bias"),
+      # (5) sigma2S: analytical estimator ratio
+      sig2S_A        = .mat("sig2S_A"),
+      # (6) sigma2S: empirical-variance calibration ratio (key CI check)
+      sig2S_B        = .mat("sig2S_B"),
+      # Reference values used for normalisation
+      R_true         = tv$R_true,
+      sigma2S_true   = tv$sigma2S_true,
+      vcov_diag_true = tv$vcov_diag_true[terms_here]
+    )
+    if (s$type == "lm") {
+      phi_row <- sub[sub$term == terms_here[1L], ]
+      phi_row <- phi_row[order(phi_row$n), ]
+      out$phi_bias <- setNames(phi_row$phi_bias, as.character(phi_row$n))
+      out$phi_true <- tv$phi_true
+    }
+    out
+  })
+  names(structured) <- sapply(model_settings, `[[`, "label")
+  structured        <- Filter(Negate(is.null), structured)
+
+  invisible(list(summary_table = summary_df, by_setting = structured))
+}
+
+
 #' @importFrom grDevices pdf dev.off
 #' @importFrom graphics plot lines points abline legend par axis plot.new mtext
 #' @importFrom splines ns
@@ -1079,10 +1640,10 @@ simFigures <- function(output.dir = "resiBootSim",
 #' @importFrom stats lm glm vcov binomial density
 #' @export
 simCompareMethodsFigures <- function(
-    output.dirs = c(boot   = "resiBootSim",
-                    normal = "resiAsympNormalSim",
-                    qf     = "resiAsympQFSim",
-                    cf     = "resiAsympCFSim"),
+    output.dirs = c(Bootstrap   = "resiBootSim",
+                    Normal = "resiAsympNormalSim",
+                    QF    = "resiAsympQFSim",
+                    CF     = "resiAsympCFSim"),
     figures.dir = NULL,
     alpha       = 0.05,
     fixed.knots = FALSE) {
@@ -1328,17 +1889,14 @@ simCompareMethodsFigures <- function(
             sprintf("%s: S=%.3f", term, true_s) else term
 
           # Shared coverage y-range (same scale for upper + lower)
-          cov_rows <- if (mtype == "glm") term_data$n >= 500 else
-            rep(TRUE, nrow(term_data))
-          cov_vals <- c(term_data[cov_rows, "upper_coverage"],
-                        term_data[cov_rows, "lower_coverage"])
+          # No n-based clipping: use all sample sizes for both lm and glm.
+          cov_vals <- c(term_data[["upper_coverage"]], term_data[["lower_coverage"]])
           cov_ylim <- range(c(cov_vals, 1 - alpha/2 - 0.02, 1.01), na.rm = TRUE)
 
-          # Width y-range
-          wid_rows <- if (mtype == "glm") term_data$n >= 500 else
-            rep(TRUE, nrow(term_data))
-          wid_vals <- term_data[wid_rows, "width"]
-          wid_ylim <- range(wid_vals[wid_vals <= 10], na.rm = TRUE)
+          # Width y-range: clip extreme values (1.5 for glm, 10 for lm)
+          max_wid  <- if (mtype == "glm") 1.5 else 10
+          wid_vals <- term_data[["width"]]
+          wid_ylim <- range(wid_vals[wid_vals <= max_wid], na.rm = TRUE)
 
           # Drawing order: SE (spans) → UpperCov → Width (spans) → LowerCov
 
@@ -1355,7 +1913,8 @@ simCompareMethodsFigures <- function(
             )
           }))
           se_vals <- c(se_comp$emp_se, se_comp$half_width)
-          lim_se  <- range(se_vals[se_vals <= 10], na.rm = TRUE)
+          max_se  <- if (mtype == "glm") 3 else 10
+          lim_se  <- range(se_vals[se_vals <= max_se], na.rm = TRUE)
           graphics::par(mar = c(3.2, 3.2, 2.2, 0.5), mgp = c(1.8, 0.5, 0))
           graphics::plot(
             NULL, xlim = lim_se, ylim = lim_se,
