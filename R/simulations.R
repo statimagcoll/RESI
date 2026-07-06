@@ -1216,9 +1216,17 @@ simCalibrationSim <- function(
     R_true <- coef_tab_true[coef_terms_true, "RESI"]
     names(R_true) <- coef_terms_true   # data.frame[rows,col] drops names
 
-    # sigma2S_true: n_full * (hw / z_ref)^2 from the normal asymptotic CI
+    # sigma2S_true: Sigma_R[k,k] from the delta-method variance of R_hat,
+    #   evaluated at the population values (full-model coefficients + HC0 Sigma_theta).
+    #   HC0 is used as the "true" population covariance (consistent estimator).
+    #   For parametric: vcov_is_model=TRUE triggers the parametric derivative;
+    #     type="HC0" supplies HC0-based Sigma_theta via the B matrix.
+    #   For robust: vcovfunc=HC0 triggers the robust derivative; type="HC0" same.
+    #   sigma2S_true_k = [dR_dtheta * Sigma_theta_HC0 * dR_dtheta^T]_{kk}
+    #                  = n_full * (hw / z_ref)^2 from the normal CI
     asym_true <- tryCatch(
-      resi_pe_asymptotic(full_mod, vcovfunc = s$vcovfunc, ci.method = "normal"),
+      resi_pe_asymptotic(full_mod, vcovfunc = true_vcovfunc_r,
+                         ci.method = "normal", type = "HC0"),
       error = function(e) NULL
     )
     if (!is.null(asym_true)) {
