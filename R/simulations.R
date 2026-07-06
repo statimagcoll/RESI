@@ -1072,6 +1072,121 @@ simFigures <- function(output.dir = "resiBootSim",
 #'     columns = sample sizes.
 #' }
 #' @seealso \code{\link{insurancePlasmodeSim}}, \code{\link{simFigures}}
+
+# Internal: full delta-method sigma2S (including A/B chain-rule terms) for each
+# coefficient in coef_idx (1-based index into coef(model)), using HC-type B.
+# Returns named vector sigma2S_Th1_k = quad_k / S_k^2  (= n * resiSE_k^2).
+.sigma2S_Th1 <- function(model, coef_idx, type = "HC0") {
+  is_lm  <- inherits(model, "lm") && !inherits(model, "glm")
+  X      <- model.matrix(model)
+  if (any(al <- is.na(coef(model)))) X <- X[, !al, drop = FALSE]
+  ef     <- sandwich::estfun(model)
+  ef     <- ef[, colnames(X), drop = FALSE]
+  p  <- ncol(X); n <- nrow(X)
+  e  <- residuals(model, "response")
+  sym_fn <- function(M) (M + t(M)) / 2
+
+  if (is_lm) {
+    phi   <- summary(model)$sigma^2
+    m     <- p + 1L
+    theta <- c(phi, coef(model))
+    psi_list <- lapply(seq_len(n), function(i) {
+      xi <- X[i, , drop = FALSE]; ei <- e[i]
+      cbind((ei^2 - phi) / (2*phi^2), matrix(ei * xi / phi, 1))
+    })
+    psiprime_list <- lapply(seq_len(n), function(i) {
+      xi <- X[i, , drop = FALSE]; ei <- e[i]
+      rbind(c((phi - 2*ei^2) / (2*phi^3), -ei * as.vector(xi) / phi^2),
+            cbind(matrix(-ei * as.vector(xi) / phi^2, p, 1),
+                  -crossprod(xi) / phi))
+    })
+  } else {
+    m     <- p
+    theta <- coef(model)
+    w_vec <- weights(model, type = "working")
+    psi_list <- lapply(seq_len(n), function(i)
+      matrix(ef[i, , drop = TRUE], 1))
+    psiprime_list <- lapply(seq_len(n), function(i)
+      -w_vec[i] * crossprod(X[i, , drop = FALSE]))
+  }
+
+  A_full <- sym_fn(-Reduce("+", psiprime_list) / n)
+  A_inv  <- tryCatch(chol2inv(chol(A_full)), error = function(e2) solve(A_full))
+
+  h    <- hatvalues(model)
+  omh  <- pmax(1 - h, .Machine$double.eps)
+  sqrtw <- switch(toupper(type),
+    "HC0" = rep(1, n),
+    "HC1" = rep(sqrt(n / max(n - p, 1L)), n),
+    "HC2" = 1 / sqrt(omh),
+    "HC3" = 1 / omh,
+    rep(1, n)
+  )
+  B_full <- sym_fn(Reduce("+", lapply(seq_len(n), function(i) {
+    psi_i <- psi_list[[i]]
+    if (is_lm) psi_i[1L, seq(2L, m)] <- psi_i[1L, seq(2L, m)] * sqrtw[i]
+    else       psi_i[1L, ]           <- psi_i[1L, ] * sqrtw[i]
+    crossprod(psi_i)
+  })) / n)
+  cov_th <- sym_fn(A_inv %*% B_full %*% A_inv)
+
+  XtXn    <- crossprod(X) / n
+  XtXn_hc <- crossprod(X * sqrtw) / n
+
+  if (is_lm) {
+    dA_phi <- rbind(
+      c(-1 / phi^3, numeric(p)),
+      cbind(numeric(p), -XtXn / phi^2))
+    dA_dth <- matrix(0, m * m, m); dA_dth[, 1L] <- as.vector(dA_phi)
+    dB_phi <- rbind(
+      c((phi^2 - 2 * mean(e^4)) / phi^5,
+        -(3 / (2 * phi^4)) * colMeans(X) * mean(e^3)),
+      cbind(matrix(-(3 / (2 * phi^4)) * colMeans(X) * mean(e^3), p, 1),
+            -XtXn_hc / phi^2))
+    dB_dth <- matrix(0, m * m, m); dB_dth[, 1L] <- as.vector(dB_phi)
+  } else {
+    mu_hat <- fitted(model)
+    dA_dth <- matrix(0, m * m, m)
+    for (j in seq_len(m)) {
+      vj <- w_vec * (1 - 2 * mu_hat) * X[, j]
+      dA_dth[, j] <- as.vector(crossprod(X, vj * X) / n)
+    }
+    dB_dth <- dA_dth
+  }
+
+  mcov_n <- n * sandwich::vcovHC(model, type = type)
+  nms    <- names(coef(model))[coef_idx]
+  result <- setNames(numeric(length(coef_idx)), nms)
+
+  for (ki in seq_along(coef_idx)) {
+    k <- coef_idx[ki]
+    if (is_lm) {
+      L  <- matrix(0, 1, m); L[1L, k + 1L] <- 1  # +1: phi occupies position 1
+      Lm <- matrix(0, 1, p); Lm[1L, k]     <- 1
+    } else {
+      L  <- matrix(0, 1, m); L[1L, k] <- 1
+      Lm <- L
+    }
+    beta_k   <- as.numeric(L %*% theta)
+    cov_beta <- as.numeric(L %*% cov_th %*% t(L))
+    Ssq      <- beta_k^2 / as.numeric(Lm %*% mcov_n %*% t(Lm))
+    if (!is.finite(Ssq) || Ssq <= 0 || !is.finite(cov_beta) || cov_beta <= 0) {
+      result[ki] <- NA_real_; next
+    }
+    La_row <- L %*% A_inv  # 1×m
+    Lc_row <- L %*% cov_th # 1×m
+    sc <- beta_k / cov_beta
+    deriv_th <- sc * L
+    deriv_A  <- (sc^2 / 2) *
+      (kronecker(La_row, Lc_row) + kronecker(Lc_row, La_row)) %*% dA_dth
+    deriv_B  <- -(sc^2 / 2) * kronecker(La_row, La_row) %*% dB_dth
+    d_tot    <- deriv_th + deriv_A + deriv_B
+    quad     <- max(0, as.numeric(d_tot %*% cov_th %*% t(d_tot)))
+    result[ki] <- quad / Ssq
+  }
+  result
+}
+
 # ============================================================
 #  simCalibrationFigures
 # ============================================================
@@ -1239,12 +1354,23 @@ simCalibrationSim <- function(
       sigma2S_true <- setNames(rep(NA_real_, length(R_true)), names(R_true))
     }
 
-    list(phi_true       = phi_true,
-         beta_true      = beta_true,
-         vcov_diag_true = vcov_diag_true,
-         R_true         = R_true,
-         sigma2S_true   = sigma2S_true,
-         coef_terms     = coef_terms_true)
+    # sigma2S_true_Th1: full delta-method variance (including A/B chain rules)
+    #   evaluated at population values with HC0 Sigma_theta.
+    #   sigma2S_Th1_k = quad_k / S_k^2 where quad_k uses deriv_theta + deriv_A + deriv_B.
+    coef_idx_th1 <- match(coef_terms_true, names(coef(full_mod)))
+    sigma2S_true_Th1 <- tryCatch(
+      .sigma2S_Th1(full_mod, coef_idx_th1, type = "HC0"),
+      error = function(e) setNames(rep(NA_real_, length(coef_terms_true)),
+                                    coef_terms_true)
+    )
+
+    list(phi_true            = phi_true,
+         beta_true           = beta_true,
+         vcov_diag_true      = vcov_diag_true,
+         R_true              = R_true,
+         sigma2S_true        = sigma2S_true,
+         sigma2S_true_Th1    = sigma2S_true_Th1,
+         coef_terms          = coef_terms_true)
   })
   names(true_vals) <- sapply(model_settings, `[[`, "label")
 
@@ -1571,12 +1697,17 @@ simCalibrationFigures <- function(
     graphics::abline(h = 1, lty = 2L, col = "gray40")
 
     for (tm in coef_terms) {
-      d <- sub[sub$term == tm, ]
-      d <- d[order(d$n), ]
-      graphics::lines(d$n, d$sig2S_A, col = term_cols[[tm]], lwd = 1.5, lty = 1L)
-      graphics::lines(d$n, d$sig2S_B, col = term_cols[[tm]], lwd = 1.5, lty = 2L)
-      graphics::points(d$n, d$sig2S_A, col = term_cols[[tm]], pch = 16L, cex = 0.7)
-      graphics::points(d$n, d$sig2S_B, col = term_cols[[tm]], pch = 1L,  cex = 0.7)
+      d    <- sub[sub$term == tm, ]
+      d    <- d[order(d$n), ]
+      # sig2S_Th1 = sig2S_B * sigma2S_true / sigma2S_true_Th1
+      r_Th1 <- tv$sigma2S_true[tm] / tv$sigma2S_true_Th1[tm]
+      sig2S_Th1_vals <- d$sig2S_B * r_Th1
+      graphics::lines(d$n, d$sig2S_A,       col = term_cols[[tm]], lwd = 1.5, lty = 1L)
+      graphics::lines(d$n, d$sig2S_B,       col = term_cols[[tm]], lwd = 1.5, lty = 2L)
+      graphics::lines(d$n, sig2S_Th1_vals,  col = term_cols[[tm]], lwd = 1.5, lty = 3L)
+      graphics::points(d$n, d$sig2S_A,      col = term_cols[[tm]], pch = 16L, cex = 0.7)
+      graphics::points(d$n, d$sig2S_B,      col = term_cols[[tm]], pch = 1L,  cex = 0.7)
+      graphics::points(d$n, sig2S_Th1_vals, col = term_cols[[tm]], pch = 2L,  cex = 0.7)
     }
 
     # --- Panel 5: Legend ---
@@ -1609,10 +1740,12 @@ simCalibrationFigures <- function(
                      ncol   = leg_ncol,
                      title  = "Term", title.font = 2L)
     graphics::legend("right",
-                     legend = c("Analytical estimator (A)", "Empirical variance (B)"),
+                     legend = c("Analytical estimator (A)",
+                                "Empirical variance (B)",
+                                "Empirical / Th1 formula (C)"),
                      col    = "gray30",
-                     lty    = c(1L, 2L),
-                     pch    = c(16L, 1L),
+                     lty    = c(1L, 2L, 3L),
+                     pch    = c(16L, 1L, 2L),
                      lwd    = 1.5,
                      bty    = "n", cex = 0.85,
                      title  = "Variance check", title.font = 2L)
@@ -1664,13 +1797,20 @@ simCalibrationFigures <- function(
       # (4) Bias of R
       R_bias         = .mat("R_bias"),
       # (5) sigma2S: analytical estimator ratio
-      sig2S_A        = .mat("sig2S_A"),
+      sig2S_A          = .mat("sig2S_A"),
       # (6) sigma2S: empirical-variance calibration ratio (key CI check)
-      sig2S_B        = .mat("sig2S_B"),
+      sig2S_B          = .mat("sig2S_B"),
+      # (7) sigma2S: empirical variance / Th1 full-delta-method reference
+      sig2S_Th1        = local({
+        r <- tv$sigma2S_true[terms_here] / tv$sigma2S_true_Th1[terms_here]
+        m <- .mat("sig2S_B")
+        sweep(m, 2L, r, "*")
+      }),
       # Reference values used for normalisation
-      R_true         = tv$R_true,
-      sigma2S_true   = tv$sigma2S_true,
-      vcov_diag_true = tv$vcov_diag_true[terms_here]
+      R_true              = tv$R_true,
+      sigma2S_true        = tv$sigma2S_true,
+      sigma2S_true_Th1    = tv$sigma2S_true_Th1,
+      vcov_diag_true      = tv$vcov_diag_true[terms_here]
     )
     if (s$type == "lm") {
       phi_row <- sub[sub$term == terms_here[1L], ]
