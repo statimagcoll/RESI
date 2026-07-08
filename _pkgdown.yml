@@ -44,6 +44,7 @@ reference:
 - contents:
   - resi
   - resi_pe
+  - resi_pe_asymptotic
 - title: Conversion functions
   desc: Manual functions for converting test statistics to RESI estimates and converting
     RESI estimates to and from other effect size measures.
@@ -68,6 +69,16 @@ reference:
   - omnibus
   - plot.resi
   - summary.resi
+- title: Simulation functions
+  desc: Functions used for evaluating new RESI estimators and CI methods.
+- contents:
+  - insurancePlasmodeSim
+  - simCalibrationFigures
+  - simCalibrationSim
+  - simCompareMethodsFigures
+  - simEstimatorFigures
+  - simFigures
+  - simRecomputeSummary
 - title: Datasets
 - contents:
   - depression
