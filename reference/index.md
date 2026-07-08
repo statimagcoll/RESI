@@ -10,6 +10,8 @@ confidence intervals.
   models
 - [`resi_pe()`](https://statimagcoll.github.io/RESI/reference/resi_pe.md)
   : Robust Effect Size Index (RESI) Point Estimation
+- [`resi_pe_asymptotic()`](https://statimagcoll.github.io/RESI/reference/resi_pe_asymptotic.md)
+  : Robust Effect Size Index with Asymptotic Confidence Intervals
 
 ## Conversion functions
 
@@ -71,6 +73,25 @@ Functions for summarizing and visualization.
   : Plotting RESI Estimates and CIs
 - [`summary(`*`<resi>`*`)`](https://statimagcoll.github.io/RESI/reference/summary.resi.md)
   : Summary method for resi objects
+
+## Simulation functions
+
+Functions used for evaluating new RESI estimators and CI methods.
+
+- [`insurancePlasmodeSim()`](https://statimagcoll.github.io/RESI/reference/insurancePlasmodeSim.md)
+  : Insurance Plasmode Simulation for RESI Evaluation
+- [`simCalibrationFigures()`](https://statimagcoll.github.io/RESI/reference/simCalibrationFigures.md)
+  : Calibration Figures for RESI Variance Estimates
+- [`simCalibrationSim()`](https://statimagcoll.github.io/RESI/reference/simCalibrationSim.md)
+  : Asymptotic Calibration Check for RESI Variance Estimates
+- [`simCompareMethodsFigures()`](https://statimagcoll.github.io/RESI/reference/simCompareMethodsFigures.md)
+  : Per-Term CI Method Comparison Figures
+- [`simEstimatorFigures()`](https://statimagcoll.github.io/RESI/reference/simEstimatorFigures.md)
+  : Estimator Comparison Figures: t2S/f2S vs z2S/chisq2S
+- [`simFigures()`](https://statimagcoll.github.io/RESI/reference/simFigures.md)
+  : Simulation Performance Figures for RESI Evaluation
+- [`simRecomputeSummary()`](https://statimagcoll.github.io/RESI/reference/simRecomputeSummary.md)
+  : Recompute Summary Table from Raw Simulation Output
 
 ## Datasets
 

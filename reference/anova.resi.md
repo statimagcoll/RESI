@@ -50,7 +50,7 @@ resi.obj = resi(mod, nboot = 100, store.boot = TRUE, alpha = 0.01)
 
 # run anova, specifying a different alpha level if desired
 anova(resi.obj, alpha = 0.05)
-#>     Df       F   Pr(>F)     RESI    2.5%  97.5%
-#> bmi  1 45.2997 0.000000 0.181819 0.14057 0.2260
-#> sex  1  3.2439 0.071915 0.040908 0.00000 0.1009
+#>     Df       F   Pr(>F)     RESI    2.5%   97.5%
+#> bmi  1 45.2997 0.000000 0.181819 0.13404 0.23396
+#> sex  1  3.2439 0.071915 0.040908 0.00000 0.10274
 ```

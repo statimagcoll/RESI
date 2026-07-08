@@ -40,8 +40,8 @@ test
 # fit a model
 mod = lm(charges ~ bmi + sex, data = RESI::insurance)
 
-# run resi with the store.boot = TRUE option
-resi_obj = resi(mod, nboot = 100, store.boot = TRUE, alpha = 0.01)
+# run resi with the store.boot = TRUE option (ci.method must be "boot")
+resi_obj = resi(mod, nboot = 100, store.boot = TRUE, alpha = 0.01, ci.method = "boot")
 
 # run summary, specifying a different alpha level if desired
 omnibus(resi_obj, alpha = 0.05)
@@ -50,5 +50,5 @@ omnibus(resi_obj, alpha = 0.05)
 #> Confidence level =  0.05 
 #>   Res.Df Df      F Pr(>F)   RESI   2.5%  97.5%
 #> 1   1337                                      
-#> 2   1335  2 24.338      0 0.1866 0.1417 0.2352
+#> 2   1335  2 24.338      0 0.1866 0.1452 0.2359
 ```

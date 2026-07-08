@@ -131,6 +131,36 @@ resi_pe(
   ...
 )
 
+# S3 method for class 'lmrob'
+resi_pe(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  vcovfunc = stats::vcov,
+  Anova.args = list(),
+  vcov.args = list(),
+  unbiased = TRUE,
+  overall = TRUE,
+  ...
+)
+
+# S3 method for class 'glmrob'
+resi_pe(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  vcovfunc = stats::vcov,
+  Anova.args = list(),
+  vcov.args = list(),
+  unbiased = TRUE,
+  overall = TRUE,
+  ...
+)
+
 # S3 method for class 'geeglm'
 resi_pe(
   model.full,
@@ -175,6 +205,7 @@ resi_pe(
   vcovfunc = clubSandwich::vcovCR,
   Anova.args = list(),
   vcov.args = list(),
+  unbiased = TRUE,
   ...
 )
 
@@ -328,6 +359,12 @@ is its own cluster.
 - `resi_pe(hurdle)`: RESI point estimation for hurdle models
 
 - `resi_pe(zeroinfl)`: RESI point estimation for zeroinfl models
+
+- `resi_pe(lmrob)`: RESI point estimation for lmrob objects (robustbase
+  package)
+
+- `resi_pe(glmrob)`: RESI point estimation for glmrob objects
+  (robustbase package)
 
 - `resi_pe(geeglm)`: RESI point estimation for geeglm object
 

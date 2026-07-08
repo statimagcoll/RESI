@@ -1,5 +1,56 @@
 # Changelog
 
+## RESI 1.3.3
+
+### Bug Fixes
+
+- Fixed error when passing a `data` argument containing `NA`s to
+  [`resi()`](https://statimagcoll.github.io/RESI/reference/resi.md) for
+  GEE models (`geeglm`). Rows with `NA` in any model variable are now
+  silently stripped before bootstrapping, matching the complete cases
+  used to fit the model and preventing cluster-size mismatches during
+  re-fitting ([\#51](https://github.com/statimagcoll/RESI/issues/51)).
+- Fixed misleading error in
+  [`summary.resi()`](https://statimagcoll.github.io/RESI/reference/summary.resi.md)
+  when a different `alpha` level is requested but confidence intervals
+  cannot be recomputed. The message now clearly explains that either (a)
+  bootstrapping is not supported for the model type, or (b)
+  [`resi()`](https://statimagcoll.github.io/RESI/reference/resi.md) was
+  not run with `store.boot = TRUE`, and instructs the user to re-run
+  [`resi()`](https://statimagcoll.github.io/RESI/reference/resi.md) with
+  the desired `alpha` directly
+  ([\#53](https://github.com/statimagcoll/RESI/issues/53)).
+- Fixed
+  [`resi()`](https://statimagcoll.github.io/RESI/reference/resi.md)
+  failing to compute the overall Wald test when the model response is a
+  computed expression (e.g. `log10(charges)` or `I(charges > 10000)`).
+  Previously the intercept-only reduced model could not be fitted inside
+  forked parallel workers because
+  [`update()`](https://rdrr.io/r/stats/update.html) tried to re-evaluate
+  the expression in an environment where the underlying variable was not
+  in scope. The fix constructs the reduced-model formula using the
+  already-evaluated column name from
+  [`model.frame()`](https://rdrr.io/r/stats/model.frame.html), avoiding
+  any re-evaluation.
+- Added an informative error when `vcov.args = list(type = "const")` is
+  passed together with `vcovfunc = sandwich::vcovHC`. The message
+  explains that `type = "const"` is the OLS sandwich (not robust) and
+  directs users to use `vcovfunc = stats::vcov` for parametric variance
+  estimation instead
+  ([\#50](https://github.com/statimagcoll/RESI/issues/50)).
+- `resi_pe` now reports CS-RESI and L-RESI for `lmer`.
+
+### New Features
+
+- Added support for `robustbase` models (`lmrob` and `glmrob`) via new
+  `resi_pe.lmrob`, `resi_pe.glmrob`, `resi.lmrob`, and `resi.glmrob`
+  methods. Both default to `vcovfunc = stats::vcov`, which uses the
+  model’s built-in robust sandwich variance. `glmrob` redirects
+  [`sandwich::vcovHC`](https://sandwich.R-Forge.R-project.org/reference/vcovHC.html)
+  to [`stats::vcov`](https://rdrr.io/r/stats/vcov.html) with a warning
+  since `vcovHC` does not support `glmrob`
+  ([\#12](https://github.com/statimagcoll/RESI/issues/12)).
+
 ## RESI 1.3.2
 
 CRAN release: 2025-07-29

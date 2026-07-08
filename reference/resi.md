@@ -33,6 +33,7 @@ resi(
   ncpus = getOption("boot.ncpus", 1L),
   long = FALSE,
   clvar = NULL,
+  ci.method = c("boot", "qf", "cf", "normal"),
   ...
 )
 
@@ -53,6 +54,7 @@ resi(
   unbiased = TRUE,
   parallel = c("no", "multicore", "snow"),
   ncpus = getOption("boot.ncpus", 1L),
+  ci.method = "boot",
   ...
 )
 
@@ -74,6 +76,50 @@ resi(
   unbiased = TRUE,
   parallel = c("no", "multicore", "snow"),
   ncpus = getOption("boot.ncpus", 1L),
+  ci.method = "qf",
+  ...
+)
+
+# S3 method for class 'lmrob'
+resi(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  overall = TRUE,
+  nboot = 1000,
+  boot.method = "nonparam",
+  vcovfunc = stats::vcov,
+  alpha = 0.05,
+  store.boot = FALSE,
+  Anova.args = list(),
+  vcov.args = list(),
+  unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
+  ci.method = "boot",
+  ...
+)
+
+# S3 method for class 'glmrob'
+resi(
+  model.full,
+  model.reduced = NULL,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  overall = TRUE,
+  nboot = 1000,
+  vcovfunc = stats::vcov,
+  alpha = 0.05,
+  store.boot = FALSE,
+  Anova.args = list(),
+  vcov.args = list(),
+  unbiased = TRUE,
+  parallel = c("no", "multicore", "snow"),
+  ncpus = getOption("boot.ncpus", 1L),
+  ci.method = "boot",
   ...
 )
 
@@ -292,7 +338,8 @@ resi(
 
 - nboot:
 
-  Numeric, the number of bootstrap replicates. By default, 1000.
+  Numeric, the number of bootstrap replicates. Used only when
+  \`ci.method = "boot"\`. By default, 1000.
 
 - boot.method:
 
@@ -346,6 +393,13 @@ resi(
 
   Character, the name of the cluster/id variable if data is clustered.
   By default, \`NULL\`.
+
+- ci.method:
+
+  Character, the method used to compute confidence intervals. One of
+  \`"boot"\` (bootstrap, default), \`"normal"\` (delta-method normal
+  approximation), or \`"qf"\` (quadratic form inversion). See
+  \`resi_pe_asymptotic\` for details on the asymptotic methods.
 
 ## Value
 
@@ -413,6 +467,12 @@ by the model and then try rerunning `resi`.
 - `resi(glm)`: RESI point and interval estimation for models
 
 - `resi(lm)`: RESI point and interval estimation for lm models
+
+- `resi(lmrob)`: RESI point and interval estimation for lmrob models
+  (robustbase)
+
+- `resi(glmrob)`: RESI point and interval estimation for glmrob models
+  (robustbase)
 
 - `resi(nls)`: RESI point and interval estimation for nls models
 
@@ -483,47 +543,48 @@ resi_obj
 #> 
 #> Coefficient Table 
 #>                       Estimate Std. Error t value Pr(>|t|)    RESI    2.5%
-#> (Intercept)         -5359.4352  2175.9439 -2.4630   0.0139 -0.0673 -0.1127
-#> regionnorthwest     -2339.4433  2395.1507 -0.9767   0.3289 -0.0267 -0.0680
-#> regionsoutheast     -3230.8512  2643.1099 -1.2224   0.2218 -0.0334 -0.0804
-#> regionsouthwest      -232.4839  2574.2823 -0.0903   0.9281 -0.0025 -0.0536
-#> age                   220.3325    40.2091  5.4797   0.0000  0.1497  0.1012
-#> bmi                   323.7725    58.0849  5.5741   0.0000  0.1523  0.1063
-#> sexmale              1328.0215   621.7421  2.1360   0.0329  0.0584  0.0004
-#> regionnorthwest:age    34.9040    57.2364  0.6098   0.5421  0.0167 -0.0328
-#> regionsoutheast:age    83.6359    63.3258  1.3207   0.1868  0.0361 -0.0096
-#> regionsouthwest:age   -33.6290    61.4065 -0.5476   0.5840 -0.0150 -0.0657
+#> (Intercept)         -5359.4352  2175.9439 -2.4630   0.0139 -0.0673 -0.1203
+#> regionnorthwest     -2339.4433  2395.1507 -0.9767   0.3289 -0.0267 -0.0803
+#> regionsoutheast     -3230.8512  2643.1099 -1.2224   0.2218 -0.0334 -0.0870
+#> regionsouthwest      -232.4839  2574.2823 -0.0903   0.9281 -0.0025 -0.0560
+#> age                   220.3325    40.2091  5.4797   0.0000  0.1497  0.0957
+#> bmi                   323.7725    58.0849  5.5741   0.0000  0.1523  0.1024
+#> sexmale              1328.0215   621.7421  2.1360   0.0329  0.0584  0.0049
+#> regionnorthwest:age    34.9040    57.2364  0.6098   0.5421  0.0167 -0.0369
+#> regionsoutheast:age    83.6359    63.3258  1.3207   0.1868  0.0361 -0.0175
+#> regionsouthwest:age   -33.6290    61.4065 -0.5476   0.5840 -0.0150 -0.0686
 #>                       97.5%
-#> (Intercept)         -0.0106
-#> regionnorthwest      0.0103
-#> regionsoutheast      0.0043
-#> regionsouthwest      0.0455
-#> age                  0.2054
-#> bmi                  0.1919
-#> sexmale              0.0966
-#> regionnorthwest:age  0.0549
-#> regionsoutheast:age  0.0850
-#> regionsouthwest:age  0.0398
+#> (Intercept)         -0.0144
+#> regionnorthwest      0.0269
+#> regionsoutheast      0.0201
+#> regionsouthwest      0.0511
+#> age                  0.2039
+#> bmi                  0.2023
+#> sexmale              0.1119
+#> regionnorthwest:age  0.0702
+#> regionsoutheast:age  0.0897
+#> regionsouthwest:age  0.0386
 #> 
 #> 
 #> Analysis of Deviance Table (Type II tests)
 #> 
 #> Response: charges
 #>            Df        F Pr(>F)   RESI   2.5%  97.5%
-#> region      3   1.5959 0.1886 0.0365 0.0000 0.1163
-#> age         1 117.7046 0.0000 0.2951 0.2446 0.3497
-#> bmi         1  31.0708 0.0000 0.1498 0.1027 0.1899
-#> sex         1   4.5624 0.0329 0.0515 0.0000 0.0926
-#> region:age  3   1.1167 0.3412 0.0161 0.0000 0.0845
+#> region      3   1.5959 0.1886 0.0365 0.0000 0.1040
+#> age         1 117.7046 0.0000 0.2951 0.2409 0.3523
+#> bmi         1  31.0708 0.0000 0.1498 0.1024 0.2023
+#> sex         1   4.5624 0.0329 0.0515 0.0000 0.1119
+#> region:age  3   1.1167 0.3412 0.0161 0.0000 0.0925
 #> 
 #> Overall RESI comparing model to intercept-only model:
 #> 
-#>   Res.Df Df       F Pr(>F)   RESI   2.5%  97.5%
-#> 1   1328  9 20.2486      0 0.3595 0.3299 0.4186
+#>   Res.Df Df       F Pr(>F)   RESI
+#> 1   1328  9 20.2486      0 0.3595
 #> 
 #> Notes:
 #> 1. The RESI was calculated using a robust covariance estimator.
 #> 2. Confidence intervals (CIs) constructed using 50 non-parametric bootstraps. 
+#> 
 
 # fit a reduced model for comparison
 mod_red = lm(charges ~ bmi, data = RESI::insurance)
@@ -543,47 +604,48 @@ resi(model.full = mod, model.reduced = mod_red, nboot = 10)
 #> 
 #> Coefficient Table 
 #>                       Estimate Std. Error t value Pr(>|t|)    RESI    2.5%
-#> (Intercept)         -5359.4352  2175.9439 -2.4630   0.0139 -0.0673 -0.0982
-#> regionnorthwest     -2339.4433  2395.1507 -0.9767   0.3289 -0.0267 -0.0618
-#> regionsoutheast     -3230.8512  2643.1099 -1.2224   0.2218 -0.0334 -0.0961
+#> (Intercept)         -5359.4352  2175.9439 -2.4630   0.0139 -0.0673 -0.1203
+#> regionnorthwest     -2339.4433  2395.1507 -0.9767   0.3289 -0.0267 -0.0803
+#> regionsoutheast     -3230.8512  2643.1099 -1.2224   0.2218 -0.0334 -0.0870
 #> regionsouthwest      -232.4839  2574.2823 -0.0903   0.9281 -0.0025 -0.0560
-#> age                   220.3325    40.2091  5.4797   0.0000  0.1497  0.0919
-#> bmi                   323.7725    58.0849  5.5741   0.0000  0.1523  0.1084
-#> sexmale              1328.0215   621.7421  2.1360   0.0329  0.0584 -0.0025
-#> regionnorthwest:age    34.9040    57.2364  0.6098   0.5421  0.0167 -0.0263
-#> regionsoutheast:age    83.6359    63.3258  1.3207   0.1868  0.0361  0.0243
-#> regionsouthwest:age   -33.6290    61.4065 -0.5476   0.5840 -0.0150 -0.0445
+#> age                   220.3325    40.2091  5.4797   0.0000  0.1497  0.0957
+#> bmi                   323.7725    58.0849  5.5741   0.0000  0.1523  0.1024
+#> sexmale              1328.0215   621.7421  2.1360   0.0329  0.0584  0.0049
+#> regionnorthwest:age    34.9040    57.2364  0.6098   0.5421  0.0167 -0.0369
+#> regionsoutheast:age    83.6359    63.3258  1.3207   0.1868  0.0361 -0.0175
+#> regionsouthwest:age   -33.6290    61.4065 -0.5476   0.5840 -0.0150 -0.0686
 #>                       97.5%
-#> (Intercept)          0.0039
-#> regionnorthwest      0.0045
-#> regionsoutheast     -0.0244
-#> regionsouthwest      0.0149
-#> age                  0.1755
-#> bmi                  0.1698
-#> sexmale              0.0972
-#> regionnorthwest:age  0.0483
-#> regionsoutheast:age  0.0931
-#> regionsouthwest:age  0.0240
+#> (Intercept)         -0.0144
+#> regionnorthwest      0.0269
+#> regionsoutheast      0.0201
+#> regionsouthwest      0.0511
+#> age                  0.2039
+#> bmi                  0.2023
+#> sexmale              0.1119
+#> regionnorthwest:age  0.0702
+#> regionsoutheast:age  0.0897
+#> regionsouthwest:age  0.0386
 #> 
 #> 
 #> Analysis of Deviance Table (Type II tests)
 #> 
 #> Response: charges
 #>            Df        F Pr(>F)   RESI   2.5%  97.5%
-#> region      3   1.5959 0.1886 0.0365 0.0074 0.1060
-#> age         1 117.7046 0.0000 0.2951 0.2526 0.3341
-#> bmi         1  31.0708 0.0000 0.1498 0.1048 0.1675
-#> sex         1   4.5624 0.0329 0.0515 0.0040 0.0931
-#> region:age  3   1.1167 0.3412 0.0161 0.0229 0.0973
+#> region      3   1.5959 0.1886 0.0365 0.0000 0.1040
+#> age         1 117.7046 0.0000 0.2951 0.2409 0.3523
+#> bmi         1  31.0708 0.0000 0.1498 0.1024 0.2023
+#> sex         1   4.5624 0.0329 0.0515 0.0000 0.1119
+#> region:age  3   1.1167 0.3412 0.0161 0.0000 0.0925
 #> 
 #> Overall RESI comparing full model to reduced model:
 #> 
-#>   Res.Df Df       F Pr(>F)   RESI   2.5%  97.5%
-#> 1   1328  8 15.9113      0 0.2983 0.2835 0.3458
+#>   Res.Df Df       F Pr(>F)   RESI
+#> 1   1328  8 15.9113      0 0.2983
 #> 
 #> Notes:
 #> 1. The RESI was calculated using a robust covariance estimator.
 #> 2. Confidence intervals (CIs) constructed using 10 non-parametric bootstraps. 
+#> 
 
 # used stored bootstrap results to get a different alpha-level confidence interval
 summary(resi_obj, alpha = c(0.01, 0.1))
@@ -594,34 +656,34 @@ summary(resi_obj, alpha = c(0.01, 0.1))
 #> 
 #> Coefficient Table 
 #>                       Estimate Std. Error t value Pr(>|t|)    RESI    0.5%
-#> (Intercept)         -5359.4352  2175.9439 -2.4630   0.0139 -0.0673 -0.1149
-#> regionnorthwest     -2339.4433  2395.1507 -0.9767   0.3289 -0.0267 -0.0773
-#> regionsoutheast     -3230.8512  2643.1099 -1.2224   0.2218 -0.0334 -0.0970
-#> regionsouthwest      -232.4839  2574.2823 -0.0903   0.9281 -0.0025 -0.0895
-#> age                   220.3325    40.2091  5.4797   0.0000  0.1497  0.0946
-#> bmi                   323.7725    58.0849  5.5741   0.0000  0.1523  0.0846
-#> sexmale              1328.0215   621.7421  2.1360   0.0329  0.0584 -0.0024
-#> regionnorthwest:age    34.9040    57.2364  0.6098   0.5421  0.0167 -0.0375
-#> regionsoutheast:age    83.6359    63.3258  1.3207   0.1868  0.0361 -0.0193
-#> regionsouthwest:age   -33.6290    61.4065 -0.5476   0.5840 -0.0150 -0.0730
-#>                          5%     95%   99.5%
-#> (Intercept)         -0.1076 -0.0245 -0.0037
-#> regionnorthwest     -0.0657  0.0067  0.0271
-#> regionsoutheast     -0.0710  0.0014  0.0097
-#> regionsouthwest     -0.0510  0.0407  0.0610
-#> age                  0.1145  0.1944  0.2170
-#> bmi                  0.1119  0.1849  0.1991
-#> sexmale              0.0030  0.0938  0.1057
-#> regionnorthwest:age -0.0198  0.0507  0.0584
-#> regionsoutheast:age -0.0063  0.0783  0.0942
-#> regionsouthwest:age -0.0590  0.0314  0.0722
+#> (Intercept)         -5359.4352  2175.9439 -2.4630   0.0139 -0.0673 -0.1369
+#> regionnorthwest     -2339.4433  2395.1507 -0.9767   0.3289 -0.0267 -0.0971
+#> regionsoutheast     -3230.8512  2643.1099 -1.2224   0.2218 -0.0334 -0.1038
+#> regionsouthwest      -232.4839  2574.2823 -0.0903   0.9281 -0.0025 -0.0729
+#> age                   220.3325    40.2091  5.4797   0.0000  0.1497  0.0787
+#> bmi                   323.7725    58.0849  5.5741   0.0000  0.1523  0.0868
+#> sexmale              1328.0215   621.7421  2.1360   0.0329  0.0584 -0.0120
+#> regionnorthwest:age    34.9040    57.2364  0.6098   0.5421  0.0167 -0.0537
+#> regionsoutheast:age    83.6359    63.3258  1.3207   0.1868  0.0361 -0.0343
+#> regionsouthwest:age   -33.6290    61.4065 -0.5476   0.5840 -0.0150 -0.0854
+#>                      99.5%      5%     95%
+#> (Intercept)         0.0023 -0.1118 -0.0229
+#> regionnorthwest     0.0437 -0.0717  0.0183
+#> regionsoutheast     0.0370 -0.0784  0.0115
+#> regionsouthwest     0.0679 -0.0474  0.0425
+#> age                 0.2209  0.1044  0.1952
+#> bmi                 0.2180  0.1105  0.1943
+#> sexmale             0.1287  0.0135  0.1033
+#> regionnorthwest:age 0.0871 -0.0283  0.0616
+#> regionsoutheast:age 0.1065 -0.0088  0.0811
+#> regionsouthwest:age 0.0555 -0.0600  0.0300
 car::Anova(resi_obj, alpha = c(0.01, 0.1))
-#>            Df        F  Pr(>F)     RESI    0.5%      5%     95%   99.5%
-#> region      3   1.5959 0.18856 0.036480 0.00000 0.00000 0.09844 0.12066
-#> age         1 117.7046 0.00000 0.295111 0.24198 0.25105 0.34473 0.36508
-#> bmi         1  31.0708 0.00000 0.149798 0.07994 0.10849 0.18280 0.19720
-#> sex         1   4.5624 0.03286 0.051549 0.00000 0.00000 0.08969 0.10204
-#> region:age  3   1.1167 0.34115 0.016056 0.00000 0.00000 0.07739 0.10248
+#>            Df        F  Pr(>F)     RESI     0.5%   99.5%       5%     95%
+#> region      3   1.5959 0.18856 0.036480 0.000000 0.12168 0.000000 0.09481
+#> age         1 117.7046 0.00000 0.295111 0.223433 0.36976 0.249872 0.34332
+#> bmi         1  31.0708 0.00000 0.149798 0.086753 0.21802 0.110469 0.19430
+#> sex         1   4.5624 0.03286 0.051549 0.000000 0.12874 0.012113 0.10332
+#> region:age  3   1.1167 0.34115 0.016056 0.000000 0.11040 0.000000 0.08313
 
 # the result of resi, as well as the summary or Anova of a `resi` object can be plotted
 # if the resi object was created with the store.boot = `TRUE` option, any alpha
@@ -644,13 +706,12 @@ if(requireNamespace("splines")){
     vcov.args = list(type = "HC0"), nboot = 25)
   summary(resi_obj)
   car::Anova(resi_obj)}
-#> Loading required namespace: splines
 #> Analysis of Deviance Table (Type II tests)
 #> 
 #> Response: smoker
-#>                          Df  Chisq Pr(>Chisq)     RESI 0.5%    99.5%
-#> splines::ns(age, df = 3)  3 1.4735    0.68841 0.000000    0 0.067442
-#> region                    3 7.2960    0.06304 0.056663    0 0.125692
+#>                          Df  Chisq Pr(>Chisq)     RESI      0.5%    99.5%
+#> splines::ns(age, df = 3)  3 1.4735    0.68841 0.000000 0.0000000 0.074244
+#> region                    3 7.2960    0.06304 0.056663 0.0010101 0.128093
 
 
 ## RESI on a survival model with alternate Z2S
@@ -674,25 +735,26 @@ if(requireNamespace("survival")){
 #> 
 #> Coefficient Table 
 #>         Estimate Std. Error z value Pr(>|z|)    RESI    2.5%   97.5%
-#> age       0.0201     0.0101  1.9915   0.0464  0.1177  0.0000  0.2464
-#> sex      -0.5210     0.1670 -3.1202   0.0018 -0.2020 -0.3260 -0.0050
-#> wt.loss   0.0008     0.0060  0.1264   0.8994  0.0000 -0.0708  0.0814
+#> age       0.0201     0.0101  1.9915   0.0464  0.1177  0.0143  0.1552
+#> sex      -0.5210     0.1670 -3.1202   0.0018 -0.2020 -0.3070 -0.1100
+#> wt.loss   0.0008     0.0060  0.1264   0.8994  0.0000 -0.0830  0.0655
 #> 
 #> 
 #> Analysis of Deviance Table (Type II tests)
 #> 
 #> Response: survival::Surv(time, status)
-#>         Df  Chisq Pr(>Chisq)   RESI  2.5%  97.5%
-#> age      1 3.9662     0.0464 0.1177 0.000 0.2464
-#> sex      1 9.7357     0.0018 0.2020 0.005 0.3260
-#> wt.loss  1 0.0160     0.8994 0.0000 0.000 0.0899
+#>         Df  Chisq Pr(>Chisq)   RESI   2.5%  97.5%
+#> age      1 3.9662     0.0464 0.1177 0.0143 0.1552
+#> sex      1 9.7357     0.0018 0.2020 0.1100 0.3070
+#> wt.loss  1 0.0160     0.8994 0.0000 0.0000 0.0864
 #> 
 #> Overall RESI comparing model to intercept-only model:
 #> 
 #>      chi2 df      P   RESI   2.5%  97.5%
-#> 1 13.7717  3 0.0032 0.2244 0.0499 0.3891
+#> 1 13.7717  3 0.0032 0.2244 0.1467 0.3303
 #> 
 #> Notes:
 #> 1. The RESI was calculated using a robust covariance estimator.
 #> 2. Confidence intervals (CIs) constructed using 10 non-parametric bootstraps. 
+#> 
 ```

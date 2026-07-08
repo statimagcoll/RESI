@@ -171,6 +171,36 @@ for models with existing Anova methods. This function is the building block for 
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
+<span><span class="co"># S3 method for class 'lmrob'</span></span>
+<span><span class="fu">resi_pe</span><span class="op">(</span></span>
+<span>  <span class="va">model.full</span>,</span>
+<span>  model.reduced <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  <span class="va">data</span>,</span>
+<span>  anova <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  coefficients <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  vcovfunc <span class="op">=</span> <span class="fu">stats</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/r/stats/vcov.html" class="external-link">vcov</a></span>,</span>
+<span>  Anova.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  vcov.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  unbiased <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  overall <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'glmrob'</span></span>
+<span><span class="fu">resi_pe</span><span class="op">(</span></span>
+<span>  <span class="va">model.full</span>,</span>
+<span>  model.reduced <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  <span class="va">data</span>,</span>
+<span>  anova <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  coefficients <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  vcovfunc <span class="op">=</span> <span class="fu">stats</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/r/stats/vcov.html" class="external-link">vcov</a></span>,</span>
+<span>  Anova.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  vcov.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  unbiased <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  overall <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span>
+<span></span>
 <span><span class="co"># S3 method for class 'geeglm'</span></span>
 <span><span class="fu">resi_pe</span><span class="op">(</span></span>
 <span>  <span class="va">model.full</span>,</span>
@@ -215,6 +245,7 @@ for models with existing Anova methods. This function is the building block for 
 <span>  vcovfunc <span class="op">=</span> <span class="fu">clubSandwich</span><span class="fu">::</span><span class="va"><a href="http://jepusto.github.io/clubSandwich/reference/vcovCR.html" class="external-link">vcovCR</a></span>,</span>
 <span>  Anova.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  vcov.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  unbiased <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -340,6 +371,8 @@ using a model where each measurement is its own cluster.</p>
 <li><p><code>resi_pe(coxph)</code>: RESI point estimation for coxph models</p></li>
 <li><p><code>resi_pe(hurdle)</code>: RESI point estimation for hurdle models</p></li>
 <li><p><code>resi_pe(zeroinfl)</code>: RESI point estimation for zeroinfl models</p></li>
+<li><p><code>resi_pe(lmrob)</code>: RESI point estimation for lmrob objects (robustbase package)</p></li>
+<li><p><code>resi_pe(glmrob)</code>: RESI point estimation for glmrob objects (robustbase package)</p></li>
 <li><p><code>resi_pe(geeglm)</code>: RESI point estimation for geeglm object</p></li>
 <li><p><code>resi_pe(glmgee)</code>: RESI point estimation for glmgee object</p></li>
 <li><p><code>resi_pe(gee)</code>: RESI point estimation for gee object</p></li>
@@ -452,7 +485,7 @@ using a model where each measurement is its own cluster.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

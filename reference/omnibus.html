@@ -81,8 +81,8 @@ the user can specify a different alpha level for this function's confidence inte
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># fit a model</span></span></span>
 <span class="r-in"><span><span class="va">mod</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="va">charges</span> <span class="op">~</span> <span class="va">bmi</span> <span class="op">+</span> <span class="va">sex</span>, data <span class="op">=</span> <span class="fu">RESI</span><span class="fu">::</span><span class="va"><a href="insurance.html">insurance</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># run resi with the store.boot = TRUE option</span></span></span>
-<span class="r-in"><span><span class="va">resi_obj</span> <span class="op">=</span> <span class="fu"><a href="resi.html">resi</a></span><span class="op">(</span><span class="va">mod</span>, nboot <span class="op">=</span> <span class="fl">100</span>, store.boot <span class="op">=</span> <span class="cn">TRUE</span>, alpha <span class="op">=</span> <span class="fl">0.01</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># run resi with the store.boot = TRUE option (ci.method must be "boot")</span></span></span>
+<span class="r-in"><span><span class="va">resi_obj</span> <span class="op">=</span> <span class="fu"><a href="resi.html">resi</a></span><span class="op">(</span><span class="va">mod</span>, nboot <span class="op">=</span> <span class="fl">100</span>, store.boot <span class="op">=</span> <span class="cn">TRUE</span>, alpha <span class="op">=</span> <span class="fl">0.01</span>, ci.method <span class="op">=</span> <span class="st">"boot"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># run summary, specifying a different alpha level if desired</span></span></span>
 <span class="r-in"><span><span class="fu">omnibus</span><span class="op">(</span><span class="va">resi_obj</span>, alpha <span class="op">=</span> <span class="fl">0.05</span><span class="op">)</span></span></span>
@@ -91,7 +91,7 @@ the user can specify a different alpha level for this function's confidence inte
 <span class="r-out co"><span class="r-pr">#&gt;</span> Confidence level =  0.05 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Res.Df Df      F Pr(&gt;F)   RESI   2.5%  97.5%</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1   1337                                      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   1335  2 24.338      0 0.1866 0.1417 0.2352</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   1335  2 24.338      0 0.1866 0.1452 0.2359</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -103,7 +103,7 @@ the user can specify a different alpha level for this function's confidence inte
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>
