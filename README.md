@@ -1,13 +1,14 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# RESI <img src="man/figures/logo.png" align="right" height="138" />
+# RESI <img src="man/figures/logo.png" align="right" height="138"/>
 
 <!-- badges: start -->
 
 [![CRAN
 status](https://www.r-pkg.org/badges/version/RESI)](https://CRAN.R-project.org/package=RESI)
 [![Website](https://img.shields.io/badge/Website-RESI-blue)](https://statimagcoll.github.io/RESI/)
+
 <!-- badges: end -->
 
 RESI is an R package designed to implement the Robust Effect Size Index
@@ -17,15 +18,16 @@ added to common reports (such as summary and ANOVA tables). This package
 currently supports <code>lm</code>, <code>glm</code>, <code>nls</code>,
 <code>survreg</code>, <code>coxph</code>, <code>hurdle</code>,
 <code>zeroinfl</code>, <code>gee</code>, <code>geeglm</code>,
-<code>lme</code>, and <code>lmerMod</code> models. Nonparametric
-bootstrapping is used to compute confidence intervals, although the
-interval performance has not yet been evaluated for the longitudinal
-models. A Bayesian bootstrap is also available for <code>lm</code> and
-<code>nls</code> models. In addition to the main <code>resi</code>
-function, the package also includes a point-estimate-only function
-(<code>resi_pe</code>), conversions from S to other common effect size
-measures and vice versa, print methods, plot methods, summary methods,
-and Anova/anova methods. A more detailed vignette is being written.
+<code>lme</code>, <code>lmerMod</code>, <code>lmrob</code>, and
+<code>glmrob</code> models. Nonparametric bootstrapping is used to
+compute confidence intervals, although the interval performance has not
+yet been evaluated for the longitudinal models. A Bayesian bootstrap is
+also available for <code>lm</code> and <code>nls</code> models. In
+addition to the main <code>resi</code> function, the package also
+includes a point-estimate-only function (<code>resi_pe</code>),
+conversions from S to other common effect size measures and vice versa,
+print methods, plot methods, summary methods, and Anova/anova methods. A
+more detailed vignette is being written.
 
 If you would like to contribute to the package, please branch off of our
 [GitHub](https://github.com/statimagcoll/RESI) and submit a pull request
