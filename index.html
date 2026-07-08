@@ -28,7 +28,7 @@
 
     <a class="navbar-brand me-2" href="index.html">RESI: Robust Effect Size Inference in R</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -66,7 +66,7 @@
 <!-- badges: start -->
 
 <!-- badges: end -->
-<p>RESI is an R package designed to implement the Robust Effect Size Index (RESI, denoted as S) described in Vandekar, Tao, &amp; Blume (2020). The RESI is a versatile effect size measure that can be easily computed and added to common reports (such as summary and ANOVA tables). This package currently supports <code>lm</code>, <code>glm</code>, <code>nls</code>, <code>survreg</code>, <code>coxph</code>, <code>hurdle</code>, <code>zeroinfl</code>, <code>gee</code>, <code>geeglm</code>, <code>lme</code>, <code>lmerMod</code>, <code>lmrob</code>, and <code>glmrob</code> models. Nonparametric bootstrapping is used to compute confidence intervals, although the interval performance has not yet been evaluated for the longitudinal models. A Bayesian bootstrap is also available for <code>lm</code> and <code>nls</code> models. In addition to the main <code>resi</code> function, the package also includes a point-estimate-only function (<code>resi_pe</code>), conversions from S to other common effect size measures and vice versa, print methods, plot methods, summary methods, and Anova/anova methods. A more detailed vignette is being written.</p>
+<p>RESI is an R package designed to implement the Robust Effect Size Index (RESI, denoted as S) described in Vandekar, Tao, &amp; Blume (2020). The RESI is a versatile effect size measure that can be easily computed and added to common reports (such as summary and ANOVA tables). This package currently supports <code>lm</code>, <code>glm</code>, <code>nls</code>, <code>survreg</code>, <code>coxph</code>, <code>hurdle</code>, <code>zeroinfl</code>, <code>gee</code>, <code>geeglm</code>, <code>lme</code>, <code>lmerMod</code>, <code>lmrob</code>, and <code>glmrob</code> models. Confidence intervals are now computed using the bootstrap or one of three asymptotic methods: a profiled quadratic form, Cornish-Fisher expansion, or normal approximation. A Bayesian bootstrap is also available for <code>lm</code> and <code>nls</code> models. In addition to the main <code>resi</code> function, the package also includes a point-estimate-only function (<code>resi_pe</code>), conversions from S to other common effect size measures and vice versa, print methods, plot methods, summary methods, and Anova/anova methods.</p>
 <p>If you would like to contribute to the package, please branch off of our <a href="https://github.com/statimagcoll/RESI" class="external-link">GitHub</a> and submit a pull request describing the contribution. Please use the <a href="https://github.com/statimagcoll/RESI/issues" class="external-link">GitHub Issues</a> page to report any problems and the <a href="https://github.com/statimagcoll/RESI/discussions/categories/q-a" class="external-link">Discussions</a> page to seek additional support.</p>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
@@ -108,9 +108,9 @@
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>Megan Jones <br><small class="roles"> Author, maintainer </small>   </li>
+<li>Megan Jones <br><small class="roles"> Author </small>   </li>
 <li>Kaidi Kang <br><small class="roles"> Author </small>   </li>
-<li>Simon Vandekar <br><small class="roles"> Author </small>   </li>
+<li>Simon Vandekar <br><small class="roles"> Author, maintainer </small>   </li>
 <li><a href="authors.html">More about authors...</a></li>
 </ul>
 </div>

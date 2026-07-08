@@ -2,11 +2,11 @@
 
 ## Authors
 
-- **Megan Jones**. Author, maintainer.
+- **Megan Jones**. Author.
 
 - **Kaidi Kang**. Author.
 
-- **Simon Vandekar**. Author.
+- **Simon Vandekar**. Author, maintainer.
 
 - **Gina Yu**. Contributor.
 
