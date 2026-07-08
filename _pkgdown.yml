@@ -1,6 +1,5 @@
 url: https://statimagcoll.github.io/RESI/
 template:
-  assets: docs/comingsoon
   bootstrap: 5
   bootswatch: flatly
   theme: breeze-light
@@ -28,14 +27,9 @@ navbar:
     - reference
     - tutorials
     - news
-    - comingsoon
     right:
     - search
     - github
-  components:
-    comingsoon:
-      text: "Coming Soon"
-      href: cs.html
 
 reference:
 - title: Model-based functions
@@ -86,5 +80,4 @@ reference:
 
 include:
   - docs/google3f0bafd3c82d41f6.html
-  - docs/cs.html
 
