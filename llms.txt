@@ -29,14 +29,21 @@ Jones M, Kang K, Vandekar S (2025). RESI: An R Package for Robust Effect
 Sizes. *Journal of Statistical Software, 112(3), 1–27.
 *<https://doi.org/10.18637/jss.v112.i03>.**
 
-Kang, K., Jones, M. T., Armstrong, K., Avery, S., McHugo, M., Heckers,
-S., & Vandekar, S. Accurate Confidence and Bayesian Interval Estimation
-for Non-centrality Parameters and Effect Size Indices. *Psychometrika.*
-2023. 10.1007/s11336-022-09899-x. Advance online publication.
-<https://doi.org/10.1007/s11336-022-09899-x>.
+Kang K, Jones MT, Armstrong K, Avery S, McHugo M, Heckers S, & Vandekar
+S. Accurate Confidence and Bayesian Interval Estimation for
+Non-centrality Parameters and Effect Size Indices. *Psychometrika.*
+2023. <https://doi.org/10.1007/s11336-022-09899-x>.
+
+Kang K, Seidlitz J, Bethlehem RAI, et al. Study design features increase
+replicability in brain-wide association studies. *Nature.* 2024.
+<https://doi.org/10.1038/s41586-024-08260-9>.
 
 Vandekar S, Tao R, Blume J. A Robust Effect Size Index. *Psychometrika.*
-2020 Mar;85(1):232-246. doi: 10.1007/s11336-020-09698-2.
+2020;85(1):232–246. <https://doi.org/10.1007/s11336-020-09698-2>.
+
+Zhang X, Muscatello R, Jones M, Corbett B, Vandekar S. Asymptotic
+Distribution of Robust Effect Size Index. *arXiv:2601.19004.* 2026.
+<https://doi.org/10.48550/arXiv.2601.19004>.
 
 # Package index
 
