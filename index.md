@@ -5,15 +5,15 @@ RESI is an R package designed to implement the Robust Effect Size Index
 RESI is a versatile effect size measure that can be easily computed and
 added to common reports (such as summary and ANOVA tables). This package
 currently supports `lm`, `glm`, `nls`, `survreg`, `coxph`, `hurdle`,
-`zeroinfl`, `gee`, `geeglm`, `lme`, and `lmerMod` models. Nonparametric
-bootstrapping is used to compute confidence intervals, although the
-interval performance has not yet been evaluated for the longitudinal
-models. A Bayesian bootstrap is also available for `lm` and `nls`
-models. In addition to the main `resi` function, the package also
-includes a point-estimate-only function (`resi_pe`), conversions from S
-to other common effect size measures and vice versa, print methods, plot
-methods, summary methods, and Anova/anova methods. A more detailed
-vignette is being written.
+`zeroinfl`, `gee`, `geeglm`, `lme`, `lmerMod`, `lmrob`, and `glmrob`
+models. Nonparametric bootstrapping is used to compute confidence
+intervals, although the interval performance has not yet been evaluated
+for the longitudinal models. A Bayesian bootstrap is also available for
+`lm` and `nls` models. In addition to the main `resi` function, the
+package also includes a point-estimate-only function (`resi_pe`),
+conversions from S to other common effect size measures and vice versa,
+print methods, plot methods, summary methods, and Anova/anova methods. A
+more detailed vignette is being written.
 
 If you would like to contribute to the package, please branch off of our
 [GitHub](https://github.com/statimagcoll/RESI) and submit a pull request
