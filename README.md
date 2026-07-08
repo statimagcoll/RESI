@@ -19,15 +19,14 @@ currently supports <code>lm</code>, <code>glm</code>, <code>nls</code>,
 <code>survreg</code>, <code>coxph</code>, <code>hurdle</code>,
 <code>zeroinfl</code>, <code>gee</code>, <code>geeglm</code>,
 <code>lme</code>, <code>lmerMod</code>, <code>lmrob</code>, and
-<code>glmrob</code> models. Nonparametric bootstrapping is used to
-compute confidence intervals, although the interval performance has not
-yet been evaluated for the longitudinal models. A Bayesian bootstrap is
-also available for <code>lm</code> and <code>nls</code> models. In
-addition to the main <code>resi</code> function, the package also
-includes a point-estimate-only function (<code>resi_pe</code>),
+<code>glmrob</code> models. Confidence intervals are now computed using
+the bootstrap or one of three asymptotic methods: a profiled quadratic
+form, Cornish-Fisher expansion, or normal approximation. A Bayesian
+bootstrap is also available for <code>lm</code> and <code>nls</code>
+models. In addition to the main <code>resi</code> function, the package
+also includes a point-estimate-only function (<code>resi_pe</code>),
 conversions from S to other common effect size measures and vice versa,
-print methods, plot methods, summary methods, and Anova/anova methods. A
-more detailed vignette is being written.
+print methods, plot methods, summary methods, and Anova/anova methods.
 
 If you would like to contribute to the package, please branch off of our
 [GitHub](https://github.com/statimagcoll/RESI) and submit a pull request

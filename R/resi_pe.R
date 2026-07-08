@@ -1,4 +1,5 @@
 utils::globalVariables("w")
+utils::globalVariables("w_cs")
 
 
 #' Robust Effect Size Index (RESI) Point Estimation
