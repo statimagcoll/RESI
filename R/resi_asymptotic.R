@@ -809,7 +809,7 @@
 #' @importFrom CompQuadForm imhof
 #' @importFrom car Anova
 #' @importFrom lmtest coeftest
-#' @importFrom stats coef hatvalues residuals fitted weights qnorm qchisq pchisq
+#' @importFrom stats coef hatvalues residuals fitted weights qnorm qchisq pchisq pnorm
 #'   model.matrix terms uniroot
 #' @export
 resi_pe_asymptotic <- function(model.full,

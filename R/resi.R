@@ -30,7 +30,7 @@
 #' @importFrom car Anova
 #' @importFrom lmtest waldtest
 #' @importFrom sandwich vcovHC
-#' @importFrom stats anova as.formula coef formula glm hatvalues lm nobs pchisq pf predict quantile rbinom residuals rnorm runif update vcov
+#' @importFrom stats anova as.formula coef complete.cases formula glm hatvalues lm nobs pchisq pf predict quantile rbinom residuals rnorm runif update vcov
 #' @importFrom utils capture.output
 #' @export
 #' @details The RESI, denoted as S, is applicable across many model types. It is a unitless

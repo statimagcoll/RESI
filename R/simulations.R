@@ -78,8 +78,8 @@
   diff_mat <- sweep(resi_mat, 2L, tv, "-")
   in_ci    <- sweep(lo_mat,   2L, tv, "<=") & sweep(hi_mat, 2L, tv, ">=")
 
-  # upper_coverage: P(hi >= tv) — CI upper bound is at or above the true value
-  # lower_coverage: P(lo <= tv) — CI lower bound is at or below the true value
+  # upper_coverage: P(hi >= tv) -- CI upper bound is at or above the true value
+  # lower_coverage: P(lo <= tv) -- CI lower bound is at or below the true value
   upper_cov_mat <- sweep(hi_mat, 2L, tv, ">=")
   lower_cov_mat <- sweep(lo_mat, 2L, tv, "<=")
 
@@ -663,7 +663,7 @@ simEstimatorFigures <- function(
                             pattern = paste0("^", lbl, "_n[0-9]+\\.rds$"),
                             full.names = TRUE)
     if (length(raw_files) == 0L) {
-      message("No raw files found for: ", lbl, " — skipping")
+      message("No raw files found for: ", lbl, " -- skipping")
       next
     }
 
@@ -755,7 +755,7 @@ simEstimatorFigures <- function(
                             paste0("estimator_compare_", lbl, "_", tbl_name, ".pdf"))
       grDevices::pdf(fig_path, width = 7, height = row_h * n_terms + leg_h)
 
-      # Layout: n_terms rows × 2 cols + 1 legend row
+      # Layout: n_terms rows x 2 cols + 1 legend row
       n_panels <- 2L * n_terms
       lay_mat  <- matrix(c(seq_len(n_panels),
                            rep(n_panels + 1L, 2L)),
@@ -912,7 +912,7 @@ simFigures <- function(output.dir = "resiBootSim",
              main_prefix = "Coef")
       )
 
-      # Layout: 4 rows × 5 cols; coverage column (col 3) is split into two
+      # Layout: 4 rows x 5 cols; coverage column (col 3) is split into two
       # half-height panels (upper coverage on top, lower coverage on bottom).
       # Row 1:  1   2   3   4   5   (anova bias, mse, upper cov, width, legend)
       # Row 2:  1   2   6   4   5   (spans continue; anova lower cov)
@@ -1040,39 +1040,6 @@ simFigures <- function(output.dir = "resiBootSim",
 #  simCompareMethodsFigures
 # ============================================================
 
-#' Per-Term CI Method Comparison Figures
-#'
-#' Reads simulation summary tables from multiple output directories (one per CI
-#' method) and produces one PDF figure per (model type \eqn{\times} variance
-#' estimator \eqn{\times} table \eqn{\times} term) combination. Each figure
-#' shows the standard performance metrics (Bias, MSE, Upper Coverage, Lower
-#' Coverage, CI Width) across sample sizes, with one colored line per CI method.
-#'
-#' @param output.dirs Named character vector mapping CI method labels to their
-#'   simulation output directories. Default:
-#'   \code{c(boot = "resiBootSim", normal = "resiAsympNormalSim",
-#'   qf = "resiAsympQFSim", cf = "resiAsympCFSim")}.
-#'   Directories that do not exist are silently skipped.
-#' @param figures.dir Character, directory where comparison figures are saved.
-#'   Default: \code{file.path(output.dirs[1], "figures", "method_comparison")}.
-#' @param alpha Numeric, nominal CI level used for coverage reference lines.
-#'   Default 0.05.
-#' @param fixed.knots Logical. Must match the value used in the original
-#'   \code{\link{insurancePlasmodeSim}} call; controls how the true RESI values
-#'   are re-computed from the full dataset for the coverage-quantile figures.
-#'   Default \code{FALSE}.
-#'
-#' @return Invisibly returns the combined summary \code{data.frame}. Saves to
-#'   \code{figures.dir}:
-#' \itemize{
-#'   \item \code{compare_<model>_<vcov>_<table>.pdf} — per-metric lines across
-#'     sample sizes, all terms in one PDF (rows = terms).
-#'   \item \code{covquant_<model>_<vcov>_<table>.pdf} — coverage-quantile density
-#'     curves, \eqn{(S_{\rm true} - \rm LCI)/(\rm UCI - \rm LCI)}, rows = terms,
-#'     columns = sample sizes.
-#' }
-#' @seealso \code{\link{insurancePlasmodeSim}}, \code{\link{simFigures}}
-
 # Internal: full delta-method sigma2S (including A/B chain-rule terms) for each
 # coefficient in coef_idx (1-based index into coef(model)), using HC-type B.
 # Returns named vector sigma2S_Th1_k = quad_k / S_k^2  (= n * resiSE_k^2).
@@ -1173,8 +1140,8 @@ simFigures <- function(output.dir = "resiBootSim",
     if (!is.finite(Ssq) || Ssq <= 0 || !is.finite(cov_beta) || cov_beta <= 0) {
       result[ki] <- NA_real_; next
     }
-    La_row <- L %*% A_inv  # 1×m
-    Lc_row <- L %*% cov_th # 1×m
+    La_row <- L %*% A_inv  # 1xm
+    Lc_row <- L %*% cov_th # 1xm
     sc <- beta_k / cov_beta
     deriv_th <- sc * L
     deriv_A  <- (sc^2 / 2) *
@@ -1194,11 +1161,11 @@ simFigures <- function(output.dir = "resiBootSim",
 #' Asymptotic Calibration Check for RESI Variance Estimates
 #'
 #' Runs a plasmode simulation to verify that the asymptotic normal CI machinery
-#' is correctly calibrated for all four model settings (lm/glm ×
+#' is correctly calibrated for all four model settings (lm/glm x
 #' parametric/robust).  For each (setting, sample size) cell the function
 #' checks:
 #' \enumerate{
-#'   \item \strong{Bias(theta)}: \eqn{\hat\theta \to \theta_{\rm true}} —
+#'   \item \strong{Bias(theta)}: \eqn{\hat\theta \to \theta_{\rm true}} --
 #'     raw coefficients (and \eqn{\phi = \hat\sigma^2} for \code{lm}) converge
 #'     to the full-dataset values.
 #'   \item \strong{vcov check A} (estimator consistency):
@@ -1223,8 +1190,6 @@ simFigures <- function(output.dir = "resiBootSim",
 #' @param alpha Numeric, nominal CI level. Default 0.05.
 #' @param output.dir Character, directory for raw per-cell RDS files.
 #'   Default \code{"resiCalibrationSim"}.
-#' @param figures.dir Character, directory for PDF figures.
-#'   Default \code{file.path(output.dir, "figures")}.
 #' @param fixed.knots Logical. Fix spline knots at full-dataset quantiles.
 #'   Default \code{FALSE}.
 #' @param mc.cores.reps Integer, cores for within-cell parallelism. Default 1.
@@ -1234,7 +1199,7 @@ simFigures <- function(output.dir = "resiBootSim",
 #' @importFrom parallel mclapply
 #' @importFrom splines ns
 #' @importFrom sandwich vcovHC
-#' @importFrom stats lm glm vcov binomial qnorm coef
+#' @importFrom stats lm glm vcov binomial qnorm coef setNames sd
 #' @importFrom grDevices pdf dev.off
 #' @importFrom graphics plot lines points abline legend par axis plot.new layout
 #' @export
@@ -1525,9 +1490,24 @@ simCalibrationSim <- function(
   invisible(summary_df)
 }
 
+#' Calibration Figures for RESI Variance Estimates
+#'
+#' Reads output from \code{\link{simCalibrationSim}} and produces one PDF per
+#' model setting showing convergence of point estimates, covariance estimates,
+#' RESI estimates, and RESI variance estimates to their population targets.
+#'
+#' @param output.dir Character, directory containing output from
+#'   \code{\link{simCalibrationSim}}. Default \code{"resiCalibrationSim"}.
+#' @param figures.dir Character, output directory for PDFs.
+#'   Default \code{file.path(output.dir, "figures")}.
+#' @param alpha Numeric, nominal CI level. Default 0.05.
+#'
+#' @return Invisibly returns the summary data frame. Saves PDF figures to
+#'   \code{figures.dir}.
+#' @seealso \code{\link{simCalibrationSim}}, \code{\link{insurancePlasmodeSim}}
 #' @importFrom splines ns
 #' @importFrom sandwich vcovHC
-#' @importFrom stats lm glm vcov binomial
+#' @importFrom stats lm glm vcov binomial setNames
 #' @importFrom grDevices pdf dev.off
 #' @importFrom graphics plot lines points abline legend par axis plot.new layout
 #' @export
@@ -1838,11 +1818,37 @@ simCalibrationFigures <- function(
 }
 
 
+#' Per-Term CI Method Comparison Figures
+#'
+#' Reads simulation summary tables from multiple output directories (one per CI
+#' method) and produces PDF figures comparing CI methods across sample sizes.
+#' For each (model type x variance estimator x table) combination two PDFs are
+#' saved: an estimator comparison (Bias, MSE) and a CI comparison (SE
+#' calibration, coverage, width).
+#'
+#' @param output.dirs Named character vector mapping CI method labels to their
+#'   simulation output directories. Default:
+#'   \code{c(boot = "resiBootSim", normal = "resiAsympNormalSim",
+#'   qf = "resiAsympQFSim", cf = "resiAsympCFSim")}.
+#'   Directories that do not exist are silently skipped.
+#' @param figures.dir Character, directory where comparison figures are saved.
+#'   Default: \code{file.path(output.dirs[1], "figures", "method_comparison")}.
+#' @param alpha Numeric, nominal CI level used for coverage reference lines.
+#'   Default 0.05.
+#' @param fixed.knots Logical. Must match the value used in the original
+#'   \code{\link{insurancePlasmodeSim}} call. Default \code{FALSE}.
+#'
+#' @return Invisibly returns the combined summary \code{data.frame}. Saves
+#'   \code{estimator_<model>_<vcov>_<table>.pdf},
+#'   \code{compare_<model>_<vcov>_<table>.pdf}, and
+#'   \code{covquant_<model>_<vcov>_<table>.pdf} to \code{figures.dir}.
+#' @seealso \code{\link{insurancePlasmodeSim}}, \code{\link{simFigures}},
+#'   \code{\link{simEstimatorFigures}}
 #' @importFrom grDevices pdf dev.off
 #' @importFrom graphics plot lines points abline legend par axis plot.new mtext
 #' @importFrom splines ns
 #' @importFrom sandwich vcovHC
-#' @importFrom stats lm glm vcov binomial density
+#' @importFrom stats lm glm vcov binomial density setNames sd
 #' @export
 simCompareMethodsFigures <- function(
     output.dirs = c(Bootstrap   = "resiBootSim",
@@ -2055,7 +2061,7 @@ simCompareMethodsFigures <- function(
         # Layout per term:
         #   sub-row 1: [SE(span), UpperCov, Width(span)]
         #   sub-row 2: [SE(span), LowerCov, Width(span)]
-        # Drawing order per layout reading: SE → UpperCov → Width → LowerCov
+        # Drawing order per layout reading: SE -> UpperCov -> Width -> LowerCov
         # ======================================================
         fig_path_ci <- file.path(
           figures.dir,
@@ -2103,7 +2109,7 @@ simCompareMethodsFigures <- function(
           wid_vals <- term_data[["width"]]
           wid_ylim <- range(wid_vals[wid_vals <= max_wid], na.rm = TRUE)
 
-          # Drawing order: SE (spans) → UpperCov → Width (spans) → LowerCov
+          # Drawing order: SE (spans) -> UpperCov -> Width (spans) -> LowerCov
 
           # ---- Panel 1: SE calibration (spans both sub-rows, term title here) ----
           se_comp <- do.call(rbind, lapply(avail_methods, function(meth) {
@@ -2194,7 +2200,7 @@ simCompareMethodsFigures <- function(
   # ============================================================
   #  Coverage-quantile figures
   #  (S_true - LCI) / (UCI - LCI) density curves
-  #  One PDF per (model × vcov × table): rows = terms, columns = n values
+  #  One PDF per (model x vcov x table): rows = terms, columns = n values
   # ============================================================
   message("Generating coverage-quantile figures...")
 

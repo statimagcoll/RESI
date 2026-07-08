@@ -1,4 +1,4 @@
-## RESI 1.3.3 (in development)
+## RESI 1.3.3
 
 ### Bug Fixes
 * Fixed error when passing a `data` argument containing `NA`s to `resi()` for
@@ -21,6 +21,7 @@
   together with `vcovfunc = sandwich::vcovHC`. The message explains that
   `type = "const"` is the OLS sandwich (not robust) and directs users to use
   `vcovfunc = stats::vcov` for parametric variance estimation instead (#50).
+* `resi_pe` now reports CS-RESI and L-RESI for `lmer`.
 
 ### New Features
 * Added support for `robustbase` models (`lmrob` and `glmrob`) via new
