@@ -1625,7 +1625,7 @@ simCalibrationFigures <- function(
     }))
     ylim2 <- range(c(all_vcov, 1), na.rm = TRUE)
     ylim2 <- ylim2 + diff(ylim2) * c(-0.06, 0.06)
-    if (is_glm) ylim2 <- c(0.8, 4)   # clip glm ratio panel
+    if (is_glm) ylim2 <- c(0.8, 3)   # clip glm ratio panel
 
     graphics::par(mar = c(3.2, 3.5, 2.2, 0.5), mgp = c(2.0, 0.5, 0))
     graphics::plot(NULL, xlim = range(n_vals_plot), ylim = ylim2,
@@ -1650,7 +1650,7 @@ simCalibrationFigures <- function(
     all_R_bias <- unlist(lapply(coef_terms, function(tm) sub[sub$term == tm, "R_bias"]))
     ylim3 <- range(c(all_R_bias, 0), na.rm = TRUE)
     ylim3 <- ylim3 + diff(ylim3) * c(-0.06, 0.06)
-    if (is_glm) ylim3 <- c(-0.2, 0.2)   # clip glm bias panel
+    if (is_glm) ylim3 <- c(-0.1, 0.1)   # clip glm bias panel
 
     graphics::par(mar = c(3.2, 3.5, 2.2, 0.5), mgp = c(2.0, 0.5, 0))
     graphics::plot(NULL, xlim = range(n_vals_plot), ylim = ylim3,
@@ -1675,7 +1675,7 @@ simCalibrationFigures <- function(
     }))
     ylim4 <- range(c(all_sig2S, 1), na.rm = TRUE)
     ylim4 <- ylim4 + diff(ylim4) * c(-0.06, 0.06)
-    if (is_glm) ylim4 <- c(0.8, 4)   # clip glm ratio panel
+    if (is_glm) ylim4 <- c(0.8, 3)   # clip glm ratio panel
 
     graphics::par(mar = c(3.2, 3.5, 2.2, 0.5), mgp = c(2.0, 0.5, 0))
     graphics::plot(NULL, xlim = range(n_vals_plot), ylim = ylim4,

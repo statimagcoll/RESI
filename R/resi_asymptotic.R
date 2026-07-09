@@ -121,8 +121,14 @@
     # dB/d_phi only
     e4mean <- mean(e^4)
     e3mean <- mean(e^3)
+    # dB_phi[1,1]: partial derivative of B_{phi,phi} = mean((e^2-phi)^2 / (4*phi^4))
+    # with respect to phi, treating residuals as fixed (valid for lm since beta-hat
+    # does not depend on phi).  Correct formula: (phi^2 - e4mean) / phi^5.
+    # OLD (incorrect -- had extra factor of 2 on e4mean, apparently from a
+    # normality-based total-derivative derivation):
+    #   (phi^2 - 2 * e4mean) / phi^5
     dB_phi <- rbind(
-      cbind((phi^2 - 2 * e4mean) / phi^5,
+      cbind((phi^2 - e4mean) / phi^5,
             -(3 / (2 * phi^4)) * t(colMeans(X) * e3mean)),
       cbind(-(3 / (2 * phi^4)) * colMeans(X) * e3mean,
             -XtX_n_hc / phi^2)
