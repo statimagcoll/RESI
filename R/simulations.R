@@ -1329,9 +1329,34 @@ simCalibrationSim <- function(
                                     coef_terms_true)
     )
 
+    # vcov_phi_phi_true and vcov_phi_beta_true: sandwich (phi,phi) and (phi,beta_k)
+    # elements for the lm settings, using the per-setting HC type as the "true"
+    # population reference (so the check targets convergence of the sample
+    # estimator to the full-dataset sandwich, consistent with vcov_diag_true).
+    # For GLM there is no phi: set to NA.
+    precomp_type_tv  <- if (s$vcov_name == "robust") "HC3" else "const"
+    vcov_phi_phi_true  <- NA_real_
+    vcov_phi_beta_true <- setNames(rep(NA_real_, length(coef_terms_true)),
+                                   coef_terms_true)
+    if (s$type == "lm") {
+      precomp_tv <- tryCatch(
+        .resi_precompute(full_mod, type = precomp_type_tv),
+        error = function(e) NULL
+      )
+      if (!is.null(precomp_tv)) {
+        vcov_phi_phi_true <- n_full * precomp_tv$cov_theta[1L, 1L]
+        beta_names_tv     <- names(coef(full_mod))[!is.na(coef(full_mod))]
+        beta_pos_tv       <- match(coef_terms_true, beta_names_tv)
+        vcov_phi_beta_true <- n_full * precomp_tv$cov_theta[1L, 1L + beta_pos_tv]
+        names(vcov_phi_beta_true) <- coef_terms_true
+      }
+    }
+
     list(phi_true            = phi_true,
          beta_true           = beta_true,
          vcov_diag_true      = vcov_diag_true,
+         vcov_phi_phi_true   = vcov_phi_phi_true,
+         vcov_phi_beta_true  = vcov_phi_beta_true,
          R_true              = R_true,
          sigma2S_true        = sigma2S_true,
          sigma2S_true_Th1    = sigma2S_true_Th1,
@@ -1402,11 +1427,32 @@ simCalibrationSim <- function(
             sigma2S_hat <- n_s * (hw / z_ref)^2
             names(sigma2S_hat) <- coef_terms
 
+            # phi-variance and phi-beta covariances from the full sandwich
+            # (lm only; requires model-level precomputation)
+            vcov_phi_phi  <- NULL
+            vcov_phi_beta <- NULL
+            if (is_lm) {
+              precomp_type_rep <- if (s$vcov_name == "robust") "HC3" else "const"
+              precomp_rep <- tryCatch(
+                .resi_precompute(mod, type = precomp_type_rep),
+                error = function(e) NULL
+              )
+              if (!is.null(precomp_rep)) {
+                vcov_phi_phi <- n_s * precomp_rep$cov_theta[1L, 1L]
+                beta_names_rep <- names(coef(mod))[!is.na(coef(mod))]
+                beta_pos_rep   <- match(coef_terms, beta_names_rep)
+                vcov_phi_beta  <- n_s * precomp_rep$cov_theta[1L, 1L + beta_pos_rep]
+                names(vcov_phi_beta) <- coef_terms
+              }
+            }
+
             list(phi_hat       = phi_hat,
                  beta_hat      = beta_hat,
                  vcov_hat_diag = vcov_hat_diag,
                  R_hat         = R_hat,
-                 sigma2S_hat   = sigma2S_hat)
+                 sigma2S_hat   = sigma2S_hat,
+                 vcov_phi_phi  = vcov_phi_phi,
+                 vcov_phi_beta = vcov_phi_beta)
           }, error = function(e) NULL)
         }, mc.cores = mc.cores.reps)
 
@@ -1414,13 +1460,17 @@ simCalibrationSim <- function(
 
         # Store matrices
         cell_data <- list(
-          n         = n_s,
-          n_success = length(reps),
-          phi_vec   = if (is_lm) sapply(reps, `[[`, "phi_hat") else NULL,
-          beta_mat  = do.call(rbind, lapply(reps, `[[`, "beta_hat")),
-          vcov_mat  = do.call(rbind, lapply(reps, `[[`, "vcov_hat_diag")),
-          R_mat     = do.call(rbind, lapply(reps, `[[`, "R_hat")),
-          sig2S_mat = do.call(rbind, lapply(reps, `[[`, "sigma2S_hat"))
+          n           = n_s,
+          n_success   = length(reps),
+          phi_vec     = if (is_lm) sapply(reps, `[[`, "phi_hat") else NULL,
+          beta_mat    = do.call(rbind, lapply(reps, `[[`, "beta_hat")),
+          vcov_mat    = do.call(rbind, lapply(reps, `[[`, "vcov_hat_diag")),
+          R_mat       = do.call(rbind, lapply(reps, `[[`, "R_hat")),
+          sig2S_mat   = do.call(rbind, lapply(reps, `[[`, "sigma2S_hat")),
+          phi_var_vec = if (is_lm && !is.null(reps[[1L]]$vcov_phi_phi))
+                          sapply(reps, `[[`, "vcov_phi_phi") else NULL,
+          phi_cov_mat = if (is_lm && !is.null(reps[[1L]]$vcov_phi_beta))
+                          do.call(rbind, lapply(reps, `[[`, "vcov_phi_beta")) else NULL
         )
         saveRDS(cell_data, rds_path)
       }
@@ -1462,21 +1512,37 @@ simCalibrationSim <- function(
       cv_Vhat <- apply(cell_data$vcov_mat, 2L, function(x)
         stats::sd(x, na.rm = TRUE) / mean(x, na.rm = TRUE))
 
+      # (9) phi variance check A: mean(n_s * vcov_phi_phi_hat) / (n_full * vcov_phi_phi_true)
+      #     (scalar, same for all terms in this cell; NA for GLM)
+      phi_var_A <- if (!is.null(cell_data$phi_var_vec) &&
+                        is.finite(tv$vcov_phi_phi_true) &&
+                        tv$vcov_phi_phi_true > 0)
+        mean(cell_data$phi_var_vec, na.rm = TRUE) / tv$vcov_phi_phi_true
+      else NA_real_
+
+      # (10) phi-beta covariance check A: per-term ratio (NA for GLM or near-zero truth)
+      phi_cov_A <- if (!is.null(cell_data$phi_cov_mat) &&
+                        all(is.finite(tv$vcov_phi_beta_true)))
+        colMeans(cell_data$phi_cov_mat, na.rm = TRUE) / tv$vcov_phi_beta_true
+      else setNames(rep(NA_real_, length(coef_terms)), coef_terms)
+
       row <- data.frame(
-        model     = s$type,
-        vcov      = s$vcov_name,
-        n         = n_s_eff,
-        n_success = cell_data$n_success,
-        term      = coef_terms,
-        phi_bias  = phi_bias,   # scalar, same for all rows
-        beta_bias = beta_bias,
-        vcov_A    = vcov_A,
-        vcov_B    = vcov_B,
-        R_bias    = R_bias,
-        sig2S_A   = sig2S_A,
-        sig2S_B   = sig2S_B,
-        cv_Vhat   = cv_Vhat,
-        row.names = NULL,
+        model      = s$type,
+        vcov       = s$vcov_name,
+        n          = n_s_eff,
+        n_success  = cell_data$n_success,
+        term       = coef_terms,
+        phi_bias   = phi_bias,   # scalar, same for all rows
+        beta_bias  = beta_bias,
+        vcov_A     = vcov_A,
+        vcov_B     = vcov_B,
+        R_bias     = R_bias,
+        sig2S_A    = sig2S_A,
+        sig2S_B    = sig2S_B,
+        cv_Vhat    = cv_Vhat,
+        phi_var_A  = phi_var_A,  # scalar, same for all rows (lm only)
+        phi_cov_A  = phi_cov_A,  # per-term (lm only)
+        row.names  = NULL,
         stringsAsFactors = FALSE
       )
       all_metrics[[length(all_metrics) + 1L]] <- row
@@ -1645,6 +1711,25 @@ simCalibrationFigures <- function(
       graphics::points(d$n, d$vcov_A, col = term_cols[[tm]], pch = 16L, cex = 0.7)
       graphics::points(d$n, d$vcov_B, col = term_cols[[tm]], pch = 1L,  cex = 0.7)
     }
+    # Phi variance (lm only): thick black solid; phi-beta covariances: colored dotted
+    if (is_lm && "phi_var_A" %in% names(sub)) {
+      d1 <- sub[sub$term == coef_terms[1L], ]
+      d1 <- d1[order(d1$n), ]
+      if (any(is.finite(d1$phi_var_A))) {
+        graphics::lines(d1$n,  d1$phi_var_A, col = "#000000", lwd = 2L, lty = 1L)
+        graphics::points(d1$n, d1$phi_var_A, col = "#000000", pch = 15L, cex = 0.8)
+      }
+      if ("phi_cov_A" %in% names(sub)) {
+        for (tm in coef_terms) {
+          d <- sub[sub$term == tm, ]
+          d <- d[order(d$n), ]
+          if (any(is.finite(d$phi_cov_A))) {
+            graphics::lines(d$n,  d$phi_cov_A, col = term_cols[[tm]], lwd = 1.5, lty = 3L)
+            graphics::points(d$n, d$phi_cov_A, col = term_cols[[tm]], pch = 2L,  cex = 0.7)
+          }
+        }
+      }
+    }
 
     # --- Panel 3: Bias(R) ---
     all_R_bias <- unlist(lapply(coef_terms, function(tm) sub[sub$term == tm, "R_bias"]))
@@ -1704,10 +1789,11 @@ simCalibrationFigures <- function(
     # --- Panel 5: Legend ---
     short_terms <- .abbrev(coef_terms)
     phi_leg <- if (is_lm) list(
-      legend = c(short_terms, "phi (sigma^2)"),
-      col    = c(unname(term_cols[coef_terms]), "#000000"),
-      pch    = c(rep(16L, n_terms), 17L),
-      lty    = c(rep(1L, n_terms), 3L)
+      legend = c(short_terms, "phi (sigma^2)", "phi var (A)", "phi-beta cov (A)"),
+      col    = c(unname(term_cols[coef_terms]), "#000000", "#000000",
+                 unname(term_cols[coef_terms[1L]])),
+      pch    = c(rep(16L, n_terms), 17L, 15L, 2L),
+      lty    = c(rep(1L, n_terms), 3L, 1L, 3L)
     ) else list(
       legend = short_terms,
       col    = unname(term_cols[coef_terms]),
@@ -1733,7 +1819,7 @@ simCalibrationFigures <- function(
     graphics::legend("right",
                      legend = c("Analytical estimator (A)",
                                 "Empirical variance (B)",
-                                "Empirical / Th1 formula (C)"),
+                                "Empirical / Th1 formula (C)  |  phi-beta cov (A)"),
                      col    = "gray30",
                      lty    = c(1L, 2L, 3L),
                      pch    = c(16L, 1L, 2L),
