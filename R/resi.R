@@ -443,7 +443,7 @@ resi.lm = function(model.full, model.reduced = NULL, data, anova = TRUE,
                     vcov.args = list(), unbiased = TRUE,
                     parallel = c("no", "multicore", "snow"),
                     ncpus = getOption("boot.ncpus", 1L),
-                    ci.method = "qf",
+                    ci.method = "boot",
                     ...){
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 

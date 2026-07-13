@@ -21,7 +21,10 @@
 # ============================================================
 
 #' @noRd
-.resi_precompute <- function(model, type = "HC3") {
+.resi_precompute <- function(model, type = "HC3",
+                             deriv_method = c("corrected", "original")) {
+
+  deriv_method <- match.arg(deriv_method)
 
   type <- match.arg(type, c("HC3", "const", "HC", "HC0", "HC1", "HC2",
                              "HC4", "HC4m", "HC5"))
@@ -118,23 +121,70 @@
     dA_dtheta <- matrix(0, m * m, m)
     dA_dtheta[, 1] <- as.vector(dA_phi)
 
-    # dB/d_phi only
+    # dB/dtheta: two implementations selected by deriv_method.
+    # "original" (v1): original code before corrections -- kept for comparison.
+    # "corrected" (v2): corrected dB/dphi off-diagonals + nonzero dB/dbeta columns.
     e4mean <- mean(e^4)
-    e3mean <- mean(e^3)
-    # dB_phi[1,1]: partial derivative of B_{phi,phi} = mean((e^2-phi)^2 / (4*phi^4))
-    # with respect to phi, treating residuals as fixed (valid for lm since beta-hat
-    # does not depend on phi).  Correct formula: (phi^2 - e4mean) / phi^5.
-    # OLD (incorrect -- had extra factor of 2 on e4mean, apparently from a
-    # normality-based total-derivative derivation):
-    #   (phi^2 - 2 * e4mean) / phi^5
-    dB_phi <- rbind(
-      cbind((phi^2 - e4mean) / phi^5,
-            -(3 / (2 * phi^4)) * t(colMeans(X) * e3mean)),
-      cbind(-(3 / (2 * phi^4)) * colMeans(X) * e3mean,
-            -XtX_n_hc / phi^2)
-    )
     dB_dtheta <- matrix(0, m * m, m)
-    dB_dtheta[, 1] <- as.vector(dB_phi)
+
+    if (deriv_method == "original") {
+      # ---- v1: original formulas (kept for comparison) ----
+      # Errors: (a) dB_phi-phi used (phi^2-2*e4mean) [wrong factor]; (b) dB_phi-beta
+      # factored as colMeans(X)*e3mean [wrong]; (c) dB_beta-beta used -XtX_hc/phi^2
+      # [wrong power/missing e^2]; (d) all dB/dbeta_l = 0.
+      e3mean <- mean(e^3)
+      dB_phi_v1 <- rbind(
+        cbind((phi^2 - 2 * e4mean) / phi^5,
+              -(3 / (2 * phi^4)) * t(colMeans(X) * e3mean)),
+        cbind(-(3 / (2 * phi^4)) * colMeans(X) * e3mean,
+              -XtX_n_hc / phi^2)
+      )
+      dB_dtheta[, 1] <- as.vector(dB_phi_v1)
+      # dB/dbeta columns: all zero (v1 approximation)
+
+    } else {
+      # ---- v2: corrected formulas ----
+      #
+      # dB/dphi corrections:
+      #   (1,1): (phi^2 - e4mean) / phi^5  [treats residuals as fixed; no normality]
+      #   (1,j) phi-beta_j: -3/(2phi^4) * mean(sqrtw_i * e_i^3 * x_ij)  [no factoring]
+      #   (j,k) beta-beta:  -2/phi * B_beta_beta  [exact: -2 * B_{bb} / phi]
+      #
+      # dB/dbeta_l corrections (new; previously all zero):
+      #   (1,1):   -mean((e^2-phi)*e*x_l) / phi^4         [nonzero under cond. skewness]
+      #   (1,1+j): -mean(sqrtw*(3e^2-phi)*x_j*x_l)/(2phi^3)  [nonzero: E ~ -[X'WX]_{jl}/phi^2]
+      #   (j,k):   0  [E[e_i|X_i]=0]
+
+      # Shared quantities for dB/dphi
+      e3_X_w <- if (is_const) colMeans(e^3 * X) else colMeans(sqrtw * e^3 * X)
+      B_beta  <- B_full[2:m, 2:m, drop = FALSE]   # p x p beta-beta block of B
+
+      dB_phi_v2 <- rbind(
+        cbind((phi^2 - e4mean) / phi^5,
+              -(3 / (2 * phi^4)) * t(e3_X_w)),
+        cbind(-(3 / (2 * phi^4)) * e3_X_w,
+              -2 / phi * B_beta)
+      )
+      dB_dtheta[, 1] <- as.vector(dB_phi_v2)
+
+      # dB/dbeta_l columns (l = 1,...,p; column index 1+l in dB_dtheta)
+      e2_m_phi_e <- (e^2 - phi) * e                                  # n-vector
+      v_3e2      <- if (is_const) 3 * e^2 - phi                      # no HC weight for const
+                    else sqrtw * (3 * e^2 - phi)                      # HC-weighted
+      # d_phi_phi_betas[l] = dB_{phi,phi} / d_beta_l
+      d_phi_phi_betas  <- -colMeans(e2_m_phi_e * X) / phi^4          # p-vector
+      # dB_phi_beta_beta[j,l] = dB_{phi,beta_j} / d_beta_l
+      dB_phi_beta_beta <- -crossprod(X, v_3e2 * X) / (2 * n * phi^3) # p x p
+
+      for (l in seq_len(p)) {
+        dB_l <- matrix(0, m, m)
+        dB_l[1L, 1L]    <- d_phi_phi_betas[l]
+        dB_l[1L, 2:m]   <- dB_phi_beta_beta[, l]
+        dB_l[2:m, 1L]   <- dB_phi_beta_beta[, l]   # B is symmetric
+        # beta-beta block: zero (E[e_i|X_i] = 0)
+        dB_dtheta[, 1L + l] <- as.vector(dB_l)
+      }
+    }
 
     theta_hat <- c(phi, coef(model))
     lm_model  <- TRUE
@@ -187,23 +237,24 @@
   }
 
   list(
-    model      = model,
-    X          = X,
-    n          = n,
-    p          = p,
-    m          = m,
-    lm_model   = lm_model,
-    phi        = phi,
-    theta_hat  = theta_hat,
-    A_inv      = A_inv,
-    B_full     = B_full,
-    cov_theta  = cov_theta,
-    dA_dtheta  = dA_dtheta,
-    dB_dtheta  = dB_dtheta,
-    is_const   = is_const,
-    type       = type,
-    psi_list   = psi_list,   # per-observation scores (1 x m each); used for CF skewness
-    sqrtw      = sqrtw       # HC weights (length n)
+    model        = model,
+    X            = X,
+    n            = n,
+    p            = p,
+    m            = m,
+    lm_model     = lm_model,
+    phi          = phi,
+    theta_hat    = theta_hat,
+    A_inv        = A_inv,
+    B_full       = B_full,
+    cov_theta    = cov_theta,
+    dA_dtheta    = dA_dtheta,
+    dB_dtheta    = dB_dtheta,
+    deriv_method = deriv_method,
+    is_const     = is_const,
+    type         = type,
+    psi_list     = psi_list,
+    sqrtw        = sqrtw
   )
 }
 
@@ -827,11 +878,13 @@ resi_pe_asymptotic <- function(model.full,
                                 ci.method    = c("normal", "qf", "cf"),
                                 type         = "HC3",
                                 unbiased     = TRUE,
+                                deriv_method = c("corrected", "original"),
                                 Anova.args   = list(),
                                 vcov.args    = list(),
                                 ...) {
 
-  ci.method <- match.arg(ci.method)
+  ci.method    <- match.arg(ci.method)
+  deriv_method <- match.arg(deriv_method)
   model     <- model.full
   n         <- nrow(model.matrix(model))
 
@@ -851,7 +904,7 @@ resi_pe_asymptotic <- function(model.full,
   }
 
   # ---- model-level precomputation ----
-  precomp <- .resi_precompute(model, type = type)
+  precomp <- .resi_precompute(model, type = type, deriv_method = deriv_method)
 
   # ---- vcov matrix for point estimates (same as resi_pe) ----
   vcovmat <- tryCatch(vcovfunc2(model), error = function(e)

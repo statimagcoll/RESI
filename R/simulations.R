@@ -1209,9 +1209,11 @@ simCalibrationSim <- function(
     alpha         = 0.05,
     output.dir    = "resiCalibrationSim",
     fixed.knots   = FALSE,
+    deriv_method  = c("corrected", "original"),
     mc.cores.reps = 1L
 ) {
-  raw_dir <- file.path(output.dir, "raw")
+  deriv_method <- match.arg(deriv_method)
+  raw_dir <- file.path(output.dir, "raw", deriv_method)
   dir.create(raw_dir,      recursive = TRUE, showWarnings = FALSE)
 
   insurance <- RESI::insurance
@@ -1306,7 +1308,8 @@ simCalibrationSim <- function(
     #                  = n_full * (hw / z_ref)^2 from the normal CI
     asym_true <- tryCatch(
       resi_pe_asymptotic(full_mod, vcovfunc = true_vcovfunc_r,
-                         ci.method = "normal", type = "HC0"),
+                         ci.method = "normal", type = "HC0",
+                         deriv_method = deriv_method),
       error = function(e) NULL
     )
     if (!is.null(asym_true)) {
@@ -1344,15 +1347,16 @@ simCalibrationSim <- function(
         error = function(e) NULL
       )
       if (!is.null(precomp_tv)) {
-        vcov_phi_phi_true <- n_full * precomp_tv$cov_theta[1L, 1L]
+        vcov_phi_phi_true <- precomp_tv$cov_theta[1L, 1L]
         beta_names_tv     <- names(coef(full_mod))[!is.na(coef(full_mod))]
         beta_pos_tv       <- match(coef_terms_true, beta_names_tv)
-        vcov_phi_beta_true <- n_full * precomp_tv$cov_theta[1L, 1L + beta_pos_tv]
+        vcov_phi_beta_true <- precomp_tv$cov_theta[1L, 1L + beta_pos_tv]
         names(vcov_phi_beta_true) <- coef_terms_true
       }
     }
 
-    list(phi_true            = phi_true,
+    list(deriv_method_used   = deriv_method,
+         phi_true            = phi_true,
          beta_true           = beta_true,
          vcov_diag_true      = vcov_diag_true,
          vcov_phi_phi_true   = vcov_phi_phi_true,
@@ -1417,7 +1421,8 @@ simCalibrationSim <- function(
 
             # R_hat and sigma2S_hat via asymptotic normal CI
             asym <- resi_pe_asymptotic(mod, vcovfunc = s$vcovfunc,
-                                       ci.method = "normal")
+                                       ci.method = "normal",
+                                       deriv_method = deriv_method)
             tab  <- asym$coefficients
             tab  <- tab[rownames(tab) != "(Intercept)", , drop = FALSE]
             hw   <- (tab[coef_terms, ci_hi_col] - tab[coef_terms, ci_lo_col]) / 2
@@ -1434,14 +1439,19 @@ simCalibrationSim <- function(
             if (is_lm) {
               precomp_type_rep <- if (s$vcov_name == "robust") "HC3" else "const"
               precomp_rep <- tryCatch(
-                .resi_precompute(mod, type = precomp_type_rep),
+                .resi_precompute(mod, type = precomp_type_rep,
+                                 deriv_method = deriv_method),
                 error = function(e) NULL
               )
               if (!is.null(precomp_rep)) {
-                vcov_phi_phi <- n_s * precomp_rep$cov_theta[1L, 1L]
+                # cov_theta[1,1] = Sigma_theta_{phi,phi} = asymptotic variance of
+                # sqrt(n)(phi_hat - phi).  Do NOT multiply by n_s: cov_theta is
+                # already the asymptotic (scaled) variance, analogous to
+                # n_s * diag(vcovfunc(mod)) for the beta terms.
+                vcov_phi_phi <- precomp_rep$cov_theta[1L, 1L]
                 beta_names_rep <- names(coef(mod))[!is.na(coef(mod))]
                 beta_pos_rep   <- match(coef_terms, beta_names_rep)
-                vcov_phi_beta  <- n_s * precomp_rep$cov_theta[1L, 1L + beta_pos_rep]
+                vcov_phi_beta  <- precomp_rep$cov_theta[1L, 1L + beta_pos_rep]
                 names(vcov_phi_beta) <- coef_terms
               }
             }
@@ -1512,7 +1522,9 @@ simCalibrationSim <- function(
       cv_Vhat <- apply(cell_data$vcov_mat, 2L, function(x)
         stats::sd(x, na.rm = TRUE) / mean(x, na.rm = TRUE))
 
-      # (9) phi variance check A: mean(n_s * vcov_phi_phi_hat) / (n_full * vcov_phi_phi_true)
+      # (9) phi variance check A: mean(Sigma_theta_phi_phi_hat) / Sigma_theta_phi_phi_true
+      #     cov_theta[1,1] IS Sigma_theta (asymptotic variance of sqrt(n)*phi_hat),
+      #     so no n factor is needed -- analogous to n_s*diag(vcovfunc) for beta.
       #     (scalar, same for all terms in this cell; NA for GLM)
       phi_var_A <- if (!is.null(cell_data$phi_var_vec) &&
                         is.finite(tv$vcov_phi_phi_true) &&
@@ -1520,29 +1532,39 @@ simCalibrationSim <- function(
         mean(cell_data$phi_var_vec, na.rm = TRUE) / tv$vcov_phi_phi_true
       else NA_real_
 
-      # (10) phi-beta covariance check A: per-term ratio (NA for GLM or near-zero truth)
+      # (10) phi variance check B: n_s * Var_empirical(phi_hat) / Sigma_theta_phi_phi_true
+      #      Empirical counterpart: n_s * var(phi_vec) estimates Sigma_theta_{phi,phi}.
+      phi_var_B <- if (!is.null(cell_data$phi_vec) &&
+                        is.finite(tv$vcov_phi_phi_true) &&
+                        tv$vcov_phi_phi_true > 0)
+        n_s_eff * stats::var(cell_data$phi_vec, na.rm = TRUE) / tv$vcov_phi_phi_true
+      else NA_real_
+
+      # (11) phi-beta covariance check A: per-term ratio (NA for GLM or near-zero truth)
       phi_cov_A <- if (!is.null(cell_data$phi_cov_mat) &&
                         all(is.finite(tv$vcov_phi_beta_true)))
         colMeans(cell_data$phi_cov_mat, na.rm = TRUE) / tv$vcov_phi_beta_true
       else setNames(rep(NA_real_, length(coef_terms)), coef_terms)
 
       row <- data.frame(
-        model      = s$type,
-        vcov       = s$vcov_name,
-        n          = n_s_eff,
-        n_success  = cell_data$n_success,
-        term       = coef_terms,
-        phi_bias   = phi_bias,   # scalar, same for all rows
-        beta_bias  = beta_bias,
-        vcov_A     = vcov_A,
-        vcov_B     = vcov_B,
-        R_bias     = R_bias,
-        sig2S_A    = sig2S_A,
-        sig2S_B    = sig2S_B,
-        cv_Vhat    = cv_Vhat,
-        phi_var_A  = phi_var_A,  # scalar, same for all rows (lm only)
-        phi_cov_A  = phi_cov_A,  # per-term (lm only)
-        row.names  = NULL,
+        model        = s$type,
+        vcov         = s$vcov_name,
+        deriv_method = deriv_method,
+        n            = n_s_eff,
+        n_success    = cell_data$n_success,
+        term         = coef_terms,
+        phi_bias     = phi_bias,
+        beta_bias    = beta_bias,
+        vcov_A       = vcov_A,
+        vcov_B       = vcov_B,
+        R_bias       = R_bias,
+        sig2S_A      = sig2S_A,
+        sig2S_B      = sig2S_B,
+        cv_Vhat      = cv_Vhat,
+        phi_var_A    = phi_var_A,
+        phi_var_B    = phi_var_B,
+        phi_cov_A    = phi_cov_A,
+        row.names    = NULL,
         stringsAsFactors = FALSE
       )
       all_metrics[[length(all_metrics) + 1L]] <- row
@@ -1550,9 +1572,9 @@ simCalibrationSim <- function(
   }
 
   summary_df <- do.call(rbind, all_metrics)
-  saveRDS(summary_df, file.path(output.dir, "calibration_summary.rds"))
-  saveRDS(true_vals,  file.path(output.dir, "calibration_truevals.rds"))
-  message("Simulation complete. Results saved to: ", output.dir)
+  saveRDS(summary_df, file.path(output.dir, paste0("calibration_summary_",  deriv_method, ".rds")))
+  saveRDS(true_vals,  file.path(output.dir, paste0("calibration_truevals_", deriv_method, ".rds")))
+  message("Simulation complete (deriv_method = '", deriv_method, "'). Results saved to: ", output.dir)
   invisible(summary_df)
 }
 
@@ -1578,20 +1600,22 @@ simCalibrationSim <- function(
 #' @importFrom graphics plot lines points abline legend par axis plot.new layout
 #' @export
 simCalibrationFigures <- function(
-    output.dir  = "resiCalibrationSim",
-    figures.dir = NULL,
-    alpha       = 0.05
+    output.dir   = "resiCalibrationSim",
+    figures.dir  = NULL,
+    alpha        = 0.05,
+    deriv_method = c("corrected", "original")
 ) {
+  deriv_method <- match.arg(deriv_method)
   if (is.null(figures.dir))
-    figures.dir <- file.path(output.dir, "figures")
+    figures.dir <- file.path(output.dir, "figures", deriv_method)
   dir.create(figures.dir, recursive = TRUE, showWarnings = FALSE)
 
-  summary_path  <- file.path(output.dir, "calibration_summary.rds")
-  truevals_path <- file.path(output.dir, "calibration_truevals.rds")
+  summary_path  <- file.path(output.dir, paste0("calibration_summary_",  deriv_method, ".rds"))
+  truevals_path <- file.path(output.dir, paste0("calibration_truevals_", deriv_method, ".rds"))
   if (!file.exists(summary_path))
-    stop("'", summary_path, "' not found. Run simCalibrationSim() first.")
+    stop("'", summary_path, "' not found. Run simCalibrationSim(deriv_method='", deriv_method, "') first.")
   if (!file.exists(truevals_path))
-    stop("'", truevals_path, "' not found. Run simCalibrationSim() first.")
+    stop("'", truevals_path, "' not found. Run simCalibrationSim(deriv_method='", deriv_method, "') first.")
 
   summary_df <- readRDS(summary_path)
   true_vals  <- readRDS(truevals_path)
@@ -1711,7 +1735,10 @@ simCalibrationFigures <- function(
       graphics::points(d$n, d$vcov_A, col = term_cols[[tm]], pch = 16L, cex = 0.7)
       graphics::points(d$n, d$vcov_B, col = term_cols[[tm]], pch = 1L,  cex = 0.7)
     }
-    # Phi variance (lm only): thick black solid; phi-beta covariances: colored dotted
+    # Phi variance (lm only): thick black solid (A) and dashed (B) squares.
+    # The phi-beta cross-covariance ratios are removed: the true covariance
+    # Cov(phi-hat, beta-hat_k) is proportional to E[e^3 x_k] which is near zero
+    # under symmetric errors, making ratio-based calibration checks unstable.
     if (is_lm && "phi_var_A" %in% names(sub)) {
       d1 <- sub[sub$term == coef_terms[1L], ]
       d1 <- d1[order(d1$n), ]
@@ -1719,15 +1746,9 @@ simCalibrationFigures <- function(
         graphics::lines(d1$n,  d1$phi_var_A, col = "#000000", lwd = 2L, lty = 1L)
         graphics::points(d1$n, d1$phi_var_A, col = "#000000", pch = 15L, cex = 0.8)
       }
-      if ("phi_cov_A" %in% names(sub)) {
-        for (tm in coef_terms) {
-          d <- sub[sub$term == tm, ]
-          d <- d[order(d$n), ]
-          if (any(is.finite(d$phi_cov_A))) {
-            graphics::lines(d$n,  d$phi_cov_A, col = term_cols[[tm]], lwd = 1.5, lty = 3L)
-            graphics::points(d$n, d$phi_cov_A, col = term_cols[[tm]], pch = 2L,  cex = 0.7)
-          }
-        }
+      if ("phi_var_B" %in% names(sub) && any(is.finite(d1$phi_var_B))) {
+        graphics::lines(d1$n,  d1$phi_var_B, col = "#000000", lwd = 2L, lty = 2L)
+        graphics::points(d1$n, d1$phi_var_B, col = "#000000", pch = 0L,  cex = 0.8)
       }
     }
 
@@ -1789,11 +1810,10 @@ simCalibrationFigures <- function(
     # --- Panel 5: Legend ---
     short_terms <- .abbrev(coef_terms)
     phi_leg <- if (is_lm) list(
-      legend = c(short_terms, "phi (sigma^2)", "phi var (A)", "phi-beta cov (A)"),
-      col    = c(unname(term_cols[coef_terms]), "#000000", "#000000",
-                 unname(term_cols[coef_terms[1L]])),
-      pch    = c(rep(16L, n_terms), 17L, 15L, 2L),
-      lty    = c(rep(1L, n_terms), 3L, 1L, 3L)
+      legend = c(short_terms, "phi (sigma^2)", "phi var (A)", "phi var (B)"),
+      col    = c(unname(term_cols[coef_terms]), "#000000", "#000000", "#000000"),
+      pch    = c(rep(16L, n_terms), 17L, 15L, 0L),
+      lty    = c(rep(1L, n_terms), 3L, 1L, 2L)
     ) else list(
       legend = short_terms,
       col    = unname(term_cols[coef_terms]),
@@ -1819,7 +1839,7 @@ simCalibrationFigures <- function(
     graphics::legend("right",
                      legend = c("Analytical estimator (A)",
                                 "Empirical variance (B)",
-                                "Empirical / Th1 formula (C)  |  phi-beta cov (A)"),
+                                "Empirical / Th1 formula (C)"),
                      col    = "gray30",
                      lty    = c(1L, 2L, 3L),
                      pch    = c(16L, 1L, 2L),
