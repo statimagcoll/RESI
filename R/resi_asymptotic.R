@@ -160,17 +160,19 @@
       B_beta  <- B_full[2:m, 2:m, drop = FALSE]   # p x p beta-beta block of B
 
       dB_phi_v2 <- rbind(
-        cbind((phi^2 - e4mean) / phi^5,
-              -(3 / (2 * phi^4)) * t(e3_X_w)),
-        cbind(-(3 / (2 * phi^4)) * e3_X_w,
-              -2 / phi * B_beta)
+        cbind((2 * phi^2 - e4mean) /2 /phi^5,
+              -(3 / (4 * phi^4)) * t(e3_X_w)),
+        cbind(-(3 / (4 * phi^4)) * e3_X_w,
+              -1/ phi * B_beta)
       )
       dB_dtheta[, 1] <- as.vector(dB_phi_v2)
 
       # dB/dbeta_l columns (l = 1,...,p; column index 1+l in dB_dtheta)
-      e2_m_phi_e <- (e^2 - phi) * e                                  # n-vector
-      v_3e2      <- if (is_const) 3 * e^2 - phi                      # no HC weight for const
-                    else sqrtw * (3 * e^2 - phi)                      # HC-weighted
+      # e2_m_phi_e <- (e^2 - phi) * e  
+      e2_m_phi_e <- e^3
+      # had a minus phi, but that is pre expectation                                # n-vector
+      v_3e2      <- if (is_const) 3 * e^2                     # no HC weight for const
+                    else sqrtw * (3 * e^2)                      # HC-weighted
       # d_phi_phi_betas[l] = dB_{phi,phi} / d_beta_l
       d_phi_phi_betas  <- -colMeans(e2_m_phi_e * X) / phi^4          # p-vector
       # dB_phi_beta_beta[j,l] = dB_{phi,beta_j} / d_beta_l
