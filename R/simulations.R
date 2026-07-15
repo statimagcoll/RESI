@@ -1340,6 +1340,7 @@ simCalibrationSim <- function(
     # estimator to the full-dataset sandwich, consistent with vcov_diag_true).
     # For GLM there is no phi: set to NA.
     precomp_type_tv  <- if (s$vcov_name == "robust") "HC3" else "const"
+    precomp_tv       <- NULL   # initialise; assigned below for lm only
     vcov_phi_phi_true  <- NA_real_
     vcov_phi_beta_true <- setNames(rep(NA_real_, length(coef_terms_true)),
                                    coef_terms_true)
@@ -1355,6 +1356,12 @@ simCalibrationSim <- function(
         vcov_phi_beta_true <- precomp_tv$cov_theta[1L, 1L + beta_pos_tv]
         names(vcov_phi_beta_true) <- coef_terms_true
       }
+    } else {
+      # GLM: precomp_tv needed for vcov_full_true_mat (beta-beta block)
+      precomp_tv <- tryCatch(
+        .resi_precompute(full_mod, type = precomp_type_tv),
+        error = function(e) NULL
+      )
     }
 
     # Chain decomposition of Sigma_R at true-value estimates (HC0 sandwich).
