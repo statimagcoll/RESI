@@ -113,7 +113,10 @@
     XtX_n    <- crossprod(X) / n
     XtX_n_hc <- if (is_const) XtX_n else crossprod(X * sqrtw) / n
 
-    # dA/d_phi only; all dA/d_beta_j = 0 for homoscedastic lm (V=1)
+    # dA/d_phi: phi column shared base (same starting point for v1 and v2).
+    # The (phi,phi) element: population approx gives -1/phi^3 (from A_pp=1/(2phi^2));
+    # sample version gives (phi - 3*mean(e^2))/phi^4, which is corrected in v2 below.
+    # The (beta,beta) block -XtX_n/phi^2 is exact for both (X'X/phi doesn't depend on phi via e).
     dA_phi <- rbind(
       cbind(-1 / phi^3,     matrix(0, 1, p)),
       cbind(matrix(0, p, 1), -XtX_n / phi^2)
@@ -160,10 +163,10 @@
       B_beta  <- B_full[2:m, 2:m, drop = FALSE]   # p x p beta-beta block of B
 
       dB_phi_v2 <- rbind(
-        cbind((2 * phi^2 - e4mean) /2 /phi^5,
-              -(3 / (4 * phi^4)) * t(e3_X_w)),
-        cbind(-(3 / (4 * phi^4)) * e3_X_w,
-              -1/ phi * B_beta)
+        cbind((phi^2 - e4mean) /phi^5,
+              -(3 / (2 * phi^4)) * t(e3_X_w)),
+        cbind(-(3 / (2 * phi^4)) * e3_X_w,
+              -2/ phi * B_beta)
       )
       dB_dtheta[, 1] <- as.vector(dB_phi_v2)
 
@@ -171,20 +174,49 @@
       # e2_m_phi_e <- (e^2 - phi) * e  
       e2_m_phi_e <- e^3
       # had a minus phi, but that is pre expectation                                # n-vector
-      v_3e2      <- if (is_const) 3 * e^2                     # no HC weight for const
-                    else sqrtw * (3 * e^2)                      # HC-weighted
+      v_3e2      <- if (is_const) 3 * e^2  - phi                    # no HC weight for const
+                    else sqrtw * (3 * e^2 - phi)                      # HC-weighted
       # d_phi_phi_betas[l] = dB_{phi,phi} / d_beta_l
       d_phi_phi_betas  <- -colMeans(e2_m_phi_e * X) / phi^4          # p-vector
       # dB_phi_beta_beta[j,l] = dB_{phi,beta_j} / d_beta_l
       dB_phi_beta_beta <- -crossprod(X, v_3e2 * X) / (2 * n * phi^3) # p x p
+
+      # Precompute HC squared weights for the beta-beta block
+      # dB_{beta_j,beta_k}/d_beta_l = -2/(n*phi^2) * sum_i tau_i e_i x_il x_ij x_ik
+      # = -2/phi^2 * [X' diag(tau_i e_i x_il) X]_{jk} / n
+      tau_eff <- if (is_const) e else sqrtw^2 * e   # tau_i * e_i (n-vector)
 
       for (l in seq_len(p)) {
         dB_l <- matrix(0, m, m)
         dB_l[1L, 1L]    <- d_phi_phi_betas[l]
         dB_l[1L, 2:m]   <- dB_phi_beta_beta[, l]
         dB_l[2:m, 1L]   <- dB_phi_beta_beta[, l]   # B is symmetric
-        # beta-beta block: zero (E[e_i|X_i] = 0)
+        # beta-beta block: -2/(n*phi^2) * X' diag(tau_i e_i x_il) X
+        # Zero in expectation (E[e_i|X_i]=0) but nonzero in the sample.
+        v_l             <- tau_eff * X[, l]         # n-vector: tau_i e_i x_il
+        dB_l[2:m, 2:m] <- -2 / phi^2 * crossprod(X, v_l * X) / n
         dB_dtheta[, 1L + l] <- as.vector(dB_l)
+      }
+
+      # Sample-level dA/dphi phi-phi element:
+      # d(A_pp)/dphi = (phi - 3*mean(e^2))/phi^4  [exact sample derivative]
+      # The population approx A_pp = 1/(2phi^2) gives d/dphi = -1/phi^3;
+      # at E[e^2]=phi these differ by factor 2.
+      e2mean <- mean(e^2)
+      dA_dtheta[1L, 1L] <- (phi - 3 * e2mean) / phi^4
+
+      # Sample-level dA/d_beta_l: phi-beta cross block is -(X'X/n)_{jl}/phi^2.
+      # d(A_pb_j)/d_beta_l = d/d_beta_l [mean(e*x_j/phi^2)] = -mean(x_j*x_l)/phi^2
+      #                     = -(X'X/n)_{jl}/phi^2  (nonzero even at MLE)
+      # d(A_pp)/d_beta_l   = -2*mean(e*x_l)/phi^3  (= 0 exactly at OLS MLE)
+      # d(A_bb_jk)/d_beta_l = 0  (X'X/n/phi doesn't depend on beta)
+      e_X_means <- colMeans(e * X)  # mean(e*x_l) -- p-vector, 0 exactly at OLS MLE
+      for (l in seq_len(p)) {
+        dA_l <- matrix(0, m, m)
+        dA_l[1L, 1L]  <- -2 * e_X_means[l] / phi^3  # 0 at OLS MLE
+        dA_l[1L, 2:m] <- -XtX_n[, l] / phi^2        # phi-beta cross
+        dA_l[2:m, 1L] <- -XtX_n[l, ] / phi^2        # symmetric
+        dA_dtheta[, 1L + l] <- as.vector(dA_l)
       }
     }
 
