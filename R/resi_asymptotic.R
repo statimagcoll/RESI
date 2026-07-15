@@ -372,6 +372,9 @@
     R_beta     = R_beta,
     Stilde     = Stilde,
     dR_dtheta  = dR_dtheta,
+    dR_direct  = direct,      # m1 x m: direct (Phat*L) contribution
+    dR_Achain  = Achain,      # m1 x m: A-chain contribution
+    dR_Bchain  = Bchain,      # m1 x m: B-chain contribution
     Sigma_R    = Sigma_R,
     phi_tilde  = phi_tilde
   )

@@ -1275,8 +1275,10 @@ simCalibrationSim <- function(
     phi_true  <- if (s$type == "lm") summary(full_mod)$sigma^2 else NULL
     beta_true <- stats::coef(full_mod)
 
-    # n_full * vcov_true (diagonal, all terms incl. intercept)
-    vcov_diag_true <- n_full * diag(s$vcovfunc(full_mod))
+    # n_full * vcov_true: full covariance matrix (all non-aliased coefficients)
+    vcov_full_true_raw <- n_full * s$vcovfunc(full_mod)
+    vcov_diag_true     <- diag(vcov_full_true_raw)
+    # Submatrix for non-intercept terms (computed later once coef_terms_true is known)
 
     # R_true using the same population definition as insurancePlasmodeSim:
     #   - robust: HC0 (no hat-value correction)
@@ -1355,15 +1357,78 @@ simCalibrationSim <- function(
       }
     }
 
+    # Chain decomposition of Sigma_R at true-value estimates (HC0 sandwich).
+    # Jacobian pieces: J = J_direct + J_Achain + J_Bchain  (each 1 x m for m1=1).
+    # Analytic: sig2S_true_X_k = J_X %*% Sig_HC0 %*% t(J_X)  for X in {dir,Ach,Bch}.
+    # MC analog: n_s * var(J_X_TV %*% (theta_hat - theta_true))  per replicate.
+    # HC0 is used for consistency with sigma2S_true (also HC0).
+    precomp_hc0 <- tryCatch(
+      .resi_precompute(full_mod, type = "HC0", deriv_method = deriv_method),
+      error = function(e) NULL
+    )
+    na_terms <- setNames(rep(NA_real_, length(coef_terms_true)), coef_terms_true)
+    J_dir_list    <- list()
+    J_Achain_list <- list()
+    J_Bchain_list <- list()
+    sig2S_true_dir    <- na_terms
+    sig2S_true_Achain <- na_terms
+    sig2S_true_Bchain <- na_terms
+    theta_true_full   <- NULL
+    if (!is.null(precomp_hc0)) {
+      Sig_hc0 <- precomp_hc0$cov_theta   # m x m Sigma_theta at HC0
+      theta_true_full <- precomp_hc0$theta_hat  # (phi, beta_1,...,beta_p)
+      for (tm in coef_terms_true) {
+        ct_tm <- tryCatch(.resi_contrast(precomp_hc0,
+                                         .get_L_coef(full_mod, tm)),
+                          error = function(e) NULL)
+        if (!is.null(ct_tm)) {
+          J_dir_list[[tm]]    <- ct_tm$dR_direct
+          J_Achain_list[[tm]] <- ct_tm$dR_Achain
+          J_Bchain_list[[tm]] <- ct_tm$dR_Bchain
+          sig2S_true_dir[tm]    <- as.numeric(ct_tm$dR_direct  %*% Sig_hc0 %*% t(ct_tm$dR_direct))
+          sig2S_true_Achain[tm] <- as.numeric(ct_tm$dR_Achain %*% Sig_hc0 %*% t(ct_tm$dR_Achain))
+          sig2S_true_Bchain[tm] <- as.numeric(ct_tm$dR_Bchain %*% Sig_hc0 %*% t(ct_tm$dR_Bchain))
+        }
+      }
+    }
+
     list(deriv_method_used   = deriv_method,
          phi_true            = phi_true,
          beta_true           = beta_true,
          vcov_diag_true      = vcov_diag_true,
+         # vcov_full_true_mat: full analytic Sigma_theta from precomp_tv (HC3 or const).
+         # For lm: (p+1)x(p+1) with phi as first row/col; for glm: pxp.
+         # Row/col names: c("phi", coef_terms_true) for lm, coef_terms_true for glm.
+         vcov_full_true_mat  = if (!is.null(precomp_tv)) {
+           if (s$type == "lm") {
+             m_all  <- precomp_tv$m
+             beta_names_all <- names(coef(full_mod))[!is.na(coef(full_mod))]
+             beta_pos_all   <- match(coef_terms_true, beta_names_all)
+             idx_all <- c(1L, 1L + beta_pos_all)
+             nm_all  <- c("phi", coef_terms_true)
+             mat_all <- precomp_tv$cov_theta[idx_all, idx_all, drop = FALSE]
+             rownames(mat_all) <- colnames(mat_all) <- nm_all
+             mat_all
+           } else {
+             beta_names_all <- names(coef(full_mod))[!is.na(coef(full_mod))]
+             beta_pos_all   <- match(coef_terms_true, beta_names_all)
+             mat_all <- precomp_tv$cov_theta[beta_pos_all, beta_pos_all, drop = FALSE]
+             rownames(mat_all) <- colnames(mat_all) <- coef_terms_true
+             mat_all
+           }
+         } else NULL,
          vcov_phi_phi_true   = vcov_phi_phi_true,
          vcov_phi_beta_true  = vcov_phi_beta_true,
          R_true              = R_true,
          sigma2S_true        = sigma2S_true,
          sigma2S_true_Th1    = sigma2S_true_Th1,
+         J_dir_list          = J_dir_list,
+         J_Achain_list       = J_Achain_list,
+         J_Bchain_list       = J_Bchain_list,
+         sig2S_true_dir      = sig2S_true_dir,
+         sig2S_true_Achain   = sig2S_true_Achain,
+         sig2S_true_Bchain   = sig2S_true_Bchain,
+         theta_true_full     = theta_true_full,
          coef_terms          = coef_terms_true)
   })
   names(true_vals) <- sapply(model_settings, `[[`, "label")
@@ -1456,13 +1521,14 @@ simCalibrationSim <- function(
               }
             }
 
-            list(phi_hat       = phi_hat,
-                 beta_hat      = beta_hat,
-                 vcov_hat_diag = vcov_hat_diag,
-                 R_hat         = R_hat,
-                 sigma2S_hat   = sigma2S_hat,
-                 vcov_phi_phi  = vcov_phi_phi,
-                 vcov_phi_beta = vcov_phi_beta)
+            list(phi_hat        = phi_hat,
+                 beta_hat       = beta_hat,
+                 theta_hat_full = NULL,     # removed: Jacobian-projection MC not used
+                 vcov_hat_diag  = vcov_hat_diag,
+                 R_hat          = R_hat,
+                 sigma2S_hat    = sigma2S_hat,
+                 vcov_phi_phi   = vcov_phi_phi,
+                 vcov_phi_beta  = vcov_phi_beta)
           }, error = function(e) NULL)
         }, mc.cores = mc.cores.reps)
 
@@ -1546,6 +1612,17 @@ simCalibrationSim <- function(
         colMeans(cell_data$phi_cov_mat, na.rm = TRUE) / tv$vcov_phi_beta_true
       else setNames(rep(NA_real_, length(coef_terms)), coef_terms)
 
+      # (12) Raw MC variances of the estimator components (no Jacobian involved).
+      #   var_R_MC_k   = n_s * var(R_hat_k)     -- actual MC variance of RESI
+      #   var_b_MC_k   = n_s * var(beta_hat_k)  -- MC variance of numerator
+      #   var_se_MC_k  = n_s * var(vcov_mat_k)  -- MC variance of scaled sandwich vcov
+      # Compare var_R_MC to sigma2S_true (analytic total) to get the total ratio.
+      # Compare var_b_MC to vcov_diag_true to get the direct-channel ratio (= vcov_B).
+      # If sig2S_B >> vcov_B, the A/B chain or nonlinear terms are responsible.
+      var_R_MC <- n_s_eff * apply(cell_data$R_mat,    2L, stats::var, na.rm = TRUE)
+      var_b_MC <- n_s_eff * apply(cell_data$beta_mat, 2L, stats::var, na.rm = TRUE)
+      var_se_MC <- n_s_eff * apply(cell_data$vcov_mat, 2L, stats::var, na.rm = TRUE)
+
       row <- data.frame(
         model        = s$type,
         vcov         = s$vcov_name,
@@ -1564,6 +1641,9 @@ simCalibrationSim <- function(
         phi_var_A    = phi_var_A,
         phi_var_B    = phi_var_B,
         phi_cov_A    = phi_cov_A,
+        var_R_MC     = var_R_MC,
+        var_b_MC     = var_b_MC,
+        var_se_MC    = var_se_MC,
         row.names    = NULL,
         stringsAsFactors = FALSE
       )
@@ -1708,47 +1788,91 @@ simCalibrationFigures <- function(
       graphics::points(d$n, d$phi_bias, col = "#000000", pch = 17L, cex = 0.8)
     }
 
-    # --- Panel 2: vcov ratios (A solid, B dashed) ---
-    all_vcov <- unlist(lapply(coef_terms, function(tm) {
-      d <- sub[sub$term == tm, ]
-      c(d$vcov_A, d$vcov_B)
-    }))
-    ylim2 <- range(c(all_vcov, 1), na.rm = TRUE)
+    # --- Panel 2: normalized-bias covariance calibration ---
+    # For each n, load raw cell, build full theta matrix (phi + beta for lm),
+    # and compute the normalized bias of every covariance element:
+    #   diff[j,k] = (Sigma_analytic[j,k] - n_s*cov_MC[j,k]) /
+    #               sqrt(n_s*var_MC[j,j] * n_s*var_MC[k,k])
+    # = (Sigma_A[j,k] - Sigma_MC[j,k]) / sqrt(Sigma_MC[j,j] * Sigma_MC[k,k])
+    # Diagonal: diff[k,k] = Sigma_A[k,k]/Sigma_MC[k,k] - 1 = 1/vcov_B_k - 1
+    # Off-diagonal: normalized difference in covariance (target 0)
+    # Includes phi row/col for lm; colored lines = diagonal, gray = off-diagonal.
+    raw_dir_p   <- file.path(output.dir, "raw", deriv_method)
+    Sig_A_mat   <- tv$vcov_full_true_mat    # analytic Sigma_theta (includes phi if lm)
+    lm_has_phi  <- is_lm && !is.null(Sig_A_mat) && "phi" %in% rownames(Sig_A_mat)
+    all_labels  <- if (!is.null(Sig_A_mat)) rownames(Sig_A_mat) else coef_terms
+    n_all       <- length(all_labels)
+
+    diag_diff_list <- vector("list", length(n_vals_plot))
+    off_diff_list  <- vector("list", length(n_vals_plot))
+    for (i_n in seq_along(n_vals_plot)) {
+      nv <- n_vals_plot[i_n]
+      rp <- file.path(raw_dir_p, paste0(lbl, "_n", nv, ".rds"))
+      if (!file.exists(rp)) next
+      cd <- readRDS(rp)
+      if (is.null(cd$beta_mat) || nrow(cd$beta_mat) < 3L) next
+      n_s_p <- cd$n
+      bm    <- cd$beta_mat
+      if (!all(coef_terms %in% colnames(bm))) next
+      bm <- bm[, coef_terms, drop = FALSE]
+      # Full theta matrix: prepend phi for lm
+      theta_mc <- if (lm_has_phi && !is.null(cd$phi_vec))
+        cbind(phi = cd$phi_vec, bm) else bm
+      if (is.null(Sig_A_mat)) next
+      Sig_MC <- n_s_p * stats::cov(theta_mc, use = "pairwise.complete.obs")
+      # Normalized bias: (Sig_A - Sig_MC) / sqrt(Sig_MC_jj * Sig_MC_kk)
+      sd_MC   <- sqrt(pmax(diag(Sig_MC), .Machine$double.eps))
+      Sig_MC_nm <- Sig_A_mat  # same dimension; use A for name alignment
+      if (nrow(Sig_MC) == nrow(Sig_A_mat)) {
+        diff_mat <- (Sig_A_mat - Sig_MC) /
+          outer(sd_MC, sd_MC)  # element-wise divide by product of MC SDs
+      } else {
+        diff_mat <- matrix(NA_real_, nrow(Sig_A_mat), ncol(Sig_A_mat))
+      }
+      rownames(diff_mat) <- colnames(diff_mat) <- all_labels
+      diag_diff_list[[i_n]] <- diag(diff_mat)
+      off_diff_list[[i_n]]  <- diff_mat[upper.tri(diff_mat)]
+    }
+
+    diag_diff_mat <- do.call(rbind, lapply(diag_diff_list, function(x)
+      if (is.null(x)) rep(NA_real_, n_all) else x[all_labels]))
+    off_diff_vals <- unlist(off_diff_list)
+    all_diff_vals <- c(as.vector(diag_diff_mat), off_diff_vals)
+    ylim2 <- range(c(all_diff_vals, 0), na.rm = TRUE)
     ylim2 <- ylim2 + diff(ylim2) * c(-0.06, 0.06)
-    if (is_glm) ylim2 <- c(0.8, 3)   # clip glm ratio panel
+    if (!is.finite(ylim2[1L])) ylim2 <- c(-1, 2)
+    if (is_glm) ylim2[2L] <- min(ylim2[2L], 3)
 
     graphics::par(mar = c(3.2, 3.5, 2.2, 0.5), mgp = c(2.0, 0.5, 0))
     graphics::plot(NULL, xlim = range(n_vals_plot), ylim = ylim2,
                    xlab = "n",
-                   ylab = "Ratio  (target = 1)",
-                   main = paste0(lbl, ": vcov calibration"),
+                   ylab = expression((Sigma[A] - Sigma[MC]) / sqrt(Sigma[MC,jj] * Sigma[MC,kk])),
+                   main = paste0(lbl, ": vcov norm. bias  (target = 0)"),
                    log = "x", xaxt = "n", bty = "l")
     graphics::axis(1L, at = n_vals_plot, labels = n_vals_plot, las = 2L,
                    mgp = c(1.7, 0.35, 0))
-    graphics::abline(h = 1, lty = 2L, col = "gray40")
+    graphics::abline(h = 0, lty = 2L, col = "gray40")
 
-    for (tm in coef_terms) {
-      d <- sub[sub$term == tm, ]
-      d <- d[order(d$n), ]
-      graphics::lines(d$n, d$vcov_A, col = term_cols[[tm]], lwd = 1.5, lty = 1L)
-      graphics::lines(d$n, d$vcov_B, col = term_cols[[tm]], lwd = 1.5, lty = 2L)
-      graphics::points(d$n, d$vcov_A, col = term_cols[[tm]], pch = 16L, cex = 0.7)
-      graphics::points(d$n, d$vcov_B, col = term_cols[[tm]], pch = 1L,  cex = 0.7)
+    # Off-diagonal: thin gray
+    n_pairs <- if (n_all > 1L) ncol(utils::combn(n_all, 2L)) else 0L
+    for (pair in seq_len(n_pairs)) {
+      vals <- vapply(off_diff_list, function(x)
+        if (is.null(x) || length(x) < pair) NA_real_ else x[pair], numeric(1L))
+      if (any(is.finite(vals)))
+        graphics::lines(n_vals_plot, vals, col = "gray70", lwd = 0.8)
     }
-    # Phi variance (lm only): thick black solid (A) and dashed (B) squares.
-    # The phi-beta cross-covariance ratios are removed: the true covariance
-    # Cov(phi-hat, beta-hat_k) is proportional to E[e^3 x_k] which is near zero
-    # under symmetric errors, making ratio-based calibration checks unstable.
-    if (is_lm && "phi_var_A" %in% names(sub)) {
-      d1 <- sub[sub$term == coef_terms[1L], ]
-      d1 <- d1[order(d1$n), ]
-      if (any(is.finite(d1$phi_var_A))) {
-        graphics::lines(d1$n,  d1$phi_var_A, col = "#000000", lwd = 2L, lty = 1L)
-        graphics::points(d1$n, d1$phi_var_A, col = "#000000", pch = 15L, cex = 0.8)
-      }
-      if ("phi_var_B" %in% names(sub) && any(is.finite(d1$phi_var_B))) {
-        graphics::lines(d1$n,  d1$phi_var_B, col = "#000000", lwd = 2L, lty = 2L)
-        graphics::points(d1$n, d1$phi_var_B, col = "#000000", pch = 0L,  cex = 0.8)
+
+    # Diagonal: colored per term (beta), black for phi
+    for (k_idx in seq_len(n_all)) {
+      lbl_k <- all_labels[k_idx]
+      vals  <- diag_diff_mat[, k_idx]
+      if (!any(is.finite(vals))) next
+      if (lbl_k == "phi") {
+        graphics::lines(n_vals_plot,  vals, col = "#000000", lwd = 2L)
+        graphics::points(n_vals_plot, vals, col = "#000000", pch = 15L, cex = 0.8)
+      } else if (lbl_k %in% names(term_cols)) {
+        graphics::lines(n_vals_plot,  vals, col = term_cols[[lbl_k]], lwd = 1.5)
+        graphics::points(n_vals_plot, vals, col = term_cols[[lbl_k]], pch = 16L, cex = 0.7)
       }
     }
 
@@ -1810,23 +1934,21 @@ simCalibrationFigures <- function(
     # --- Panel 5: Legend ---
     short_terms <- .abbrev(coef_terms)
     phi_leg <- if (is_lm) list(
-      legend = c(short_terms, "phi (sigma^2)", "phi var (A)", "phi var (B)"),
-      col    = c(unname(term_cols[coef_terms]), "#000000", "#000000", "#000000"),
-      pch    = c(rep(16L, n_terms), 17L, 15L, 0L),
-      lty    = c(rep(1L, n_terms), 3L, 1L, 2L)
+      legend = c(short_terms, "phi (sigma^2)"),
+      col    = c(unname(term_cols[coef_terms]), "#000000"),
+      pch    = c(rep(16L, n_terms), 15L),
+      lty    = c(rep(1L, n_terms), 1L)
     ) else list(
       legend = short_terms,
       col    = unname(term_cols[coef_terms]),
       pch    = rep(16L, n_terms),
       lty    = rep(1L, n_terms)
     )
-    # Target ~3 rows; ceiling(n/3) gives the needed number of columns
     leg_ncol <- ceiling(length(phi_leg$legend) / 3L)
 
     graphics::par(mar = c(0.2, 0.5, 0.2, 0.5))
     graphics::plot.new()
 
-    # Two sub-legends: term colors (left) + line type key (right)
     graphics::legend("left",
                      legend = phi_leg$legend,
                      col    = phi_leg$col,
@@ -1837,15 +1959,15 @@ simCalibrationFigures <- function(
                      ncol   = leg_ncol,
                      title  = "Term", title.font = 2L)
     graphics::legend("right",
-                     legend = c("Analytical estimator (A)",
-                                "Empirical variance (B)",
-                                "Empirical / Th1 formula (C)"),
-                     col    = "gray30",
-                     lty    = c(1L, 2L, 3L),
-                     pch    = c(16L, 1L, 2L),
-                     lwd    = 1.5,
+                     legend = c("Diag: vcov_B_k - 1  (variance excess)",
+                                "Off-diag: cor_MC - cor_A  (gray)",
+                                "sigma2S: Empirical / Th1 (C)"),
+                     col    = c("black", "gray70", "gray30"),
+                     lty    = c(1L, 1L, 3L),
+                     pch    = c(16L, NA_integer_, 2L),
+                     lwd    = c(1.5, 0.8, 1.5),
                      bty    = "n", cex = 0.85,
-                     title  = "Variance check", title.font = 2L)
+                     title  = "Line key", title.font = 2L)
 
     grDevices::dev.off()
     message("Saved: ", fig_path)
