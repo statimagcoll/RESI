@@ -1690,7 +1690,7 @@ simCalibrationFigures <- function(
     output.dir   = "resiCalibrationSim",
     figures.dir  = NULL,
     alpha        = 0.05,
-    deriv_method = c("corrected", "original")
+    deriv_method = c("corrected", "original", "population")
 ) {
   deriv_method <- match.arg(deriv_method)
   if (is.null(figures.dir))

@@ -22,7 +22,7 @@
 
 #' @noRd
 .resi_precompute <- function(model, type = "HC3",
-                             deriv_method = c("corrected", "original")) {
+                             deriv_method = c("corrected", "original", "population")) {
 
   deriv_method <- match.arg(deriv_method)
 
@@ -146,7 +146,14 @@
       # dB/dbeta columns: all zero (v1 approximation)
 
     } else {
-      # ---- v2: corrected formulas ----
+      # ---- v2 / population: corrected formulas ----
+      # 'corrected'  : sample-level derivatives for all blocks (exact FD match).
+      # 'population' : same as corrected EXCEPT the beta-beta block of dB/dbeta_l
+      #                is set to zero.  Rationale: under E[e_i|X_i]=0 (no homoscedasticity
+      #                assumed), E[tau_i e_i x_j x_k x_l] = 0, so the population-level
+      #                derivative of B_{beta,beta} w.r.t. beta_l is zero.  The sample
+      #                version is a noisy estimate of 0 that inflates J_chain and causes
+      #                the near-cancellation in V_chain / 2C_cross for spline terms.
       #
       # dB/dphi corrections:
       #   (1,1): (phi^2 - e4mean) / phi^5  [treats residuals as fixed; no normality]
@@ -191,10 +198,15 @@
         dB_l[1L, 1L]    <- d_phi_phi_betas[l]
         dB_l[1L, 2:m]   <- dB_phi_beta_beta[, l]
         dB_l[2:m, 1L]   <- dB_phi_beta_beta[, l]   # B is symmetric
-        # beta-beta block: -2/(n*phi^2) * X' diag(tau_i e_i x_il) X
-        # Zero in expectation (E[e_i|X_i]=0) but nonzero in the sample.
-        v_l             <- tau_eff * X[, l]         # n-vector: tau_i e_i x_il
-        dB_l[2:m, 2:m] <- -2 / phi^2 * crossprod(X, v_l * X) / n
+        # beta-beta block:
+        # 'corrected'  : -2/(n*phi^2) * X' diag(tau_i e_i x_il) X  (sample, exact FD)
+        # 'population' : 0  (E[tau_i e_i x_j x_k x_l]=0 under E[e_i|X_i]=0, no homoscedasticity)
+        if (deriv_method == "population") {
+          # beta-beta block = 0 at population level
+        } else {
+          v_l             <- tau_eff * X[, l]         # n-vector: tau_i e_i x_il
+          dB_l[2:m, 2:m] <- -2 / phi^2 * crossprod(X, v_l * X) / n
+        }
         dB_dtheta[, 1L + l] <- as.vector(dB_l)
       }
 
@@ -915,7 +927,7 @@ resi_pe_asymptotic <- function(model.full,
                                 ci.method    = c("normal", "qf", "cf"),
                                 type         = "HC3",
                                 unbiased     = TRUE,
-                                deriv_method = c("corrected", "original"),
+                                deriv_method = c("corrected", "original", "population"),
                                 Anova.args   = list(),
                                 vcov.args    = list(),
                                 ...) {
