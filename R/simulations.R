@@ -1209,7 +1209,7 @@ simCalibrationSim <- function(
     alpha         = 0.05,
     output.dir    = "resiCalibrationSim",
     fixed.knots   = FALSE,
-    deriv_method  = c("corrected", "original"),
+    deriv_method  = c("corrected", "original", 'population'),
     mc.cores.reps = 1L
 ) {
   deriv_method <- match.arg(deriv_method)
