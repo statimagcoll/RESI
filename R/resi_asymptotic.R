@@ -22,7 +22,7 @@
 
 #' @noRd
 .resi_precompute <- function(model, type = "HC3",
-                             deriv_method = c("corrected", "original", "population")) {
+                             deriv_method = c("corrected", "original", "population", "population2")) {
 
   deriv_method <- match.arg(deriv_method)
 
@@ -195,17 +195,22 @@
 
       for (l in seq_len(p)) {
         dB_l <- matrix(0, m, m)
-        dB_l[1L, 1L]    <- d_phi_phi_betas[l]
-        dB_l[1L, 2:m]   <- dB_phi_beta_beta[, l]
-        dB_l[2:m, 1L]   <- dB_phi_beta_beta[, l]   # B is symmetric
         # beta-beta block:
-        # 'corrected'  : -2/(n*phi^2) * X' diag(tau_i e_i x_il) X  (sample, exact FD)
-        # 'population' : 0  (E[tau_i e_i x_j x_k x_l]=0 under E[e_i|X_i]=0, no homoscedasticity)
-        if (deriv_method == "population") {
-          # beta-beta block = 0 at population level
+        # 'corrected'   : -2/(n*phi^2) * X' diag(tau_i e_i x_il) X  (sample, exact FD)
+        # 'population'  : 0  (E[tau_i e_i x_j x_k x_l]=0 under E[e_i|X_i]=0)
+        # 'population2' : entire dB_l = 0  (all blocks; assumes higher moments of
+        #                 B don't depend on beta, i.e. E[e_i^3 x_jl]=0 etc.)
+        if (deriv_method == "population2") {
+          # entire beta column zeroed: phi-phi, phi-beta, and beta-beta blocks all 0
         } else {
-          v_l             <- tau_eff * X[, l]         # n-vector: tau_i e_i x_il
-          dB_l[2:m, 2:m] <- -2 / phi^2 * crossprod(X, v_l * X) / n
+          dB_l[1L, 1L]  <- d_phi_phi_betas[l]
+          dB_l[1L, 2:m] <- dB_phi_beta_beta[, l]
+          dB_l[2:m, 1L] <- dB_phi_beta_beta[, l]   # B is symmetric
+          if (deriv_method == "corrected") {
+            v_l             <- tau_eff * X[, l]       # n-vector: tau_i e_i x_il
+            dB_l[2:m, 2:m] <- -2 / phi^2 * crossprod(X, v_l * X) / n
+          }
+          # population: beta-beta block left as 0
         }
         dB_dtheta[, 1L + l] <- as.vector(dB_l)
       }
@@ -927,7 +932,7 @@ resi_pe_asymptotic <- function(model.full,
                                 ci.method    = c("normal", "qf", "cf"),
                                 type         = "HC3",
                                 unbiased     = TRUE,
-                                deriv_method = c("corrected", "original", "population"),
+                                deriv_method = c("corrected", "original", "population", "population2"),
                                 Anova.args   = list(),
                                 vcov.args    = list(),
                                 ...) {
