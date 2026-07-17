@@ -22,7 +22,7 @@
 
 #' @noRd
 .resi_precompute <- function(model, type = "HC3",
-                             deriv_method = c("corrected", "original", "population", "population2")) {
+                             deriv_method = c("corrected", "original", "population", "population2", "zeroB", "indep_moment")) {
 
   deriv_method <- match.arg(deriv_method)
 
@@ -146,74 +146,67 @@
       # dB/dbeta columns: all zero (v1 approximation)
 
     } else {
-      # ---- v2 / population: corrected formulas ----
-      # 'corrected'  : sample-level derivatives for all blocks (exact FD match).
-      # 'population' : same as corrected EXCEPT the beta-beta block of dB/dbeta_l
-      #                is set to zero.  Rationale: under E[e_i|X_i]=0 (no homoscedasticity
-      #                assumed), E[tau_i e_i x_j x_k x_l] = 0, so the population-level
-      #                derivative of B_{beta,beta} w.r.t. beta_l is zero.  The sample
-      #                version is a noisy estimate of 0 that inflates J_chain and causes
-      #                the near-cancellation in V_chain / 2C_cross for spline terms.
-      #
-      # dB/dphi corrections:
-      #   (1,1): (phi^2 - e4mean) / phi^5  [treats residuals as fixed; no normality]
-      #   (1,j) phi-beta_j: -3/(2phi^4) * mean(sqrtw_i * e_i^3 * x_ij)  [no factoring]
-      #   (j,k) beta-beta:  -2/phi * B_beta_beta  [exact: -2 * B_{bb} / phi]
-      #
-      # dB/dbeta_l corrections (new; previously all zero):
-      #   (1,1):   -mean((e^2-phi)*e*x_l) / phi^4         [nonzero under cond. skewness]
-      #   (1,1+j): -mean(sqrtw*(3e^2-phi)*x_j*x_l)/(2phi^3)  [nonzero: E ~ -[X'WX]_{jl}/phi^2]
-      #   (j,k):   0  [E[e_i|X_i]=0]
+      # ---- v2+: corrected formulas ----
+      # 'corrected'    : sample-level derivatives for all blocks (exact FD match).
+      # 'population'   : beta-beta block of dB/dbeta_l = 0.
+      # 'population2'  : all beta columns of dB = 0.
+      # 'zeroB'        : dB_dtheta = 0 entirely (only A-chain contributes).
+      #                  Diagnostic: removes B-chain; unrealistic since B depends on phi.
+      # 'indep_moment' : population + independence assumption E[e^3 x_j] = E[e^3]*E[x_j]
+      #                  applied to the phi-beta cross block of dB/dphi.
 
-      # Shared quantities for dB/dphi
-      e3_X_w <- if (is_const) colMeans(e^3 * X) else colMeans(sqrtw * e^3 * X)
-      B_beta  <- B_full[2:m, 2:m, drop = FALSE]   # p x p beta-beta block of B
-
-      dB_phi_v2 <- rbind(
-        cbind((phi^2 - e4mean) /phi^5,
-              -(3 / (2 * phi^4)) * t(e3_X_w)),
-        cbind(-(3 / (2 * phi^4)) * e3_X_w,
-              -2/ phi * B_beta)
-      )
-      dB_dtheta[, 1] <- as.vector(dB_phi_v2)
-
-      # dB/dbeta_l columns (l = 1,...,p; column index 1+l in dB_dtheta)
-      # e2_m_phi_e <- (e^2 - phi) * e  
-      e2_m_phi_e <- e^3
-      # had a minus phi, but that is pre expectation                                # n-vector
-      v_3e2      <- if (is_const) 3 * e^2  - phi                    # no HC weight for const
-                    else sqrtw * (3 * e^2 - phi)                      # HC-weighted
-      # d_phi_phi_betas[l] = dB_{phi,phi} / d_beta_l
-      d_phi_phi_betas  <- -colMeans(e2_m_phi_e * X) / phi^4          # p-vector
-      # dB_phi_beta_beta[j,l] = dB_{phi,beta_j} / d_beta_l
-      dB_phi_beta_beta <- -crossprod(X, v_3e2 * X) / (2 * n * phi^3) # p x p
-
-      # Precompute HC squared weights for the beta-beta block
-      # dB_{beta_j,beta_k}/d_beta_l = -2/(n*phi^2) * sum_i tau_i e_i x_il x_ij x_ik
-      # = -2/phi^2 * [X' diag(tau_i e_i x_il) X]_{jk} / n
-      tau_eff <- if (is_const) e else sqrtw^2 * e   # tau_i * e_i (n-vector)
-
-      for (l in seq_len(p)) {
-        dB_l <- matrix(0, m, m)
-        # beta-beta block:
-        # 'corrected'   : -2/(n*phi^2) * X' diag(tau_i e_i x_il) X  (sample, exact FD)
-        # 'population'  : 0  (E[tau_i e_i x_j x_k x_l]=0 under E[e_i|X_i]=0)
-        # 'population2' : entire dB_l = 0  (all blocks; assumes higher moments of
-        #                 B don't depend on beta, i.e. E[e_i^3 x_jl]=0 etc.)
-        if (deriv_method == "population2") {
-          # entire beta column zeroed: phi-phi, phi-beta, and beta-beta blocks all 0
+      if (deriv_method != "zeroB") {
+        # ---- dB/dphi (phi column of dB_dtheta) ----
+        # phi-beta cross block: factored under indep_moment, sample-level otherwise
+        e3_X_w <- if (deriv_method == "indep_moment") {
+          if (is_const) mean(e^3) * colMeans(X)
+          else          mean(sqrtw * e^3) * colMeans(X)
         } else {
-          dB_l[1L, 1L]  <- d_phi_phi_betas[l]
-          dB_l[1L, 2:m] <- dB_phi_beta_beta[, l]
-          dB_l[2:m, 1L] <- dB_phi_beta_beta[, l]   # B is symmetric
-          if (deriv_method == "corrected") {
-            v_l             <- tau_eff * X[, l]       # n-vector: tau_i e_i x_il
-            dB_l[2:m, 2:m] <- -2 / phi^2 * crossprod(X, v_l * X) / n
-          }
-          # population: beta-beta block left as 0
+          if (is_const) colMeans(e^3 * X)
+          else          colMeans(sqrtw * e^3 * X)
         }
-        dB_dtheta[, 1L + l] <- as.vector(dB_l)
+        B_beta <- B_full[2:m, 2:m, drop = FALSE]   # p x p beta-beta block of B
+
+        dB_phi_v2 <- rbind(
+          cbind((phi^2 - e4mean) / phi^5,
+                -(3 / (2 * phi^4)) * t(e3_X_w)),
+          cbind(-(3 / (2 * phi^4)) * e3_X_w,
+                -2 / phi * B_beta)
+        )
+        dB_dtheta[, 1] <- as.vector(dB_phi_v2)
+
+        # ---- dB/dbeta_l columns (l = 1,...,p; column index 1+l) ----
+        # e2_m_phi_e <- (e^2 - phi) * e  
+        e2_m_phi_e <- e^3
+        # had a minus phi, but that is pre expectation                                # n-vector
+        v_3e2      <- if (is_const) 3 * e^2  - phi                    # no HC weight for const
+                      else sqrtw * (3 * e^2 - phi)                      # HC-weighted
+        # d_phi_phi_betas[l] = dB_{phi,phi} / d_beta_l
+        d_phi_phi_betas  <- -colMeans(e2_m_phi_e * X) / phi^4          # p-vector
+        # dB_phi_beta_beta[j,l] = dB_{phi,beta_j} / d_beta_l
+        dB_phi_beta_beta <- -crossprod(X, v_3e2 * X) / (2 * n * phi^3) # p x p
+
+        # Precompute HC squared weights for the beta-beta block
+        tau_eff <- if (is_const) e else sqrtw^2 * e   # tau_i * e_i (n-vector)
+
+        for (l in seq_len(p)) {
+          dB_l <- matrix(0, m, m)
+          if (deriv_method == "population2") {
+            # entire beta column zeroed: phi-phi, phi-beta, and beta-beta blocks all 0
+          } else {
+            dB_l[1L, 1L]  <- d_phi_phi_betas[l]
+            dB_l[1L, 2:m] <- dB_phi_beta_beta[, l]
+            dB_l[2:m, 1L] <- dB_phi_beta_beta[, l]   # B is symmetric
+            if (deriv_method == "corrected") {
+              v_l             <- tau_eff * X[, l]       # n-vector: tau_i e_i x_il
+              dB_l[2:m, 2:m] <- -2 / phi^2 * crossprod(X, v_l * X) / n
+            }
+            # population, indep_moment: beta-beta block left as 0
+          }
+          dB_dtheta[, 1L + l] <- as.vector(dB_l)
+        }
       }
+      # zeroB: dB_dtheta remains all zeros (initialized above)
 
       # Sample-level dA/dphi phi-phi element:
       # d(A_pp)/dphi = (phi - 3*mean(e^2))/phi^4  [exact sample derivative]
@@ -932,7 +925,7 @@ resi_pe_asymptotic <- function(model.full,
                                 ci.method    = c("normal", "qf", "cf"),
                                 type         = "HC3",
                                 unbiased     = TRUE,
-                                deriv_method = c("corrected", "original", "population", "population2"),
+                                deriv_method = c("corrected", "original", "population", "population2", "zeroB", "indep_moment"),
                                 Anova.args   = list(),
                                 vcov.args    = list(),
                                 ...) {

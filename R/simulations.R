@@ -1209,7 +1209,7 @@ simCalibrationSim <- function(
     alpha         = 0.05,
     output.dir    = "resiCalibrationSim",
     fixed.knots   = FALSE,
-    deriv_method  = c("corrected", "original", "population", "population2"),
+    deriv_method  = c("corrected", "original", "population", "population2", "zeroB", "indep_moment"),
     mc.cores.reps = 1L
 ) {
   deriv_method <- match.arg(deriv_method)
@@ -1690,7 +1690,7 @@ simCalibrationFigures <- function(
     output.dir   = "resiCalibrationSim",
     figures.dir  = NULL,
     alpha        = 0.05,
-    deriv_method = c("corrected", "original", "population", "population2")
+    deriv_method = c("corrected", "original", "population", "population2", "zeroB", "indep_moment")
 ) {
   deriv_method <- match.arg(deriv_method)
   if (is.null(figures.dir))
