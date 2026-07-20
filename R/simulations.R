@@ -1209,7 +1209,7 @@ simCalibrationSim <- function(
     alpha         = 0.05,
     output.dir    = "resiCalibrationSim",
     fixed.knots   = FALSE,
-    deriv_method  = c("corrected", "original", "population", "population2", "zeroB", "indep_moment"),
+    deriv_method  = c("corrected", "original", "population", "population2", "zeroB", "zero_phi_cross", "extended"),
     mc.cores.reps = 1L
 ) {
   deriv_method <- match.arg(deriv_method)
@@ -1365,14 +1365,14 @@ simCalibrationSim <- function(
     }
 
     # Chain decomposition of Sigma_R at true-value estimates (HC0 sandwich).
-    # Jacobian pieces: J = J_direct + J_Achain + J_Bchain  (each 1 x m for m1=1).
-    # Analytic: sig2S_true_X_k = J_X %*% Sig_HC0 %*% t(J_X)  for X in {dir,Ach,Bch}.
-    # MC analog: n_s * var(J_X_TV %*% (theta_hat - theta_true))  per replicate.
-    # HC0 is used for consistency with sigma2S_true (also HC0).
-    precomp_hc0 <- tryCatch(
-      .resi_precompute(full_mod, type = "HC0", deriv_method = deriv_method),
-      error = function(e) NULL
-    )
+    # For 'extended': Sigma_R comes from influence-function approach; no chain decomp.
+    # For other methods: standard J = J_direct + J_Achain + J_Bchain decomposition.
+    precomp_hc0 <- if (deriv_method == "extended") {
+      tryCatch(.resi_precompute_ext(full_mod, type = "HC0"), error = function(e) NULL)
+    } else {
+      tryCatch(.resi_precompute(full_mod, type = "HC0", deriv_method = deriv_method),
+               error = function(e) NULL)
+    }
     na_terms <- setNames(rep(NA_real_, length(coef_terms_true)), coef_terms_true)
     J_dir_list    <- list()
     J_Achain_list <- list()
@@ -1385,16 +1385,28 @@ simCalibrationSim <- function(
       Sig_hc0 <- precomp_hc0$cov_theta   # m x m Sigma_theta at HC0
       theta_true_full <- precomp_hc0$theta_hat  # (phi, beta_1,...,beta_p)
       for (tm in coef_terms_true) {
-        ct_tm <- tryCatch(.resi_contrast(precomp_hc0,
-                                         .get_L_coef(full_mod, tm)),
-                          error = function(e) NULL)
-        if (!is.null(ct_tm)) {
-          J_dir_list[[tm]]    <- ct_tm$dR_direct
-          J_Achain_list[[tm]] <- ct_tm$dR_Achain
-          J_Bchain_list[[tm]] <- ct_tm$dR_Bchain
-          sig2S_true_dir[tm]    <- as.numeric(ct_tm$dR_direct  %*% Sig_hc0 %*% t(ct_tm$dR_direct))
-          sig2S_true_Achain[tm] <- as.numeric(ct_tm$dR_Achain %*% Sig_hc0 %*% t(ct_tm$dR_Achain))
-          sig2S_true_Bchain[tm] <- as.numeric(ct_tm$dR_Bchain %*% Sig_hc0 %*% t(ct_tm$dR_Bchain))
+        L_tm <- .get_L_coef(full_mod, tm)
+        if (deriv_method == "extended") {
+          # Extended: Sigma_R is the total; store in dir, Achain/Bchain = 0
+          ct_tm <- tryCatch(.resi_contrast_ext(precomp_hc0, L_tm), error = function(e) NULL)
+          if (!is.null(ct_tm)) {
+            J_dir_list[[tm]]    <- matrix(0, 1, precomp_hc0$m)
+            J_Achain_list[[tm]] <- matrix(0, 1, precomp_hc0$m)
+            J_Bchain_list[[tm]] <- matrix(0, 1, precomp_hc0$m)
+            sig2S_true_dir[tm]    <- as.numeric(ct_tm$Sigma_R)
+            sig2S_true_Achain[tm] <- 0
+            sig2S_true_Bchain[tm] <- 0
+          }
+        } else {
+          ct_tm <- tryCatch(.resi_contrast(precomp_hc0, L_tm), error = function(e) NULL)
+          if (!is.null(ct_tm)) {
+            J_dir_list[[tm]]    <- ct_tm$dR_direct
+            J_Achain_list[[tm]] <- ct_tm$dR_Achain
+            J_Bchain_list[[tm]] <- ct_tm$dR_Bchain
+            sig2S_true_dir[tm]    <- as.numeric(ct_tm$dR_direct  %*% Sig_hc0 %*% t(ct_tm$dR_direct))
+            sig2S_true_Achain[tm] <- as.numeric(ct_tm$dR_Achain %*% Sig_hc0 %*% t(ct_tm$dR_Achain))
+            sig2S_true_Bchain[tm] <- as.numeric(ct_tm$dR_Bchain %*% Sig_hc0 %*% t(ct_tm$dR_Bchain))
+          }
         }
       }
     }
@@ -1690,7 +1702,7 @@ simCalibrationFigures <- function(
     output.dir   = "resiCalibrationSim",
     figures.dir  = NULL,
     alpha        = 0.05,
-    deriv_method = c("corrected", "original", "population", "population2", "zeroB", "indep_moment")
+    deriv_method = c("corrected", "original", "population", "population2", "zeroB", "zero_phi_cross", "extended")
 ) {
   deriv_method <- match.arg(deriv_method)
   if (is.null(figures.dir))

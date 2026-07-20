@@ -22,7 +22,7 @@
 
 #' @noRd
 .resi_precompute <- function(model, type = "HC3",
-                             deriv_method = c("corrected", "original", "population", "population2", "zeroB", "indep_moment")) {
+                             deriv_method = c("corrected", "original", "population", "population2", "zeroB", "zero_phi_cross")) {
 
   deriv_method <- match.arg(deriv_method)
 
@@ -150,17 +150,16 @@
       # 'corrected'    : sample-level derivatives for all blocks (exact FD match).
       # 'population'   : beta-beta block of dB/dbeta_l = 0.
       # 'population2'  : all beta columns of dB = 0.
-      # 'zeroB'        : dB_dtheta = 0 entirely (only A-chain contributes).
-      #                  Diagnostic: removes B-chain; unrealistic since B depends on phi.
-      # 'indep_moment' : population + independence assumption E[e^3 x_j] = E[e^3]*E[x_j]
-      #                  applied to the phi-beta cross block of dB/dphi.
+      # 'zeroB'          : dB_dtheta = 0 entirely (only A-chain contributes).
+      #                    Diagnostic: removes B-chain; unrealistic since B depends on phi.
+      # 'zero_phi_cross' : population + phi-beta cross block of dB/dphi set to zero.
+      #                    Tests whether E[e^3 x_j] cross terms in dB/dphi matter.
 
       if (deriv_method != "zeroB") {
         # ---- dB/dphi (phi column of dB_dtheta) ----
-        # phi-beta cross block: factored under indep_moment, sample-level otherwise
-        e3_X_w <- if (deriv_method == "indep_moment") {
-          if (is_const) mean(e^3) * colMeans(X)
-          else          mean(sqrtw * e^3) * colMeans(X)
+        # phi-beta cross block: zeroed for zero_phi_cross, sample-level otherwise
+        e3_X_w <- if (deriv_method == "zero_phi_cross") {
+          rep(0, p)          # phi-beta cross = 0
         } else {
           if (is_const) colMeans(e^3 * X)
           else          colMeans(sqrtw * e^3 * X)
@@ -201,7 +200,7 @@
               v_l             <- tau_eff * X[, l]       # n-vector: tau_i e_i x_il
               dB_l[2:m, 2:m] <- -2 / phi^2 * crossprod(X, v_l * X) / n
             }
-            # population, indep_moment: beta-beta block left as 0
+            # population, zero_phi_cross: beta-beta block left as 0
           }
           dB_dtheta[, 1L + l] <- as.vector(dB_l)
         }
@@ -925,7 +924,7 @@ resi_pe_asymptotic <- function(model.full,
                                 ci.method    = c("normal", "qf", "cf"),
                                 type         = "HC3",
                                 unbiased     = TRUE,
-                                deriv_method = c("corrected", "original", "population", "population2", "zeroB", "indep_moment"),
+                                deriv_method = c("corrected", "original", "population", "population2", "zeroB", "zero_phi_cross", "extended"),
                                 Anova.args   = list(),
                                 vcov.args    = list(),
                                 ...) {
@@ -951,7 +950,12 @@ resi_pe_asymptotic <- function(model.full,
   }
 
   # ---- model-level precomputation ----
-  precomp <- .resi_precompute(model, type = type, deriv_method = deriv_method)
+  # 'extended': treats Sigma_X and Sigma_Xw as separate estimators;
+  # dispatches to .resi_precompute_ext + .resi_contrast_ext.
+  use_ext     <- (deriv_method == "extended")
+  precomp     <- if (use_ext) .resi_precompute_ext(model, type = type)
+                 else         .resi_precompute(model, type = type, deriv_method = deriv_method)
+  contrast_fn <- if (use_ext) .resi_contrast_ext else .resi_contrast
 
   # ---- vcov matrix for point estimates (same as resi_pe) ----
   vcovmat <- tryCatch(vcovfunc2(model), error = function(e)
@@ -993,7 +997,7 @@ resi_pe_asymptotic <- function(model.full,
     # asymptotic signed CIs
     ci_mat <- do.call(rbind, lapply(coef_names, function(cn) {
       L_mod  <- .get_L_coef(model, cn)
-      contr  <- tryCatch(.resi_contrast(precomp, L_mod, vcovmat_n = n * vcovmat),
+      contr  <- tryCatch(contrast_fn(precomp, L_mod, vcovmat_n = n * vcovmat),
                          error = function(e) NULL)
       if (is.null(contr)) return(c(LCI = NA_real_, UCI = NA_real_))
       if (ci.method == "cf") {
@@ -1045,7 +1049,7 @@ resi_pe_asymptotic <- function(model.full,
       if (is.null(L_mod) || nrow(L_mod) == 0)
         return(c(LCI = NA_real_, UCI = NA_real_))
 
-      contr <- tryCatch(.resi_contrast(precomp, L_mod, vcovmat_n = n * vcovmat),
+      contr <- tryCatch(contrast_fn(precomp, L_mod, vcovmat_n = n * vcovmat),
                         error = function(e) NULL)
       if (is.null(contr)) return(c(LCI = NA_real_, UCI = NA_real_))
 
@@ -1070,6 +1074,150 @@ resi_pe_asymptotic <- function(model.full,
   output$type      <- type
   class(output)    <- c("resi", "list")
   output
+}
+
+
+# ============================================================
+#  Extended framework: Sigma_X and Sigma_Xw as separate estimators
+# ============================================================
+
+#' Extended precompute for lm: adds Sigma_X, Sigma_Xw ingredients
+#'
+#' Treats X-moment matrices as additional estimators (not purely functions of
+#' theta = (phi, beta)), yielding a per-observation influence-function approach
+#' to sigma2S that accounts for the direct sampling variance of the sandwich.
+#' Only lm models are supported.  dB_dtheta is set to zero (same as "zeroB").
+#' @noRd
+.resi_precompute_ext <- function(model, type = "HC3") {
+  if (!inherits(model, "lm") || inherits(model, "glm"))
+    stop(".resi_precompute_ext: extended framework currently only supports lm models")
+
+  precomp   <- .resi_precompute(model, type = type, deriv_method = "zeroB")
+  X         <- precomp$X
+  e         <- residuals(model, "response")
+  sqrtw     <- precomp$sqrtw
+  tau       <- sqrtw^2          # HC squared weights: tau_i = sqrtw_i^2
+
+  SigmaX     <- crossprod(X) / precomp$n
+  SigmaX_inv <- .resi_safe_inv(SigmaX)
+  SigmaXw    <- crossprod(X, tau * e^2 * X) / precomp$n
+
+  precomp$SigmaX     <- SigmaX
+  precomp$SigmaX_inv <- SigmaX_inv
+  precomp$SigmaXw    <- SigmaXw
+  precomp$tau        <- tau
+  precomp$e_hat      <- e
+  precomp$deriv_method <- "extended"
+  precomp
+}
+
+#' Extended contrast: Sigma_R via per-observation influence functions
+#'
+#' The sandwich V_beta = SigmaX^{-1} SigmaXw SigmaX^{-1} (phi cancels in A^{-1}BA^{-1}).
+#' Treating beta, SigmaX, SigmaXw as independent estimators, R has NO explicit phi dependence.
+#'
+#' Per-observation influence function (m1-vector):
+#'   phi_i = phi_direct_i + z_Xw_i + z_X_i
+#' where (d = eigenvalues of Sigma_beta_L = H SigmaXw H', H = L SigmaX^{-1}):
+#'   phi_direct_i: sqrt(n/d) * sqrt(tau_i)*e_i * Sigma_beta_L^{-1/2} H X_i
+#'   z_Xw_i: -V*(W*(tau_i*e_i^2*atilde_i*atilde_i' - D))*VT_beta
+#'   z_X_i:   V*(W*(atilde_i*delta_i' + delta_i*atilde_i' - 2D))*VT_beta
+#' Centering: E[tau_i e_i^2 atilde_i atilde_i^T]_eig = D,
+#'            E[atilde delta' + delta atilde']_eig = 2D
+#' => const_Xw = VT_beta/(2*sqrtd),  const_X = 2*const_Xw
+#' @noRd
+.resi_contrast_ext <- function(precomp_ext, L_model, vcovmat_n = NULL) {
+  stopifnot(isTRUE(precomp_ext$lm_model),
+            identical(precomp_ext$deriv_method, "extended"))
+
+  m1          <- nrow(L_model)
+  n           <- precomp_ext$n
+  phi         <- precomp_ext$phi
+  X           <- precomp_ext$X
+  e           <- precomp_ext$e_hat
+  tau         <- precomp_ext$tau
+  SigmaX_inv  <- precomp_ext$SigmaX_inv
+  SigmaXw     <- precomp_ext$SigmaXw
+
+  # H = L_model SigmaX^{-1}  (m1 x p)
+  H <- L_model %*% SigmaX_inv
+
+  # Sigma_beta_L = H SigmaXw H'  (m1 x m1)
+  # phi cancels in A^{-1}BA^{-1}: V_beta = (SigmaX/phi)^{-1}*(SigmaXw/phi^2)*(SigmaX/phi)^{-1}
+  #                                       = SigmaX^{-1} SigmaXw SigmaX^{-1}
+  Sigma_beta_L <- .resi_sym(H %*% SigmaXw %*% t(H))
+
+  # EVD
+  eig   <- eigen(Sigma_beta_L, symmetric = TRUE)
+  d     <- pmax(eig$values, .Machine$double.eps)
+  V_eig <- eig$vectors           # m1 x m1
+  sqrtd <- sqrt(d)
+  Phat  <- V_eig %*% diag(1/sqrtd, m1) %*% t(V_eig)   # Sigma_beta_L^{-1/2}
+  W     <- outer(sqrtd, sqrtd, function(a, b) 1/(a*b*(a+b)))
+
+  # Point estimate
+  beta_hat <- as.vector(L_model %*% coef(precomp_ext$model))  # m1-vector
+  R_beta   <- as.vector(Phat %*% beta_hat)   # m1-vector (drop matrix wrapper)
+  Stilde   <- sqrt(sum(R_beta^2))
+  VT_beta  <- as.vector(t(V_eig) %*% beta_hat)   # m1-vector, eigenspace
+
+  # Projected matrices (m1 x p)
+  # F = V'H,  G = F*SigmaXw*SigmaX^{-1}  (= V'H*SigmaXw*SigmaX^{-1})
+  F_mat <- t(V_eig) %*% H
+  G_mat <- F_mat %*% SigmaXw %*% SigmaX_inv
+
+  # Per-obs eigenspace projections (m1 x n)
+  A_tilde <- F_mat %*% t(X)   # atilde_i = F X_i
+  D_tilde <- G_mat %*% t(X)   # delta_i  = G X_i
+
+  # Lyapunov-weighted projection: Wvb[j,k] = W[j,k]*VT_beta[k]
+  Wvb     <- W * matrix(VT_beta, m1, m1, byrow = TRUE)  # m1 x m1
+  Q_mat   <- Wvb %*% A_tilde   # m1 x n: col i = W*(A_tilde[,i]*VT_beta)
+  Q_D_mat <- Wvb %*% D_tilde   # m1 x n: col i = W*(D_tilde[,i]*VT_beta)
+
+  # Centering constants (m1-vectors, eigenspace):
+  # E[tau_i e_i^2 atilde_i atilde_i^T]_eig = F SigmaXw F^T = D
+  #   => (W*D)*VT_beta = diag(W_{jj}*d_j)*VT_beta = VT_beta/(2*sqrtd)
+  # E[atilde_i delta_i^T + delta_i atilde_i^T]_eig = 2D
+  const_Xw <- VT_beta / (2 * sqrtd)   # m1-vector (element-wise, no phi)
+  const_X  <- 2 * const_Xw
+
+  # Assemble per-obs influence functions (m1 x n), each phi_i satisfies Sigma_R = (1/n)*sum phi_i^2
+  # (1) Direct beta: phi_direct_i = Sigma_beta_L^{-1/2} * sqrt(tau_i)*e_i * H X_i
+  #     (1/n)*sum phi_i^2 = 1 (direct term = 1 by construction)
+  sc <- sqrt(tau) * e   # n-vector (NO sqrt(n): influence fn is f_i/sqrt(d), not sqrt(n/d)*f_i)
+  phi_direct <- (V_eig %*% sweep(A_tilde, 1, sqrtd, '/')) *
+                matrix(sc, m1, n, byrow = TRUE)
+
+  # (2) Sigma_Xw: -V*(W*(tau_i*e_i^2*atilde_i atilde_i' - D))*VT_beta  (no phi factor)
+  Xw_core  <- sweep(A_tilde * Q_mat, 2, tau * e^2, '*') -
+               matrix(const_Xw, m1, n)
+  phi_Xw_m <- -V_eig %*% Xw_core
+
+  # (3) Sigma_X: V*(W*(atilde_i delta_i' + delta_i atilde_i' - 2D))*VT_beta  (no phi factor)
+  X_core  <- A_tilde * Q_D_mat + D_tilde * Q_mat - matrix(const_X, m1, n)
+  phi_X_m <- V_eig %*% X_core
+
+  # NOTE: NO phi contribution — phi cancels in V_beta = A^{-1}BA^{-1}.
+  phi_ext <- phi_direct + phi_Xw_m + phi_X_m   # m1 x n
+
+  # Sigma_R_ext = (1/n) * phi_ext %*% t(phi_ext)  (m1 x m1)
+  Sigma_R_ext <- .resi_sym(tcrossprod(phi_ext) / n)
+
+  list(
+    m1         = m1,
+    n          = n,
+    beta_hat   = beta_hat,
+    Sigma_beta = Sigma_beta_L,
+    R_beta     = R_beta,
+    Stilde     = Stilde,
+    dR_dtheta  = NULL,
+    dR_direct  = NULL,
+    dR_Achain  = NULL,
+    dR_Bchain  = NULL,
+    Sigma_R    = Sigma_R_ext,
+    phi_tilde  = if (m1 == 1L) drop(phi_ext) else NULL
+  )
 }
 
 
