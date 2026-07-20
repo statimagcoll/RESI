@@ -899,8 +899,9 @@
 #' @param ci.method Character; \code{"normal"} (truncated normal),
 #'   \code{"qf"} (quadratic-form Imhof), or \code{"cf"} (Cornish-Fisher
 #'   test inversion). Default \code{"normal"}.
-#' @param type Character; HC type for the M-estimator sandwich used in CI
-#'   construction. Default \code{"HC3"}.
+#' @param type Character; HC type for the sandwich variance used in CI
+#'   construction (controls tau_i weights in SigmaXw). Default \code{"HC3"}.
+#'   Supported: \code{"HC0"}–\code{"HC5"}, \code{"const"}.
 #' @param unbiased Logical; use bias-corrected RESI point estimate. Default
 #'   \code{TRUE}.
 #' @param Anova.args List; additional arguments passed to \code{car::Anova}.
@@ -924,13 +925,11 @@ resi_pe_asymptotic <- function(model.full,
                                 ci.method    = c("normal", "qf", "cf"),
                                 type         = "HC3",
                                 unbiased     = TRUE,
-                                deriv_method = c("corrected", "original", "population", "population2", "zeroB", "zero_phi_cross", "extended"),
                                 Anova.args   = list(),
                                 vcov.args    = list(),
                                 ...) {
 
   ci.method    <- match.arg(ci.method)
-  deriv_method <- match.arg(deriv_method)
   model     <- model.full
   n         <- nrow(model.matrix(model))
 
@@ -949,13 +948,12 @@ resi_pe_asymptotic <- function(model.full,
     vcovfunc2 <- vcovfunc
   }
 
-  # ---- model-level precomputation ----
-  # 'extended': treats Sigma_X and Sigma_Xw as separate estimators;
-  # dispatches to .resi_precompute_ext + .resi_contrast_ext.
-  use_ext     <- (deriv_method == "extended")
-  precomp     <- if (use_ext) .resi_precompute_ext(model, type = type)
-                 else         .resi_precompute(model, type = type, deriv_method = deriv_method)
-  contrast_fn <- if (use_ext) .resi_contrast_ext else .resi_contrast
+  # ---- model-level precomputation (extended framework) ----
+  # Treats SigmaX = X'X/n and SigmaXw = X'diag(tau*e^2)X/n as separate
+  # estimators; phi cancels in A^{-1}BA^{-1}, giving a pure influence-function
+  # variance estimate with no chain-rule approximation errors.
+  precomp     <- .resi_precompute_ext(model, type = type)
+  contrast_fn <- .resi_contrast_ext
 
   # ---- vcov matrix for point estimates (same as resi_pe) ----
   vcovmat <- tryCatch(vcovfunc2(model), error = function(e)
@@ -1081,71 +1079,98 @@ resi_pe_asymptotic <- function(model.full,
 #  Extended framework: Sigma_X and Sigma_Xw as separate estimators
 # ============================================================
 
-#' Extended precompute for lm: adds Sigma_X, Sigma_Xw ingredients
+#' Extended precompute: adds SigmaXA, SigmaXB ingredients
 #'
-#' Treats X-moment matrices as additional estimators (not purely functions of
-#' theta = (phi, beta)), yielding a per-observation influence-function approach
-#' to sigma2S that accounts for the direct sampling variance of the sandwich.
-#' Only lm models are supported.  dB_dtheta is set to zero (same as "zeroB").
+#' Generalizes to lm and glm (both parametric and robust).
+#' The sandwich V_beta = SigmaXA^{-1} SigmaXB SigmaXA^{-1} is decomposed into
+#' two moment-matrix estimators treated as independent:
+#'   SigmaXA = -(1/n) sum_i c_i c_i' (bread moments; lm: X_i, glm: sqrt(w_i)*X_i)
+#'   SigmaXB = (1/n) sum_i tau_i r_i^2 X_i X_i'  (HC-weighted meat)
+#' where r_i are the appropriate residuals and tau_i the HC squared weights.
 #' @noRd
 .resi_precompute_ext <- function(model, type = "HC3") {
-  if (!inherits(model, "lm") || inherits(model, "glm"))
-    stop(".resi_precompute_ext: extended framework currently only supports lm models")
+  is_glm <- inherits(model, "glm")
+  is_lm  <- inherits(model, "lm") && !is_glm
+  if (!is_lm && !is_glm)
+    stop(".resi_precompute_ext: only lm or glm models supported")
 
-  precomp   <- .resi_precompute(model, type = type, deriv_method = "zeroB")
-  X         <- precomp$X
-  e         <- residuals(model, "response")
-  sqrtw     <- precomp$sqrtw
-  tau       <- sqrtw^2          # HC squared weights: tau_i = sqrtw_i^2
+  # For CI computation the extended framework always uses a consistent (robust)
+  # variance estimator.  The 'const' type signals the parametric RESI point
+  # estimate but must not carry over to the CI variance: upgrade to HC0 so that
+  # tau_i = 1 (HC0) is used explicitly and 'is_const' does not affect B_full.
+  ci_type <- if (type == "const") "HC0" else type
 
-  SigmaX     <- crossprod(X) / precomp$n
-  SigmaX_inv <- .resi_safe_inv(SigmaX)
-  SigmaXw    <- crossprod(X, tau * e^2 * X) / precomp$n
+  precomp <- .resi_precompute(model, type = ci_type, deriv_method = "zeroB")
+  X       <- precomp$X
+  n       <- precomp$n
+  sqrtw   <- precomp$sqrtw
+  tau     <- sqrtw^2          # HC squared weights: tau_i = sqrtw_i^2
 
-  precomp$SigmaX     <- SigmaX
-  precomp$SigmaX_inv <- SigmaX_inv
-  precomp$SigmaXw    <- SigmaXw
-  precomp$tau        <- tau
-  precomp$e_hat      <- e
+  if (is_lm) {
+    # lm: SigmaXA = X'X/n,  SigmaXB = X'diag(tau*e^2)X/n
+    # c_i = X_i (bread contribution),  r_i = e_i (residuals)
+    r   <- residuals(model, "response")   # OLS residuals
+    w_A <- rep(1, n)                       # bread weights: 1 for lm
+    SigmaXA <- crossprod(X) / n
+    SigmaXB <- crossprod(X, tau * r^2 * X) / n
+  } else {
+    # glm: SigmaXA = X'WX/n,  SigmaXB = X'diag(tau*(y-mu)^2)X/n
+    # c_i = sqrt(w_i)*X_i (bread contribution),  r_i = y_i - mu_i
+    w_A <- weights(model, type = "working")  # working weights w_i = mu_i(1-mu_i)
+    r   <- residuals(model, type = "response")  # y - mu(beta_hat)
+    SigmaXA <- crossprod(X * sqrt(w_A), X * sqrt(w_A)) / n   # X'WX/n
+    SigmaXB <- crossprod(X, tau * r^2 * X) / n
+  }
+
+  precomp$SigmaXA     <- SigmaXA
+  precomp$SigmaXA_inv <- .resi_safe_inv(SigmaXA)
+  precomp$SigmaXB     <- SigmaXB
+  precomp$r           <- r          # residuals for direct term
+  precomp$w_A         <- w_A        # bread weights (1 for lm, w_i for glm)
+  precomp$tau         <- tau
   precomp$deriv_method <- "extended"
   precomp
 }
 
 #' Extended contrast: Sigma_R via per-observation influence functions
 #'
-#' The sandwich V_beta = SigmaX^{-1} SigmaXw SigmaX^{-1} (phi cancels in A^{-1}BA^{-1}).
-#' Treating beta, SigmaX, SigmaXw as independent estimators, R has NO explicit phi dependence.
+#' General formulation for lm and glm (parametric and robust).
+#' The sandwich decomposes as V_beta = SigmaXA^{-1} SigmaXB SigmaXA^{-1} where:
+#'   SigmaXA = bread moment matrix (lm: X'X/n; glm: X'WX/n)
+#'   SigmaXB = HC-weighted meat    (lm: X'diag(tau*e^2)X/n; glm: X'diag(tau*r^2)X/n)
 #'
 #' Per-observation influence function (m1-vector):
-#'   phi_i = phi_direct_i + z_Xw_i + z_X_i
-#' where (d = eigenvalues of Sigma_beta_L = H SigmaXw H', H = L SigmaX^{-1}):
-#'   phi_direct_i: sqrt(n/d) * sqrt(tau_i)*e_i * Sigma_beta_L^{-1/2} H X_i
-#'   z_Xw_i: -V*(W*(tau_i*e_i^2*atilde_i*atilde_i' - D))*VT_beta
-#'   z_X_i:   V*(W*(atilde_i*delta_i' + delta_i*atilde_i' - 2D))*VT_beta
-#' Centering: E[tau_i e_i^2 atilde_i atilde_i^T]_eig = D,
-#'            E[atilde delta' + delta atilde']_eig = 2D
-#' => const_Xw = VT_beta/(2*sqrtd),  const_X = 2*const_Xw
+#'   phi_i = phi_direct_i + z_XB_i + z_XA_i
+#' where (H = L SigmaXA^{-1}, d = eigenvalues of Sigma_beta_L = H SigmaXB H'):
+#'   phi_direct_i: sqrt(tau_i)*r_i * Sigma_beta_L^{-1/2} H X_i    [direct beta]
+#'   z_XB_i: -V*(W*(tau_i*r_i^2*atilde_i*atilde_i' - D))*VT_beta  [SigmaXB variance]
+#'   z_XA_i:  V*(W*(atilde_i*delta_i' + delta_i*atilde_i' - 2D))*VT_beta [SigmaXA variance]
+#' where atilde_i = V'H(sqrt(w_A_i)*X_i) and delta_i = V'G(sqrt(w_A_i)*X_i),
+#' G = F*SigmaXB*SigmaXA^{-1}.  For lm: w_A_i = 1; for glm: w_A_i = w_i.
+#'
+#' Centering: E[tau_i r_i^2 atilde_i atilde_i^T]_eig = D  => const_XB = VT_beta/(2*sqrtd)
+#'            E[atilde_i delta_i^T + delta_i atilde_i^T]_eig = 2D => const_XA = 2*const_XB
 #' @noRd
 .resi_contrast_ext <- function(precomp_ext, L_model, vcovmat_n = NULL) {
-  stopifnot(isTRUE(precomp_ext$lm_model),
-            identical(precomp_ext$deriv_method, "extended"))
+  stopifnot(identical(precomp_ext$deriv_method, "extended"))
 
   m1          <- nrow(L_model)
   n           <- precomp_ext$n
-  phi         <- precomp_ext$phi
   X           <- precomp_ext$X
-  e           <- precomp_ext$e_hat
+  r           <- precomp_ext$r           # residuals (e for lm, y-mu for glm)
   tau         <- precomp_ext$tau
-  SigmaX_inv  <- precomp_ext$SigmaX_inv
-  SigmaXw     <- precomp_ext$SigmaXw
+  w_A         <- precomp_ext$w_A         # bread weights (1 for lm, w_i for glm)
+  SigmaXA_inv <- precomp_ext$SigmaXA_inv
+  SigmaXB     <- precomp_ext$SigmaXB
 
-  # H = L_model SigmaX^{-1}  (m1 x p)
-  H <- L_model %*% SigmaX_inv
+  # H = L_model SigmaXA^{-1}  (m1 x p)
+  H <- L_model %*% SigmaXA_inv
 
-  # Sigma_beta_L = H SigmaXw H'  (m1 x m1)
-  # phi cancels in A^{-1}BA^{-1}: V_beta = (SigmaX/phi)^{-1}*(SigmaXw/phi^2)*(SigmaX/phi)^{-1}
-  #                                       = SigmaX^{-1} SigmaXw SigmaX^{-1}
-  Sigma_beta_L <- .resi_sym(H %*% SigmaXw %*% t(H))
+  # Sigma_beta_L = H SigmaXB H'  (m1 x m1)
+  # General sandwich: V_beta = SigmaXA^{-1} SigmaXB SigmaXA^{-1}
+  # For lm: phi cancels in A^{-1}BA^{-1} giving SigmaXA=X'X/n, SigmaXB=SigmaXw.
+  # For glm: A_beta = X'WX/n (SigmaXA), B_beta = HC-weighted meat (SigmaXB).
+  Sigma_beta_L <- .resi_sym(H %*% SigmaXB %*% t(H))
 
   # EVD
   eig   <- eigen(Sigma_beta_L, symmetric = TRUE)
@@ -1157,49 +1182,53 @@ resi_pe_asymptotic <- function(model.full,
 
   # Point estimate
   beta_hat <- as.vector(L_model %*% coef(precomp_ext$model))  # m1-vector
-  R_beta   <- as.vector(Phat %*% beta_hat)   # m1-vector (drop matrix wrapper)
+  R_beta   <- as.vector(Phat %*% beta_hat)   # m1-vector
   Stilde   <- sqrt(sum(R_beta^2))
   VT_beta  <- as.vector(t(V_eig) %*% beta_hat)   # m1-vector, eigenspace
 
   # Projected matrices (m1 x p)
-  # F = V'H,  G = F*SigmaXw*SigmaX^{-1}  (= V'H*SigmaXw*SigmaX^{-1})
+  # F = V'H,  G = F*SigmaXB*SigmaXA^{-1}
   F_mat <- t(V_eig) %*% H
-  G_mat <- F_mat %*% SigmaXw %*% SigmaX_inv
+  G_mat <- F_mat %*% SigmaXB %*% SigmaXA_inv
 
-  # Per-obs eigenspace projections (m1 x n)
-  A_tilde <- F_mat %*% t(X)   # atilde_i = F X_i
-  D_tilde <- G_mat %*% t(X)   # delta_i  = G X_i
+  # Per-obs projections (m1 x n)
+  # FX_tilde: for SigmaXB and direct — uses X_i directly (SigmaXB = X'diag(tau*r^2)X/n)
+  #   E[tau_i r_i^2 FX_tilde_i FX_tilde_i^T]_eig = F SigmaXB F^T = D  => const_XB = VT_beta/(2*sqrtd) ✓
+  # A_tilde: for SigmaXA — uses c_i = sqrt(w_A_i)*X_i (SigmaXA = sum_i w_A_i X_i X_i^T / n)
+  #   E[A_tilde_i A_tilde_i^T]_eig = F SigmaXA F^T = D  => const_XA = 2*VT_beta/(2*sqrtd) ✓
+  FX_tilde <- F_mat %*% t(X)           # m1 x n: F X_i  (unweighted, for B and direct)
+  C_mat    <- sweep(t(X), 2, sqrt(w_A), '*')  # p x n: sqrt(w_A_i)*X_i
+  A_tilde  <- F_mat %*% C_mat           # m1 x n: F * sqrt(w_A_i)*X_i  (for SigmaXA)
+  D_tilde  <- G_mat %*% C_mat           # m1 x n: G * sqrt(w_A_i)*X_i  (for SigmaXA)
 
-  # Lyapunov-weighted projection: Wvb[j,k] = W[j,k]*VT_beta[k]
-  Wvb     <- W * matrix(VT_beta, m1, m1, byrow = TRUE)  # m1 x m1
-  Q_mat   <- Wvb %*% A_tilde   # m1 x n: col i = W*(A_tilde[,i]*VT_beta)
-  Q_D_mat <- Wvb %*% D_tilde   # m1 x n: col i = W*(D_tilde[,i]*VT_beta)
+  # Lyapunov-weighted projections: Wvb[j,k] = W[j,k]*VT_beta[k]
+  Wvb       <- W * matrix(VT_beta, m1, m1, byrow = TRUE)   # m1 x m1
+  Q_B_mat   <- Wvb %*% FX_tilde   # m1 x n: for z_XB (uses unweighted FX)
+  Q_mat     <- Wvb %*% A_tilde    # m1 x n: for z_XA (uses w_A-weighted atilde)
+  Q_D_mat   <- Wvb %*% D_tilde    # m1 x n: for z_XA delta term
 
   # Centering constants (m1-vectors, eigenspace):
-  # E[tau_i e_i^2 atilde_i atilde_i^T]_eig = F SigmaXw F^T = D
-  #   => (W*D)*VT_beta = diag(W_{jj}*d_j)*VT_beta = VT_beta/(2*sqrtd)
-  # E[atilde_i delta_i^T + delta_i atilde_i^T]_eig = 2D
-  const_Xw <- VT_beta / (2 * sqrtd)   # m1-vector (element-wise, no phi)
-  const_X  <- 2 * const_Xw
+  # E[tau_i r_i^2 FX_tilde_i FX_tilde_i^T]_eig = F SigmaXB F^T = D => const_XB = VT_beta/(2*sqrtd)
+  # E[A_tilde_i delta_i^T + delta_i A_tilde_i^T]_eig = 2D           => const_XA = 2*const_XB
+  const_XB <- VT_beta / (2 * sqrtd)   # m1-vector
+  const_XA <- 2 * const_XB
 
-  # Assemble per-obs influence functions (m1 x n), each phi_i satisfies Sigma_R = (1/n)*sum phi_i^2
-  # (1) Direct beta: phi_direct_i = Sigma_beta_L^{-1/2} * sqrt(tau_i)*e_i * H X_i
-  #     (1/n)*sum phi_i^2 = 1 (direct term = 1 by construction)
-  sc <- sqrt(tau) * e   # n-vector (NO sqrt(n): influence fn is f_i/sqrt(d), not sqrt(n/d)*f_i)
-  phi_direct <- (V_eig %*% sweep(A_tilde, 1, sqrtd, '/')) *
+  # Assemble per-obs influence functions (m1 x n)
+  # (1) Direct beta: sqrt(tau_i)*r_i * Sigma_beta_L^{-1/2} * H * X_i  (uses FX_tilde)
+  sc <- sqrt(tau) * r   # n-vector: HC-weighted residuals
+  phi_direct <- (V_eig %*% sweep(FX_tilde, 1, sqrtd, '/')) *
                 matrix(sc, m1, n, byrow = TRUE)
 
-  # (2) Sigma_Xw: -V*(W*(tau_i*e_i^2*atilde_i atilde_i' - D))*VT_beta  (no phi factor)
-  Xw_core  <- sweep(A_tilde * Q_mat, 2, tau * e^2, '*') -
-               matrix(const_Xw, m1, n)
-  phi_Xw_m <- -V_eig %*% Xw_core
+  # (2) SigmaXB: -V*(W*(tau_i*r_i^2*FX_tilde_i FX_tilde_i' - D))*VT_beta  (uses FX_tilde)
+  XB_core  <- sweep(FX_tilde * Q_B_mat, 2, tau * r^2, '*') -
+               matrix(const_XB, m1, n)
+  phi_XB_m <- -V_eig %*% XB_core
 
-  # (3) Sigma_X: V*(W*(atilde_i delta_i' + delta_i atilde_i' - 2D))*VT_beta  (no phi factor)
-  X_core  <- A_tilde * Q_D_mat + D_tilde * Q_mat - matrix(const_X, m1, n)
-  phi_X_m <- V_eig %*% X_core
+  # (3) SigmaXA: V*(W*(A_tilde_i delta_i' + delta_i A_tilde_i' - 2D))*VT_beta  (uses A_tilde)
+  XA_core  <- A_tilde * Q_D_mat + D_tilde * Q_mat - matrix(const_XA, m1, n)
+  phi_XA_m <- V_eig %*% XA_core
 
-  # NOTE: NO phi contribution — phi cancels in V_beta = A^{-1}BA^{-1}.
-  phi_ext <- phi_direct + phi_Xw_m + phi_X_m   # m1 x n
+  phi_ext <- phi_direct + phi_XB_m + phi_XA_m   # m1 x n
 
   # Sigma_R_ext = (1/n) * phi_ext %*% t(phi_ext)  (m1 x m1)
   Sigma_R_ext <- .resi_sym(tcrossprod(phi_ext) / n)
