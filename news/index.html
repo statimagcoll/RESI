@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">RESI: Robust Effect Size Inference in R</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,12 +40,14 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.4.2" id="resi-142">RESI 1.4.2<a class="anchor" aria-label="anchor" href="#resi-142"></a></h2>
 <div class="section level3">
-<h3 id="new-features-1-4-2">New Features<a class="anchor" aria-label="anchor" href="#new-features-1-4-2"></a></h3>
+<h3 id="resi-1-4-2">RESI 1.4.2<a class="anchor" aria-label="anchor" href="#resi-1-4-2"></a></h3>
+<div class="section level4">
+<h4 id="new-features-1-4-2">New Features<a class="anchor" aria-label="anchor" href="#new-features-1-4-2"></a></h4>
 <ul><li>Added analytic confidence intervals based on quadratic form, Cornish-Fisher, and Normal approximations. <code>qf</code> is now the default confidence interval method for <code>lm</code> and <code>glm</code>.</li>
 <li>Added support for <code>robustbase</code> models (<code>lmrob</code> and <code>glmrob</code>) via new <code>resi_pe.lmrob</code>, <code>resi_pe.glmrob</code>, <code>resi.lmrob</code>, and <code>resi.glmrob</code> methods. Both default to <code>vcovfunc = stats::vcov</code>, which uses the model’s built-in robust sandwich variance. <code>glmrob</code> redirects <code><a href="https://sandwich.R-Forge.R-project.org/reference/vcovHC.html" class="external-link">sandwich::vcovHC</a></code> to <code><a href="https://rdrr.io/r/stats/vcov.html" class="external-link">stats::vcov</a></code> with a warning since <code>vcovHC</code> does not support <code>glmrob</code> (<a href="https://github.com/statimagcoll/RESI/issues/12" class="external-link">#12</a>).</li>
 </ul></div>
-<div class="section level3">
-<h3 id="bug-fixes-1-4-2">Bug Fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-4-2"></a></h3>
+<div class="section level4">
+<h4 id="bug-fixes-1-4-2">Bug Fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-4-2"></a></h4>
 <ul><li>Fixed error when passing a <code>data</code> argument containing <code>NA</code>s to <code><a href="../reference/resi.html">resi()</a></code> for GEE models (<code>geeglm</code>). Rows with <code>NA</code> in any model variable are now silently stripped before bootstrapping, matching the complete cases used to fit the model and preventing cluster-size mismatches during re-fitting (<a href="https://github.com/statimagcoll/RESI/issues/51" class="external-link">#51</a>).</li>
 <li>Fixed misleading error in <code><a href="../reference/summary.resi.html">summary.resi()</a></code> when a different <code>alpha</code> level is requested but confidence intervals cannot be recomputed. The message now clearly explains that either (a) bootstrapping is not supported for the model type, or (b) <code><a href="../reference/resi.html">resi()</a></code> was not run with <code>store.boot = TRUE</code>, and instructs the user to re-run <code><a href="../reference/resi.html">resi()</a></code> with the desired <code>alpha</code> directly (<a href="https://github.com/statimagcoll/RESI/issues/53" class="external-link">#53</a>).</li>
 <li>Fixed <code><a href="../reference/resi.html">resi()</a></code> failing to compute the overall Wald test when the model response is a computed expression (e.g. <code>log10(charges)</code> or <code>I(charges &gt; 10000)</code>). Previously the intercept-only reduced model could not be fitted inside forked parallel workers because <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> tried to re-evaluate the expression in an environment where the underlying variable was not in scope. The fix constructs the reduced-model formula using the already-evaluated column name from <code><a href="https://rdrr.io/r/stats/model.frame.html" class="external-link">model.frame()</a></code>, avoiding any re-evaluation.</li>
@@ -54,8 +56,8 @@
 <code>resi_pe</code> now reports CS-RESI and L-RESI for <code>lmer</code>.</li>
 </ul></div>
 </div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="1.3.2" id="resi-132">RESI 1.3.2<a class="anchor" aria-label="anchor" href="#resi-132"></a></h2><p class="text-muted">CRAN release: 2025-07-29</p>
+<div class="section level3">
+<h3 id="resi-1-4-2-1">RESI 1.3.2<a class="anchor" aria-label="anchor" href="#resi-1-4-2-1"></a></h3>
 <ul><li>Added RESI estimation for <code>emmeans</code> objects</li>
 <li>Added support for <code>glmgee</code> models from <code>glmtoolbox</code>
 </li>
@@ -65,20 +67,20 @@
 <li>Fixed bug with <code>geeglm</code> objects not assigning weights properly with missing data</li>
 <li>Documentation fix for Linux systems</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="1.3.0" id="resi-130">RESI 1.3.0<a class="anchor" aria-label="anchor" href="#resi-130"></a></h2><p class="text-muted">CRAN release: 2025-03-24</p>
+<div class="section level3">
+<h3 id="resi-1-4-2-2">RESI 1.3.0<a class="anchor" aria-label="anchor" href="#resi-1-4-2-2"></a></h3>
 <ul><li>Added citation for Journal of Statistical Software paper <a href="doi:10.18637/jss.v112.i03" class="uri">doi:10.18637/jss.v112.i03</a>
 </li>
 <li>Bug fix in cluster bootstrapping: Now correctly assigns the clustered IDs in the bootstrap</li>
 <li>Minor documentation updates</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="1.2.4" id="resi-124">RESI 1.2.4<a class="anchor" aria-label="anchor" href="#resi-124"></a></h2><p class="text-muted">CRAN release: 2024-01-16</p>
+<div class="section level3">
+<h3 id="resi-1-4-2-3">RESI 1.2.4<a class="anchor" aria-label="anchor" href="#resi-1-4-2-3"></a></h3>
 <ul><li>Minor bug and documentation fixes</li>
 <li>Website deployed</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="1.2.0" id="resi-120">RESI 1.2.0<a class="anchor" aria-label="anchor" href="#resi-120"></a></h2><p class="text-muted">CRAN release: 2023-06-09</p>
+<div class="section level3">
+<h3 id="resi-1-4-2-4">RESI 1.2.0<a class="anchor" aria-label="anchor" href="#resi-1-4-2-4"></a></h3>
 <ul><li>Implemented <code>boot</code> package for bootstrapping
 <ul><li>
 <code>boot.results</code> element of <code>resi</code> object contains full <code>boot</code> object</li>
@@ -95,12 +97,12 @@
 <li>Fixed error in <code>resi</code> when using a model with only one predictor</li>
 <li>Various typo fixes and cleaned up documentation</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="1.1.1" id="resi-111">RESI 1.1.1<a class="anchor" aria-label="anchor" href="#resi-111"></a></h2><p class="text-muted">CRAN release: 2023-03-22</p>
+<div class="section level3">
+<h3 id="resi-1-4-2-5">RESI 1.1.1<a class="anchor" aria-label="anchor" href="#resi-1-4-2-5"></a></h3>
 <ul><li>Minor argument consistency fix</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="1.1.0" id="resi-110">RESI 1.1.0<a class="anchor" aria-label="anchor" href="#resi-110"></a></h2><p class="text-muted">CRAN release: 2023-02-10</p>
+<div class="section level3">
+<h3 id="resi-1-4-2-6">RESI 1.1.0<a class="anchor" aria-label="anchor" href="#resi-1-4-2-6"></a></h3>
 <ul><li>Expanded longitudinal methods
 <ul><li>
 <code>gee</code> and <code>geeglm</code> reporting valid confidence intervals</li>
@@ -118,10 +120,11 @@
 <li>Changed class of <code>summary</code> on a <code>resi</code> object to <code>summary_resi</code> for consistency</li>
 <li>Small typos and inconsistencies fixed</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="1.0.5" id="resi-105">RESI 1.0.5<a class="anchor" aria-label="anchor" href="#resi-105"></a></h2><p class="text-muted">CRAN release: 2022-09-06</p>
+<div class="section level3">
+<h3 id="resi-1-4-2-7">RESI 1.0.5<a class="anchor" aria-label="anchor" href="#resi-1-4-2-7"></a></h3>
 <ul><li>First version</li>
 </ul></div>
+</div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

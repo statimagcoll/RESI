@@ -2,7 +2,9 @@
 
 ## RESI 1.4.2
 
-### New Features
+### RESI 1.4.2
+
+#### New Features
 
 - Added analytic confidence intervals based on quadratic form,
   Cornish-Fisher, and Normal approximations. `qf` is now the default
@@ -16,7 +18,7 @@
   since `vcovHC` does not support `glmrob`
   ([\#12](https://github.com/statimagcoll/RESI/issues/12)).
 
-### Bug Fixes
+#### Bug Fixes
 
 - Fixed error when passing a `data` argument containing `NA`s to
   [`resi()`](https://statimagcoll.github.io/RESI/reference/resi.md) for
@@ -54,9 +56,7 @@
   ([\#50](https://github.com/statimagcoll/RESI/issues/50)).
 - `resi_pe` now reports CS-RESI and L-RESI for `lmer`.
 
-## RESI 1.3.2
-
-CRAN release: 2025-07-29
+### RESI 1.3.2
 
 - Added RESI estimation for `emmeans` objects
 - Added support for `glmgee` models from `glmtoolbox`
@@ -66,9 +66,7 @@ CRAN release: 2025-07-29
   missing data
 - Documentation fix for Linux systems
 
-## RESI 1.3.0
-
-CRAN release: 2025-03-24
+### RESI 1.3.0
 
 - Added citation for Journal of Statistical Software paper
   <doi:10.18637/jss.v112.i03>
@@ -76,16 +74,12 @@ CRAN release: 2025-03-24
   IDs in the bootstrap
 - Minor documentation updates
 
-## RESI 1.2.4
-
-CRAN release: 2024-01-16
+### RESI 1.2.4
 
 - Minor bug and documentation fixes
 - Website deployed
 
-## RESI 1.2.0
-
-CRAN release: 2023-06-09
+### RESI 1.2.0
 
 - Implemented `boot` package for bootstrapping
   - `boot.results` element of `resi` object contains full `boot` object
@@ -102,15 +96,11 @@ CRAN release: 2023-06-09
 - Fixed error in `resi` when using a model with only one predictor
 - Various typo fixes and cleaned up documentation
 
-## RESI 1.1.1
-
-CRAN release: 2023-03-22
+### RESI 1.1.1
 
 - Minor argument consistency fix
 
-## RESI 1.1.0
-
-CRAN release: 2023-02-10
+### RESI 1.1.0
 
 - Expanded longitudinal methods
   - `gee` and `geeglm` reporting valid confidence intervals
@@ -128,8 +118,6 @@ CRAN release: 2023-02-10
   consistency
 - Small typos and inconsistencies fixed
 
-## RESI 1.0.5
-
-CRAN release: 2022-09-06
+### RESI 1.0.5
 
 - First version
