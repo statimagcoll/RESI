@@ -1,7 +1,7 @@
 Package: RESI
 Type: Package
 Title: Robust Effect Size Index (RESI) Estimation
-Version: 1.4.1
+Version: 1.4.2
 Authors@R: 
   c(person('Megan', 'Jones', email='megan.n.taylor@vanderbilt.edu', role=c('aut')),
   person('Kaidi', 'Kang', email = 'kaidi.kang@vanderbilt.edu', role = c('aut')),
