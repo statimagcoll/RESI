@@ -61,7 +61,7 @@ resi(model.full, ...)
   unbiased = TRUE,
   parallel = c("no", "multicore", "snow"),
   ncpus = getOption("boot.ncpus", 1L),
-  ci.method = "boot",
+  ci.method = "qf",
   ...
 )
 
@@ -333,9 +333,9 @@ resi(model.full, ...)
 \item{clvar}{Character, the name of the cluster/id variable if data is clustered. By default, `NULL`.}
 
 \item{ci.method}{Character, the method used to compute confidence intervals.
-One of `"boot"` (bootstrap, default), `"normal"` (delta-method normal approximation),
-or `"qf"` (quadratic form inversion). See `resi_pe_asymptotic` for details on
-the asymptotic methods.}
+One of `"boot"` (bootstrap), `"qf"` (quadratic-form inversion, default for lm and glm),
+`"normal"` (normal approximation), or `"cf"` (Cornish-Fisher inversion).
+See `resi_pe_asymptotic` for details on the asymptotic methods.}
 }
 \value{
 Returns a list that includes function arguments, RESI point estimates,

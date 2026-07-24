@@ -188,7 +188,9 @@ test_that("boot.method = 'bayes' only works for lm and nls", {
 })
 
 test_that("data is needed for certain models", {
-  expect_error(resi(mod.s, nboot = 1))
+  # mod.s now uses ci.method='qf' by default, which succeeds without data;
+  # use ci.method='boot' to test that bootstrapping fails without data
+  expect_error(resi(mod.s, nboot = 1, ci.method = "boot"))
   # mod.lm.s now uses ci.method='qf' by default, which succeeds without data;
   # use ci.method='boot' to test that bootstrapping fails without data
   expect_error(resi(mod.lm.s, nboot = 1, ci.method = "boot"))

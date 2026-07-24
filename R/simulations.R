@@ -1193,6 +1193,8 @@ simFigures <- function(output.dir = "resiBootSim",
 #' @param fixed.knots Logical. Fix spline knots at full-dataset quantiles.
 #'   Default \code{FALSE}.
 #' @param mc.cores.reps Integer, cores for within-cell parallelism. Default 1.
+#' @param deriv_method Character, type of derivative being evaluated. Package now only includes "extended" in resi implementation.
+
 #'
 #' @return Invisibly returns the combined metrics \code{data.frame}.
 #' @seealso \code{\link{insurancePlasmodeSim}}, \code{\link{simCompareMethodsFigures}}
@@ -1698,6 +1700,7 @@ simCalibrationSim <- function(
 #' @param figures.dir Character, output directory for PDFs.
 #'   Default \code{file.path(output.dir, "figures")}.
 #' @param alpha Numeric, nominal CI level. Default 0.05.
+#' @param deriv_method Character, type of derivative being evaluated. Package now only includes "extended" in resi implementation.
 #'
 #' @return Invisibly returns the summary data frame. Saves PDF figures to
 #'   \code{figures.dir}.

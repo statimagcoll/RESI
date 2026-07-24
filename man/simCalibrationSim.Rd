@@ -10,6 +10,8 @@ simCalibrationSim(
   alpha = 0.05,
   output.dir = "resiCalibrationSim",
   fixed.knots = FALSE,
+  deriv_method = c("corrected", "original", "population", "population2", "zeroB",
+    "zero_phi_cross", "extended"),
   mc.cores.reps = 1L
 )
 }
@@ -26,6 +28,8 @@ Default \code{"resiCalibrationSim"}.}
 
 \item{fixed.knots}{Logical. Fix spline knots at full-dataset quantiles.
 Default \code{FALSE}.}
+
+\item{deriv_method}{Character, type of derivative being evaluated. Package now only includes "extended" in resi implementation.}
 
 \item{mc.cores.reps}{Integer, cores for within-cell parallelism. Default 1.}
 }

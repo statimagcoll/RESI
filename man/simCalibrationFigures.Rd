@@ -7,7 +7,9 @@
 simCalibrationFigures(
   output.dir = "resiCalibrationSim",
   figures.dir = NULL,
-  alpha = 0.05
+  alpha = 0.05,
+  deriv_method = c("extended", "corrected", "original", "population", "population2",
+    "zeroB", "zero_phi_cross")
 )
 }
 \arguments{
@@ -18,6 +20,8 @@ simCalibrationFigures(
 Default \code{file.path(output.dir, "figures")}.}
 
 \item{alpha}{Numeric, nominal CI level. Default 0.05.}
+
+\item{deriv_method}{Character, type of derivative being evaluated. Package now only includes "extended" in resi implementation.}
 }
 \value{
 Invisibly returns the summary data frame. Saves PDF figures to

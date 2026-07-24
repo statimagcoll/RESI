@@ -11,7 +11,7 @@ resi_pe_asymptotic(
   coefficients = TRUE,
   anova = TRUE,
   alpha = 0.05,
-  ci.method = c("normal", "qf", "cf"),
+  ci.method = c("qf", "normal", "cf"),
   type = "HC3",
   unbiased = TRUE,
   Anova.args = list(),
@@ -33,12 +33,13 @@ resi_pe_asymptotic(
 
 \item{alpha}{Numeric; significance level. Default \code{0.05}.}
 
-\item{ci.method}{Character; \code{"normal"} (truncated normal),
-\code{"qf"} (quadratic-form Imhof), or \code{"cf"} (Cornish-Fisher
-test inversion). Default \code{"normal"}.}
+\item{ci.method}{Character; \code{"qf"} (quadratic-form Imhof, default),
+\code{"normal"} (truncated normal),
+or \code{"cf"} (Cornish-Fisher test inversion).}
 
-\item{type}{Character; HC type for the M-estimator sandwich used in CI
-construction. Default \code{"HC3"}.}
+\item{type}{Character; HC type for the sandwich variance used in CI
+construction (controls tau_i weights in SigmaXw). Default \code{"HC3"}.
+Supported: \code{"HC0"}–\code{"HC5"}, \code{"const"}.}
 
 \item{unbiased}{Logical; use bias-corrected RESI point estimate. Default
 \code{TRUE}.}
