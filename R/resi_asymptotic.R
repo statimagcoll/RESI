@@ -896,9 +896,9 @@
 #' @param coefficients Logical; include coefficient table. Default \code{TRUE}.
 #' @param anova Logical; include anova table. Default \code{TRUE}.
 #' @param alpha Numeric; significance level. Default \code{0.05}.
-#' @param ci.method Character; \code{"normal"} (truncated normal),
-#'   \code{"qf"} (quadratic-form Imhof), or \code{"cf"} (Cornish-Fisher
-#'   test inversion). Default \code{"normal"}.
+#' @param ci.method Character; \code{"qf"} (quadratic-form Imhof, default),
+#'   \code{"normal"} (truncated normal),
+#'   or \code{"cf"} (Cornish-Fisher test inversion).
 #' @param type Character; HC type for the sandwich variance used in CI
 #'   construction (controls tau_i weights in SigmaXw). Default \code{"HC3"}.
 #'   Supported: \code{"HC0"}–\code{"HC5"}, \code{"const"}.
@@ -922,7 +922,7 @@ resi_pe_asymptotic <- function(model.full,
                                 coefficients = TRUE,
                                 anova        = TRUE,
                                 alpha        = 0.05,
-                                ci.method    = c("normal", "qf", "cf"),
+                                ci.method    = c("qf", "normal", "cf"),
                                 type         = "HC3",
                                 unbiased     = TRUE,
                                 Anova.args   = list(),

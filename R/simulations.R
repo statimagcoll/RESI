@@ -1468,9 +1468,19 @@ simCalibrationSim <- function(
       rds_path   <- file.path(raw_dir, paste0(cell_label, ".rds"))
 
       if (file.exists(rds_path)) {
-        message("  n = ", n_s, " (loading cached)")
         cell_data <- readRDS(rds_path)
+        if (cell_data$n_success > 0L) {
+          message("  n = ", n_s, " (loading cached)")
+        } else {
+          message("  n = ", n_s, " (cached n_success = 0; re-running)")
+          file.remove(rds_path)
+          cell_data <- NULL
+        }
       } else {
+        cell_data <- NULL
+      }
+
+      if (is.null(cell_data)) {
         message("  n = ", n_s, " ...")
         reps_raw <- parallel::mclapply(seq_len(nsim), function(i) {
           repeat {
@@ -1702,7 +1712,7 @@ simCalibrationFigures <- function(
     output.dir   = "resiCalibrationSim",
     figures.dir  = NULL,
     alpha        = 0.05,
-    deriv_method = c("corrected", "original", "population", "population2", "zeroB", "zero_phi_cross", "extended")
+    deriv_method = c("extended", "corrected", "original", "population", "population2", "zeroB", "zero_phi_cross")
 ) {
   deriv_method <- match.arg(deriv_method)
   if (is.null(figures.dir))
@@ -1728,15 +1738,23 @@ simCalibrationFigures <- function(
   })
 
   # ---- Figures ---------------------------------------------------------------
-  # Abbreviate long term names for display in legends
+  # Abbreviate long term names and format for display in legends
   .abbrev <- function(x) {
     x <- sub("splines::ns\\(age, df = [0-9]+\\)", "ns(age)", x)
-    x <- sub("regionnorthwest", "reg:NW", x)
-    x <- sub("regionsoutheast", "reg:SE", x)
-    x <- sub("regionsouthwest", "reg:SW", x)
-    x <- sub("regionnortheast", "reg:NE", x)
+    x <- sub("regionnorthwest", "Reg:NW", x)
+    x <- sub("regionsoutheast", "Reg:SE", x)
+    x <- sub("regionsouthwest", "Reg:SW", x)
+    x <- sub("regionnortheast", "Reg:NE", x)
     x <- sub(":sexmale$",       ":sex",   x)
     x
+  }
+
+  # Pretty-print setting label for titles (e.g. "lm_robust" -> "Robust LM")
+  .fmt_lbl <- function(lbl) {
+    parts <- strsplit(lbl, "_", fixed = TRUE)[[1L]]
+    mod   <- toupper(parts[1L])
+    vcov  <- if (length(parts) > 1L && parts[2L] == "robust") "Robust" else "Parametric"
+    paste(vcov, mod)
   }
 
   .sim_pal <- c("#1F77B4", "#D62728", "#2CA02C", "#FF7F0E", "#9467BD",
@@ -1787,8 +1805,9 @@ simCalibrationFigures <- function(
 
     graphics::par(mar = c(3.2, 3.5, 2.2, 0.5), mgp = c(2.0, 0.5, 0))
     graphics::plot(NULL, xlim = range(n_vals_plot), ylim = ylim1,
-                   xlab = "n", ylab = "Bias",
-                   main = paste0(lbl, ": Bias of theta"),
+                   xlab = "n",
+                   ylab = expression(paste("Calibration of ", theta)),
+                   main = bquote(.(paste0(.fmt_lbl(lbl), ": Calibration of ")) * theta),
                    log = "x", xaxt = "n", bty = "l")
     graphics::axis(1L, at = n_vals_plot, labels = n_vals_plot, las = 2L,
                    mgp = c(1.7, 0.35, 0))
@@ -1865,9 +1884,10 @@ simCalibrationFigures <- function(
     graphics::par(mar = c(3.2, 3.5, 2.2, 0.5), mgp = c(2.0, 0.5, 0))
     graphics::plot(NULL, xlim = range(n_vals_plot), ylim = ylim2,
                    xlab = "n",
-                   ylab = expression((Sigma[A] - Sigma[MC]) / sqrt(Sigma[MC,jj] * Sigma[MC,kk])),
-                   main = paste0(lbl, ": vcov norm. bias  (target = 0)"),
-                   log = "x", xaxt = "n", bty = "l")
+                   ylab = expression(paste("(", Sigma[A] - Sigma[MC], ") / ",
+                                           sqrt(Sigma[MC*","*jj] %*% Sigma[MC*","*kk]))),
+                   main = paste0(.fmt_lbl(lbl), ":  Covariance calibration"),
+                   log = "x", xaxt = "n", bty = "l", font.main = 1L)
     graphics::axis(1L, at = n_vals_plot, labels = n_vals_plot, las = 2L,
                    mgp = c(1.7, 0.35, 0))
     graphics::abline(h = 0, lty = 2L, col = "gray40")
@@ -1903,8 +1923,9 @@ simCalibrationFigures <- function(
 
     graphics::par(mar = c(3.2, 3.5, 2.2, 0.5), mgp = c(2.0, 0.5, 0))
     graphics::plot(NULL, xlim = range(n_vals_plot), ylim = ylim3,
-                   xlab = "n", ylab = "Bias",
-                   main = paste0(lbl, ": Bias of R"),
+                   xlab = "n",
+                   ylab = expression(paste("Calibration of ", R)),
+                   main = bquote(.(paste0(.fmt_lbl(lbl), ": Calibration of ")) * R),
                    log = "x", xaxt = "n", bty = "l")
     graphics::axis(1L, at = n_vals_plot, labels = n_vals_plot, las = 2L,
                    mgp = c(1.7, 0.35, 0))
@@ -1917,20 +1938,24 @@ simCalibrationFigures <- function(
       graphics::points(d$n, d$R_bias, col = term_cols[[tm]], pch = 16L, cex = 0.7)
     }
 
-    # --- Panel 4: sigma2S ratios (A solid, B dashed) ---
+    # --- Panel 4: sigma2S ratios (true-to-MC solid, init-to-MC dashed) ---
+    # Compute ylim including BOTH sig2S_B and sig2S_Th1_vals
     all_sig2S <- unlist(lapply(coef_terms, function(tm) {
       d <- sub[sub$term == tm, ]
-      c(d$sig2S_A, d$sig2S_B)
+      r_Th1 <- tv$sigma2S_true[tm] / tv$sigma2S_true_Th1[tm]
+      sig2S_Th1_v <- d$sig2S_B * r_Th1
+      c(d$sig2S_B, sig2S_Th1_v)
     }))
-    ylim4 <- range(c(all_sig2S, 1), na.rm = TRUE)
-    ylim4 <- ylim4 + diff(ylim4) * c(-0.06, 0.06)
-    if (is_glm) ylim4 <- c(0.8, 3)   # clip glm ratio panel
+    ylim4 <- range(c(1/all_sig2S, 1), na.rm = TRUE)
+    ylim4 <- ylim4 + diff(ylim4) * c(-0.06, 0.10)
+    if (is_glm) ylim4[2L] <- max(ylim4[2L], 3)
 
     graphics::par(mar = c(3.2, 3.5, 2.2, 0.5), mgp = c(2.0, 0.5, 0))
     graphics::plot(NULL, xlim = range(n_vals_plot), ylim = ylim4,
                    xlab = "n",
-                   ylab = "Ratio  (target = 1)",
-                   main = paste(lbl, expression(sigma[S]^2), "calibration"),
+                   ylab = expression(paste(sigma[R]^2, " ratio")),
+                   main = bquote(.(paste0(.fmt_lbl(lbl), ":  ")) *
+                                   sigma[R]^2 ~ "calibration"),
                    log = "x", xaxt = "n", bty = "l")
     graphics::axis(1L, at = n_vals_plot, labels = n_vals_plot, las = 2L,
                    mgp = c(1.7, 0.35, 0))
@@ -1939,54 +1964,57 @@ simCalibrationFigures <- function(
     for (tm in coef_terms) {
       d    <- sub[sub$term == tm, ]
       d    <- d[order(d$n), ]
-      # sig2S_Th1 = sig2S_B * sigma2S_true / sigma2S_true_Th1
+      # sig2S_Th1 = MC / sigma2S_true_Th1 = (sig2S_B * sigma2S_true) / sigma2S_true_Th1
       r_Th1 <- tv$sigma2S_true[tm] / tv$sigma2S_true_Th1[tm]
-      sig2S_Th1_vals <- d$sig2S_B * r_Th1
-      graphics::lines(d$n, d$sig2S_A,       col = term_cols[[tm]], lwd = 1.5, lty = 1L)
-      graphics::lines(d$n, d$sig2S_B,       col = term_cols[[tm]], lwd = 1.5, lty = 2L)
-      graphics::lines(d$n, sig2S_Th1_vals,  col = term_cols[[tm]], lwd = 1.5, lty = 3L)
-      graphics::points(d$n, d$sig2S_A,      col = term_cols[[tm]], pch = 16L, cex = 0.7)
-      graphics::points(d$n, d$sig2S_B,      col = term_cols[[tm]], pch = 1L,  cex = 0.7)
-      graphics::points(d$n, sig2S_Th1_vals, col = term_cols[[tm]], pch = 2L,  cex = 0.7)
+      sig2S_Th1_vals <- 1/(d$sig2S_B * r_Th1)
+      # Solid: sig2S_B = sigma2S_true /sigma2S_MC
+      # Dashed: sig2S_Th1 = sigma2S_true_init/sigma2S_MC   ("init-to-MC" ratio)
+      graphics::lines(d$n, 1/d$sig2S_B,      col = term_cols[[tm]], lwd = 1.8, lty = 1L)
+      graphics::lines(d$n, sig2S_Th1_vals, col = term_cols[[tm]], lwd = 1.5, lty = 2L)
+      graphics::points(d$n, 1/d$sig2S_B,      col = term_cols[[tm]], pch = 16L, cex = 0.7)
+      graphics::points(d$n, sig2S_Th1_vals, col = term_cols[[tm]], pch = 1L,  cex = 0.7)
     }
 
     # --- Panel 5: Legend ---
     short_terms <- .abbrev(coef_terms)
-    phi_leg <- if (is_lm) list(
-      legend = c(short_terms, "phi (sigma^2)"),
-      col    = c(unname(term_cols[coef_terms]), "#000000"),
-      pch    = c(rep(16L, n_terms), 15L),
-      lty    = c(rep(1L, n_terms), 1L)
-    ) else list(
-      legend = short_terms,
-      col    = unname(term_cols[coef_terms]),
-      pch    = rep(16L, n_terms),
-      lty    = rep(1L, n_terms)
-    )
-    leg_ncol <- ceiling(length(phi_leg$legend) / 3L)
+    leg_ncol <- ceiling(n_terms / 3L)
 
-    graphics::par(mar = c(0.2, 0.5, 0.2, 0.5))
+    graphics::par(mar = c(0.2, 0.5, 0.2, 0.5), cex = 0.90)
     graphics::plot.new()
 
-    graphics::legend("left",
-                     legend = phi_leg$legend,
-                     col    = phi_leg$col,
-                     pch    = phi_leg$pch,
-                     lty    = phi_leg$lty,
+    # Left: coefficient colour key (coefficients only, without phi)
+    graphics::legend(x = 0.01, y = 1.0,
+                     legend = short_terms,
+                     col    = unname(term_cols[coef_terms]),
+                     pch    = rep(16L, n_terms),
+                     lty    = rep(1L, n_terms),
                      lwd    = 1.5,
-                     bty    = "n", cex = 0.80,
+                     bty    = "n", cex = 0.85, xjust = 0L, yjust = 1L,
                      ncol   = leg_ncol,
-                     title  = "Term", title.font = 2L)
-    graphics::legend("right",
-                     legend = c("Diag: vcov_B_k - 1  (variance excess)",
-                                "Off-diag: cor_MC - cor_A  (gray)",
-                                "sigma2S: Empirical / Th1 (C)"),
-                     col    = c("black", "gray70", "gray30"),
-                     lty    = c(1L, 1L, 3L),
-                     pch    = c(16L, NA_integer_, 2L),
-                     lwd    = c(1.5, 0.8, 1.5),
-                     bty    = "n", cex = 0.85,
-                     title  = "Line key", title.font = 2L)
+                     title  = "Coefficient (all panels)", title.font = 2L)
+
+    # If lm: phi below coefficients
+    if (is_lm) {
+      graphics::legend(x = 0.01, y = 0.65,
+                       legend = expression(phi ~ "(error variance)"),
+                       col    = "#000000", pch = 15L, lty = 1L, lwd = 1.5,
+                       bty    = "n", cex = 0.85, xjust = 0L, yjust = 1L)
+    }
+
+    # Right: line-style key
+    graphics::legend(x = 0.60, y = 1.0,
+                     legend = c(
+                       "Diagonal: vcov ratio - 1",
+                       "Off-diagonal: norm. bias (gray)",
+                       expression(sigma[R]^2 ~ ": MC / true  (solid)"),
+                       expression(sigma[R]^2 ~ ": MC / init  (dashed)")
+                     ),
+                     col    = c("black", "gray70", "gray30", "gray30"),
+                     lty    = c(1L, 1L, 1L, 2L),
+                     pch    = c(15L, NA_integer_, 16L, 1L),
+                     lwd    = c(1.5, 0.8, 1.8, 1.5),
+                     bty    = "n", cex = 0.85, xjust = 0L, yjust = 1L,
+                     title  = "Line style key", title.font = 2L)
 
     grDevices::dev.off()
     message("Saved: ", fig_path)

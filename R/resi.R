@@ -9,9 +9,9 @@
 #' @param anova Logical, whether to produce an Anova table with the RESI columns added. By default = `TRUE`.
 #' @param overall Logical, whether to produce an overall Wald test comparing full to reduced model with RESI columns added. By default = `TRUE`.
 #' @param ci.method Character, the method used to compute confidence intervals.
-#'   One of `"boot"` (bootstrap, default), `"normal"` (delta-method normal approximation),
-#'   or `"qf"` (quadratic form inversion). See `resi_pe_asymptotic` for details on
-#'   the asymptotic methods.
+#'   One of `"boot"` (bootstrap), `"qf"` (quadratic-form inversion, default for lm and glm),
+#'   `"normal"` (normal approximation), or `"cf"` (Cornish-Fisher inversion).
+#'   See `resi_pe_asymptotic` for details on the asymptotic methods.
 #' @param nboot Numeric, the number of bootstrap replicates. Used only when
 #'   `ci.method = "boot"`. By default, 1000.
 #' @param boot.method String, which type of bootstrap to use: `nonparam` = non-parametric bootstrap (default); `bayes` = Bayesian bootstrap.
@@ -419,11 +419,9 @@ resi.glm = function(model.full, model.reduced = NULL, data, anova = TRUE,
                     vcovfunc = sandwich::vcovHC, alpha = 0.05, store.boot = FALSE,
                     Anova.args = list(), vcov.args = list(), unbiased = TRUE,
                     parallel = c("no", "multicore", "snow"), ncpus = getOption("boot.ncpus", 1L),
-                    ci.method = "boot",
-                    ...){
-  dots = list(...)
-  if ("boot.method" %in% names(dots)){
-    stop("\nOnly nonparametric bootstrap supported for model type")
+                    ci.method = "qf",
+                    ...){  dots = list(...)
+  if ("boot.method" %in% names(dots)){    stop("\nOnly nonparametric bootstrap supported for model type")
   }
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,
                anova = anova, coefficients = coefficients, overall = overall,
@@ -443,8 +441,8 @@ resi.lm = function(model.full, model.reduced = NULL, data, anova = TRUE,
                     vcov.args = list(), unbiased = TRUE,
                     parallel = c("no", "multicore", "snow"),
                     ncpus = getOption("boot.ncpus", 1L),
-                    ci.method = "boot",
-                    ...){
+                    ci.method = "qf",
+                    ...){  
   boot.method = match.arg(tolower(boot.method), choices = c("nonparam", "bayes"))
 
   resi.default(model.full = model.full, model.reduced = model.reduced, data = data,

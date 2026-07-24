@@ -31,6 +31,12 @@ navbar:
     - search
     - github
 
+articles:
+- title: Simulation validation
+  navbar: Simulation validation
+  contents:
+  - articles/ci_validation
+
 reference:
 - title: Model-based functions
   desc: Use these functions on fitted models to obtain RESI estimates and confidence
