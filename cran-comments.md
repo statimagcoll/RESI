@@ -1,4 +1,4 @@
-## CRAN Submission 1.4.1
+## CRAN Submission 1.4.2
 
 ### New features
 
@@ -9,6 +9,8 @@
 ### Bug fixes
 
 - Fixed intercept-only reduced model for computed responses in `resi_pe.default`
+- Fixed derivative method to produce accurate coverage.
+- Added statistical evaluation to package website.
 
 ## Test Environments
 
@@ -18,8 +20,7 @@
 
 ## R CMD check results
 
-There were no ERRORs, WARNINGs.
-There was a NOTE regarding URLs in /inst/doc/RESI_paper.pdf. The URLs reported in the NOTE originate from citations embedded in this PDF. The PDF is not generated during package build and the package code, examples, and vignettes do not depend on these URLs. The NOTE is confined to this archival document.
+There were no ERRORs, WARNINGs. There was a NOTE regarding URLs in /inst/doc/RESI_paper.pdf. The URLs reported in the NOTE originate from citations embedded in this PDF. The PDF is not generated during package build and the package code, examples, and vignettes do not depend on these URLs. The NOTE is confined to this archival document.
 
 ## Downstream dependencies
 

@@ -13,7 +13,7 @@
 #' \item{charges}{individual medical costs billed by health insurance}
 #' }
 #'
-#' @source \url{https://www.kaggle.com/datasets/teertha/ushealthinsurancedataset}
+#' @source Kaggle dataset teertha ushealthinsurancedataset. url checker thinks the link is broken.
 "insurance"
 
 

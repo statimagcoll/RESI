@@ -69,5 +69,4 @@ Depends:
     R (>= 2.10)
 Config/testthat/edition: 3
 URL: https://statimagcoll.github.io/RESI/, https://github.com/statimagcoll/RESI
-VignetteBuilder: R.rsp
 BugReports: https://github.com/statimagcoll/RESI/issues
