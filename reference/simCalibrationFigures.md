@@ -12,7 +12,9 @@ estimates to their population targets.
 simCalibrationFigures(
   output.dir = "resiCalibrationSim",
   figures.dir = NULL,
-  alpha = 0.05
+  alpha = 0.05,
+  deriv_method = c("extended", "corrected", "original", "population", "population2",
+    "zeroB", "zero_phi_cross")
 )
 ```
 
@@ -32,6 +34,11 @@ simCalibrationFigures(
 - alpha:
 
   Numeric, nominal CI level. Default 0.05.
+
+- deriv_method:
+
+  Character, type of derivative being evaluated. Package now only
+  includes "extended" in resi implementation.
 
 ## Value
 

@@ -14,7 +14,7 @@ resi_pe_asymptotic(
   coefficients = TRUE,
   anova = TRUE,
   alpha = 0.05,
-  ci.method = c("normal", "qf", "cf"),
+  ci.method = c("qf", "normal", "cf"),
   type = "HC3",
   unbiased = TRUE,
   Anova.args = list(),
@@ -52,13 +52,14 @@ resi_pe_asymptotic(
 
 - ci.method:
 
-  Character; `"normal"` (truncated normal), `"qf"` (quadratic-form
-  Imhof), or `"cf"` (Cornish-Fisher test inversion). Default `"normal"`.
+  Character; `"qf"` (quadratic-form Imhof, default), `"normal"`
+  (truncated normal), or `"cf"` (Cornish-Fisher test inversion).
 
 - type:
 
-  Character; HC type for the M-estimator sandwich used in CI
-  construction. Default `"HC3"`.
+  Character; HC type for the sandwich variance used in CI construction
+  (controls tau_i weights in SigmaXw). Default `"HC3"`. Supported:
+  `"HC0"`–`"HC5"`, `"const"`.
 
 - unbiased:
 

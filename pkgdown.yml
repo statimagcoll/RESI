@@ -2,9 +2,8 @@ pandoc: 3.8.3
 pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
-  RESI_paper: RESI_paper.html
-  RESI: RESI.html
-last_built: 2026-07-09T15:42Z
+  articles/ci_validation: ci_validation.html
+last_built: 2026-07-24T15:01Z
 urls:
   reference: https://statimagcoll.github.io/RESI/reference
   article: https://statimagcoll.github.io/RESI/articles

@@ -40,6 +40,8 @@ simCalibrationSim(
   alpha = 0.05,
   output.dir = "resiCalibrationSim",
   fixed.knots = FALSE,
+  deriv_method = c("corrected", "original", "population", "population2", "zeroB",
+    "zero_phi_cross", "extended"),
   mc.cores.reps = 1L
 )
 ```
@@ -67,6 +69,11 @@ simCalibrationSim(
 - fixed.knots:
 
   Logical. Fix spline knots at full-dataset quantiles. Default `FALSE`.
+
+- deriv_method:
+
+  Character, type of derivative being evaluated. Package now only
+  includes "extended" in resi implementation.
 
 - mc.cores.reps:
 
