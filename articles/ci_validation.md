@@ -79,14 +79,14 @@ The calibration study examines whether the analytic $`\hat\sigma^2_R`$
 of $`\hat{R}`$ across replications. Each calibration figure has four
 panels:
 
-1.  **Bias of $`\hat\theta`$**: signed deviation of the parameter
+1.  **Bias of** $`\hat\theta`$: signed deviation of the parameter
     estimates (model coefficients and, for `lm`,
     $`\hat\phi = \hat\sigma^2`$) from their full-data targets.
 2.  **Sandwich covariance normalized bias**:
     $`(n\,\widehat{\mathrm{Var}}(\hat\beta_k) -
     n\,\mathrm{Var}_{\mathrm{MC}}(\hat\beta_k)) / n\,\mathrm{Var}_{\mathrm{MC}}(\hat\beta_k)`$.
-3.  **Bias of $`\hat{R}`$** (RESI point estimate).
-4.  **$`\sigma^2_R`$ ratios**: solid line = $`\sigma^2_{R,\text{MC}} /
+3.  **Bias of** $`\hat{R}`$ (RESI point estimate).
+4.  $`\sigma^2_R`$ ratios: solid line = $`\sigma^2_{R,\text{MC}} /
     \sigma^2_{R,\text{extended}}`$ (Monte Carlo variance over extended
     estimator); dashed = ratio against the initial delta-method
     derivation. A ratio of 1 (dashed reference line) indicates perfect
@@ -163,12 +163,12 @@ simEstimatorFigures(sim.dir     = "resiBootSim",
                     figures.dir = "method_comparison")
 ```
 
-### Step 4 — copy figures into the package
+### Step 4 — copy and rasterize figures for the website
 
 ``` r
 
 # Adjust pkg_dir to the root of your RESI package source tree
-pkg_dir  <- "path/to/RESI"
+pkg_dir  <- "/path/to/RESI"
 figs_dir <- file.path(pkg_dir, "vignettes", "articles", "figures")
 dir.create(figs_dir, recursive = TRUE, showWarnings = FALSE)
 
@@ -178,6 +178,22 @@ file.copy(list.files("resiAsympQFSim/figures",
                      pattern = "\\.pdf$", full.names = TRUE), figs_dir)
 file.copy(list.files("method_comparison",
                      pattern = "\\.pdf$", full.names = TRUE), figs_dir)
+
+# Browsers do not reliably render PDF files in HTML <img> elements. Create a
+# PNG companion for every source PDF; pkgdown displays these PNG files below.
+# install.packages(c("magick", "pdftools")) # needed once for regeneration
+pdf_files <- list.files(figs_dir, pattern = "\\.pdf$", full.names = TRUE)
+for (pdf_file in pdf_files) {
+  cat(pdf_file)
+  pages <- magick::image_read_pdf(pdf_file, density = 700)
+  stopifnot(length(pages) == 1L)
+  pages <- magick::image_resize(pages, "3400x")
+  magick::image_write(
+    pages,
+    path = sub("\\.pdf$", ".png", pdf_file),
+    format = "png"
+  )
+}
 ```
 
 ------------------------------------------------------------------------
@@ -190,11 +206,19 @@ sample size.
 
 ### LM parametric
 
+![](figures/calibration_lm_parametric.png)
+
 ### LM robust
+
+![](figures/calibration_lm_robust.png)
 
 ### GLM parametric
 
+![](figures/calibration_glm_parametric.png)
+
 ### GLM robust
+
+![](figures/calibration_glm_robust.png)
 
 ------------------------------------------------------------------------
 
@@ -208,19 +232,35 @@ population RESI value.
 
 ### LM parametric — coefficients
 
+![](figures/compare_lm_parametric_coefficients.png)
+
 ### LM parametric — ANOVA
+
+![](figures/compare_lm_parametric_anova.png)
 
 ### LM robust — coefficients
 
+![](figures/compare_lm_robust_coefficients.png)
+
 ### LM robust — ANOVA
+
+![](figures/compare_lm_robust_anova.png)
 
 ### GLM parametric — coefficients
 
+![](figures/compare_glm_parametric_coefficients.png)
+
 ### GLM parametric — ANOVA
+
+![](figures/compare_glm_parametric_anova.png)
 
 ### GLM robust — coefficients
 
+![](figures/compare_glm_robust_coefficients.png)
+
 ### GLM robust — ANOVA
+
+![](figures/compare_glm_robust_anova.png)
 
 ------------------------------------------------------------------------
 
@@ -234,19 +274,35 @@ under- or over-covers.
 
 ### LM parametric — coefficients
 
+![](figures/covquant_lm_parametric_coefficients.png)
+
 ### LM parametric — ANOVA
+
+![](figures/covquant_lm_parametric_anova.png)
 
 ### LM robust — coefficients
 
+![](figures/covquant_lm_robust_coefficients.png)
+
 ### LM robust — ANOVA
+
+![](figures/covquant_lm_robust_anova.png)
 
 ### GLM parametric — coefficients
 
+![](figures/covquant_glm_parametric_coefficients.png)
+
 ### GLM parametric — ANOVA
+
+![](figures/covquant_glm_parametric_anova.png)
 
 ### GLM robust — coefficients
 
+![](figures/covquant_glm_robust_coefficients.png)
+
 ### GLM robust — ANOVA
+
+![](figures/covquant_glm_robust_anova.png)
 
 ------------------------------------------------------------------------
 
@@ -260,19 +316,35 @@ differences in small samples.
 
 ### LM parametric — coefficients
 
+![](figures/estimator_lm_parametric_coefficients.png)
+
 ### LM parametric — ANOVA
+
+![](figures/estimator_lm_parametric_anova.png)
 
 ### LM robust — coefficients
 
+![](figures/estimator_lm_robust_coefficients.png)
+
 ### LM robust — ANOVA
+
+![](figures/estimator_lm_robust_anova.png)
 
 ### GLM parametric — coefficients
 
+![](figures/estimator_glm_parametric_coefficients.png)
+
 ### GLM parametric — ANOVA
+
+![](figures/estimator_glm_parametric_anova.png)
 
 ### GLM robust — coefficients
 
+![](figures/estimator_glm_robust_coefficients.png)
+
 ### GLM robust — ANOVA
+
+![](figures/estimator_glm_robust_anova.png)
 
 ------------------------------------------------------------------------
 
@@ -286,11 +358,19 @@ model, based on bootstrap simulation replicates.
 
 ### LM parametric — coefficients
 
+![](figures/estimator_compare_lm_parametric_coefficients.png)
+
 ### LM parametric — ANOVA
+
+![](figures/estimator_compare_lm_parametric_anova.png)
 
 ### LM robust — coefficients
 
+![](figures/estimator_compare_lm_robust_coefficients.png)
+
 ### LM robust — ANOVA
+
+![](figures/estimator_compare_lm_robust_anova.png)
 
 ------------------------------------------------------------------------
 
@@ -301,11 +381,19 @@ default — across the full sample-size grid.
 
 ### LM parametric
 
+![](figures/sim_lm_parametric_qf.png)
+
 ### LM robust
+
+![](figures/sim_lm_robust_qf.png)
 
 ### GLM parametric
 
+![](figures/sim_glm_parametric_qf.png)
+
 ### GLM robust
+
+![](figures/sim_glm_robust_qf.png)
 
 ------------------------------------------------------------------------
 

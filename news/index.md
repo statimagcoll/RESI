@@ -2,6 +2,8 @@
 
 ## RESI 1.4.2
 
+CRAN release: 2026-07-24
+
 ### RESI 1.4.2
 
 #### New Features

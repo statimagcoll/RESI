@@ -84,16 +84,23 @@ It lives at RESI/vignettes/articles/ci_validation.Rmd and is registered in
 RESI/_pkgdown.yml under the "articles:" section.
 
 PRE-COMPUTED FIGURES
-All 36 PDFs referenced below are committed to
+All 36 source PDFs and their web-ready PNG versions are committed to
   RESI/vignettes/articles/figures/
 and were produced by the simulation pipeline described in the
 "Reproducing these figures" section of this document.
 
+The article embeds 3600-pixel-wide, full-color PNG files because browsers do not reliably
+display a PDF as an HTML <img>. Keep both formats: PDFs preserve vector output,
+while the high-resolution PNGs are the assets rendered by pkgdown. The HTML is
+not self-contained because embedding all full-resolution assets would exceed
+normal website file-size limits. Target the width rather than the longest edge
+because the coefficient figures are tall.
+
 TO REGENERATE FIGURES after changing the simulation code or the estimator:
   1. Run the `eval=FALSE` code chunks in this document from the project root.
-  2. Copy the output PDFs back to vignettes/articles/figures/ (the code chunk
-     already does this as the last step).
-  3. Commit the updated PDFs.
+  2. Copy and rasterize the output PDFs in vignettes/articles/figures/ (the
+    final code chunk does both).
+  3. Commit the updated PDFs and PNGs.
 
 FIGURE SOURCES
   calibration_*.pdf      ← simCalibrationFigures(..., deriv_method="extended")
@@ -159,6 +166,11 @@ weighted chi-square</td>
 </table>
 <p>Results are shown for four estimation settings:</p>
 <table class="table">
+<colgroup>
+<col width="22%">
+<col width="40%">
+<col width="36%">
+</colgroup>
 <thead><tr class="header">
 <th>Setting</th>
 <th>Model</th>
@@ -253,8 +265,8 @@ of
 across replications. Each calibration figure has four panels:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong>Bias of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>θ</mi><mo accent="true">̂</mo></mover><annotation encoding="application/x-tex">\hat\theta</annotation></semantics></math></strong>:
+<strong>Bias of</strong>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>θ</mi><mo accent="true">̂</mo></mover><annotation encoding="application/x-tex">\hat\theta</annotation></semantics></math>:
 signed deviation of the parameter estimates (model coefficients and, for
 <code>lm</code>,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mi>ϕ</mi><mo accent="true">̂</mo></mover><mo>=</mo><msup><mover><mi>σ</mi><mo accent="true">̂</mo></mover><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\hat\phi = \hat\sigma^2</annotation></semantics></math>)
@@ -264,12 +276,12 @@ from their full-data targets.</li>
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mspace width="0.167em"></mspace><mover><mrow><mi mathvariant="normal">V</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">r</mi></mrow><mo accent="true">̂</mo></mover><mo stretchy="false" form="prefix">(</mo><msub><mover><mi>β</mi><mo accent="true">̂</mo></mover><mi>k</mi></msub><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>n</mi><mspace width="0.167em"></mspace><msub><mrow><mi mathvariant="normal">V</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">r</mi></mrow><mrow><mi mathvariant="normal">M</mi><mi mathvariant="normal">C</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><msub><mover><mi>β</mi><mo accent="true">̂</mo></mover><mi>k</mi></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mi>/</mi><mi>n</mi><mspace width="0.167em"></mspace><msub><mrow><mi mathvariant="normal">V</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">r</mi></mrow><mrow><mi mathvariant="normal">M</mi><mi mathvariant="normal">C</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><msub><mover><mi>β</mi><mo accent="true">̂</mo></mover><mi>k</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(n\,\widehat{\mathrm{Var}}(\hat\beta_k) -
 n\,\mathrm{Var}_{\mathrm{MC}}(\hat\beta_k)) / n\,\mathrm{Var}_{\mathrm{MC}}(\hat\beta_k)</annotation></semantics></math>.</li>
 <li>
-<strong>Bias of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>R</mi><mo accent="true">̂</mo></mover><annotation encoding="application/x-tex">\hat{R}</annotation></semantics></math></strong>
+<strong>Bias of</strong>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>R</mi><mo accent="true">̂</mo></mover><annotation encoding="application/x-tex">\hat{R}</annotation></semantics></math>
 (RESI point estimate).</li>
 <li>
-<strong><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msubsup><mi>σ</mi><mi>R</mi><mn>2</mn></msubsup><annotation encoding="application/x-tex">\sigma^2_R</annotation></semantics></math>
-ratios</strong>: solid line =
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msubsup><mi>σ</mi><mi>R</mi><mn>2</mn></msubsup><annotation encoding="application/x-tex">\sigma^2_R</annotation></semantics></math>
+ratios: solid line =
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>σ</mi><mrow><mi>R</mi><mo>,</mo><mtext mathvariant="normal">MC</mtext></mrow><mn>2</mn></msubsup><mi>/</mi><msubsup><mi>σ</mi><mrow><mi>R</mi><mo>,</mo><mtext mathvariant="normal">extended</mtext></mrow><mn>2</mn></msubsup></mrow><annotation encoding="application/x-tex">\sigma^2_{R,\text{MC}} /
 \sigma^2_{R,\text{extended}}</annotation></semantics></math> (Monte
 Carlo variance over extended estimator); dashed = ratio against the
@@ -347,11 +359,11 @@ the package source tree.</p>
 <span>                    figures.dir <span class="op">=</span> <span class="st">"method_comparison"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="step-4-copy-figures-into-the-package">Step 4 — copy figures into the package<a class="anchor" aria-label="anchor" href="#step-4-copy-figures-into-the-package"></a>
+<h3 id="step-4-copy-and-rasterize-figures-for-the-website">Step 4 — copy and rasterize figures for the website<a class="anchor" aria-label="anchor" href="#step-4-copy-and-rasterize-figures-for-the-website"></a>
 </h3>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Adjust pkg_dir to the root of your RESI package source tree</span></span>
-<span><span class="va">pkg_dir</span>  <span class="op">&lt;-</span> <span class="st">"path/to/RESI"</span></span>
+<span><span class="va">pkg_dir</span>  <span class="op">&lt;-</span> <span class="st">"/path/to/RESI"</span></span>
 <span><span class="va">figs_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">pkg_dir</span>, <span class="st">"vignettes"</span>, <span class="st">"articles"</span>, <span class="st">"figures"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">figs_dir</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span>, showWarnings <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
@@ -360,7 +372,23 @@ the package source tree.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.copy</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="st">"resiAsympQFSim/figures"</span>,</span>
 <span>                     pattern <span class="op">=</span> <span class="st">"\\.pdf$"</span>, full.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="va">figs_dir</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.copy</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="st">"method_comparison"</span>,</span>
-<span>                     pattern <span class="op">=</span> <span class="st">"\\.pdf$"</span>, full.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="va">figs_dir</span><span class="op">)</span></span></code></pre></div>
+<span>                     pattern <span class="op">=</span> <span class="st">"\\.pdf$"</span>, full.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="va">figs_dir</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Browsers do not reliably render PDF files in HTML &lt;img&gt; elements. Create a</span></span>
+<span><span class="co"># PNG companion for every source PDF; pkgdown displays these PNG files below.</span></span>
+<span><span class="co"># install.packages(c("magick", "pdftools")) # needed once for regeneration</span></span>
+<span><span class="va">pdf_files</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">figs_dir</span>, pattern <span class="op">=</span> <span class="st">"\\.pdf$"</span>, full.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="kw">for</span> <span class="op">(</span><span class="va">pdf_file</span> <span class="kw">in</span> <span class="va">pdf_files</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">pdf_file</span><span class="op">)</span></span>
+<span>  <span class="va">pages</span> <span class="op">&lt;-</span> <span class="fu">magick</span><span class="fu">::</span><span class="fu">image_read_pdf</span><span class="op">(</span><span class="va">pdf_file</span>, density <span class="op">=</span> <span class="fl">700</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">pages</span><span class="op">)</span> <span class="op">==</span> <span class="fl">1L</span><span class="op">)</span></span>
+<span>  <span class="va">pages</span> <span class="op">&lt;-</span> <span class="fu">magick</span><span class="fu">::</span><span class="fu">image_resize</span><span class="op">(</span><span class="va">pages</span>, <span class="st">"3400x"</span><span class="op">)</span></span>
+<span>  <span class="fu">magick</span><span class="fu">::</span><span class="fu">image_write</span><span class="op">(</span></span>
+<span>    <span class="va">pages</span>,</span>
+<span>    path <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">sub</a></span><span class="op">(</span><span class="st">"\\.pdf$"</span>, <span class="st">".png"</span>, <span class="va">pdf_file</span><span class="op">)</span>,</span>
+<span>    format <span class="op">=</span> <span class="st">"png"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span></code></pre></div>
 <hr>
 </div>
 </div>
@@ -374,22 +402,23 @@ well-calibrated as a function of sample size.</p>
 <div class="section level3">
 <h3 id="lm-parametric">LM parametric<a class="anchor" aria-label="anchor" href="#lm-parametric"></a>
 </h3>
-<embed src="figures/calibration_lm_parametric.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/calibration_lm_parametric.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="lm-robust">LM robust<a class="anchor" aria-label="anchor" href="#lm-robust"></a>
 </h3>
-<embed src="figures/calibration_lm_robust.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/calibration_lm_robust.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-parametric">GLM parametric<a class="anchor" aria-label="anchor" href="#glm-parametric"></a>
 </h3>
-<embed src="figures/calibration_glm_parametric.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/calibration_glm_parametric.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-robust">GLM robust<a class="anchor" aria-label="anchor" href="#glm-robust"></a>
 </h3>
-<embed src="figures/calibration_glm_robust.pdf" width="100%" type="application/pdf"></embed><hr>
+<p><img src="figures/calibration_glm_robust.png" class="r-plt" alt="" width="100%"></p>
+<hr>
 </div>
 </div>
 <div class="section level2">
@@ -403,42 +432,43 @@ population RESI value.</p>
 <div class="section level3">
 <h3 id="lm-parametric-coefficients">LM parametric — coefficients<a class="anchor" aria-label="anchor" href="#lm-parametric-coefficients"></a>
 </h3>
-<embed src="figures/compare_lm_parametric_coefficients.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/compare_lm_parametric_coefficients.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="lm-parametric-anova">LM parametric — ANOVA<a class="anchor" aria-label="anchor" href="#lm-parametric-anova"></a>
 </h3>
-<embed src="figures/compare_lm_parametric_anova.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/compare_lm_parametric_anova.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="lm-robust-coefficients">LM robust — coefficients<a class="anchor" aria-label="anchor" href="#lm-robust-coefficients"></a>
 </h3>
-<embed src="figures/compare_lm_robust_coefficients.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/compare_lm_robust_coefficients.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="lm-robust-anova">LM robust — ANOVA<a class="anchor" aria-label="anchor" href="#lm-robust-anova"></a>
 </h3>
-<embed src="figures/compare_lm_robust_anova.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/compare_lm_robust_anova.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-parametric-coefficients">GLM parametric — coefficients<a class="anchor" aria-label="anchor" href="#glm-parametric-coefficients"></a>
 </h3>
-<embed src="figures/compare_glm_parametric_coefficients.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/compare_glm_parametric_coefficients.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-parametric-anova">GLM parametric — ANOVA<a class="anchor" aria-label="anchor" href="#glm-parametric-anova"></a>
 </h3>
-<embed src="figures/compare_glm_parametric_anova.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/compare_glm_parametric_anova.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-robust-coefficients">GLM robust — coefficients<a class="anchor" aria-label="anchor" href="#glm-robust-coefficients"></a>
 </h3>
-<embed src="figures/compare_glm_robust_coefficients.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/compare_glm_robust_coefficients.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-robust-anova">GLM robust — ANOVA<a class="anchor" aria-label="anchor" href="#glm-robust-anova"></a>
 </h3>
-<embed src="figures/compare_glm_robust_anova.pdf" width="100%" type="application/pdf"></embed><hr>
+<p><img src="figures/compare_glm_robust_anova.png" class="r-plt" alt="" width="100%"></p>
+<hr>
 </div>
 </div>
 <div class="section level2">
@@ -452,42 +482,43 @@ under- or over-covers.</p>
 <div class="section level3">
 <h3 id="lm-parametric-coefficients-1">LM parametric — coefficients<a class="anchor" aria-label="anchor" href="#lm-parametric-coefficients-1"></a>
 </h3>
-<embed src="figures/covquant_lm_parametric_coefficients.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/covquant_lm_parametric_coefficients.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="lm-parametric-anova-1">LM parametric — ANOVA<a class="anchor" aria-label="anchor" href="#lm-parametric-anova-1"></a>
 </h3>
-<embed src="figures/covquant_lm_parametric_anova.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/covquant_lm_parametric_anova.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="lm-robust-coefficients-1">LM robust — coefficients<a class="anchor" aria-label="anchor" href="#lm-robust-coefficients-1"></a>
 </h3>
-<embed src="figures/covquant_lm_robust_coefficients.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/covquant_lm_robust_coefficients.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="lm-robust-anova-1">LM robust — ANOVA<a class="anchor" aria-label="anchor" href="#lm-robust-anova-1"></a>
 </h3>
-<embed src="figures/covquant_lm_robust_anova.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/covquant_lm_robust_anova.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-parametric-coefficients-1">GLM parametric — coefficients<a class="anchor" aria-label="anchor" href="#glm-parametric-coefficients-1"></a>
 </h3>
-<embed src="figures/covquant_glm_parametric_coefficients.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/covquant_glm_parametric_coefficients.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-parametric-anova-1">GLM parametric — ANOVA<a class="anchor" aria-label="anchor" href="#glm-parametric-anova-1"></a>
 </h3>
-<embed src="figures/covquant_glm_parametric_anova.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/covquant_glm_parametric_anova.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-robust-coefficients-1">GLM robust — coefficients<a class="anchor" aria-label="anchor" href="#glm-robust-coefficients-1"></a>
 </h3>
-<embed src="figures/covquant_glm_robust_coefficients.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/covquant_glm_robust_coefficients.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-robust-anova-1">GLM robust — ANOVA<a class="anchor" aria-label="anchor" href="#glm-robust-anova-1"></a>
 </h3>
-<embed src="figures/covquant_glm_robust_anova.pdf" width="100%" type="application/pdf"></embed><hr>
+<p><img src="figures/covquant_glm_robust_anova.png" class="r-plt" alt="" width="100%"></p>
+<hr>
 </div>
 </div>
 <div class="section level2">
@@ -502,42 +533,43 @@ numerical differences in small samples.</p>
 <div class="section level3">
 <h3 id="lm-parametric-coefficients-2">LM parametric — coefficients<a class="anchor" aria-label="anchor" href="#lm-parametric-coefficients-2"></a>
 </h3>
-<embed src="figures/estimator_lm_parametric_coefficients.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/estimator_lm_parametric_coefficients.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="lm-parametric-anova-2">LM parametric — ANOVA<a class="anchor" aria-label="anchor" href="#lm-parametric-anova-2"></a>
 </h3>
-<embed src="figures/estimator_lm_parametric_anova.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/estimator_lm_parametric_anova.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="lm-robust-coefficients-2">LM robust — coefficients<a class="anchor" aria-label="anchor" href="#lm-robust-coefficients-2"></a>
 </h3>
-<embed src="figures/estimator_lm_robust_coefficients.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/estimator_lm_robust_coefficients.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="lm-robust-anova-2">LM robust — ANOVA<a class="anchor" aria-label="anchor" href="#lm-robust-anova-2"></a>
 </h3>
-<embed src="figures/estimator_lm_robust_anova.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/estimator_lm_robust_anova.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-parametric-coefficients-2">GLM parametric — coefficients<a class="anchor" aria-label="anchor" href="#glm-parametric-coefficients-2"></a>
 </h3>
-<embed src="figures/estimator_glm_parametric_coefficients.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/estimator_glm_parametric_coefficients.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-parametric-anova-2">GLM parametric — ANOVA<a class="anchor" aria-label="anchor" href="#glm-parametric-anova-2"></a>
 </h3>
-<embed src="figures/estimator_glm_parametric_anova.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/estimator_glm_parametric_anova.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-robust-coefficients-2">GLM robust — coefficients<a class="anchor" aria-label="anchor" href="#glm-robust-coefficients-2"></a>
 </h3>
-<embed src="figures/estimator_glm_robust_coefficients.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/estimator_glm_robust_coefficients.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-robust-anova-2">GLM robust — ANOVA<a class="anchor" aria-label="anchor" href="#glm-robust-anova-2"></a>
 </h3>
-<embed src="figures/estimator_glm_robust_anova.pdf" width="100%" type="application/pdf"></embed><hr>
+<p><img src="figures/estimator_glm_robust_anova.png" class="r-plt" alt="" width="100%"></p>
+<hr>
 </div>
 </div>
 <div class="section level2">
@@ -555,22 +587,23 @@ bootstrap simulation replicates.</p>
 <div class="section level3">
 <h3 id="lm-parametric-coefficients-3">LM parametric — coefficients<a class="anchor" aria-label="anchor" href="#lm-parametric-coefficients-3"></a>
 </h3>
-<embed src="figures/estimator_compare_lm_parametric_coefficients.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/estimator_compare_lm_parametric_coefficients.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="lm-parametric-anova-3">LM parametric — ANOVA<a class="anchor" aria-label="anchor" href="#lm-parametric-anova-3"></a>
 </h3>
-<embed src="figures/estimator_compare_lm_parametric_anova.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/estimator_compare_lm_parametric_anova.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="lm-robust-coefficients-3">LM robust — coefficients<a class="anchor" aria-label="anchor" href="#lm-robust-coefficients-3"></a>
 </h3>
-<embed src="figures/estimator_compare_lm_robust_coefficients.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/estimator_compare_lm_robust_coefficients.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="lm-robust-anova-3">LM robust — ANOVA<a class="anchor" aria-label="anchor" href="#lm-robust-anova-3"></a>
 </h3>
-<embed src="figures/estimator_compare_lm_robust_anova.pdf" width="100%" type="application/pdf"></embed><hr>
+<p><img src="figures/estimator_compare_lm_robust_anova.png" class="r-plt" alt="" width="100%"></p>
+<hr>
 </div>
 </div>
 <div class="section level2">
@@ -581,22 +614,23 @@ package default — across the full sample-size grid.</p>
 <div class="section level3">
 <h3 id="lm-parametric-1">LM parametric<a class="anchor" aria-label="anchor" href="#lm-parametric-1"></a>
 </h3>
-<embed src="figures/sim_lm_parametric_qf.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/sim_lm_parametric_qf.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="lm-robust-1">LM robust<a class="anchor" aria-label="anchor" href="#lm-robust-1"></a>
 </h3>
-<embed src="figures/sim_lm_robust_qf.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/sim_lm_robust_qf.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-parametric-1">GLM parametric<a class="anchor" aria-label="anchor" href="#glm-parametric-1"></a>
 </h3>
-<embed src="figures/sim_glm_parametric_qf.pdf" width="100%" type="application/pdf"></embed>
+<p><img src="figures/sim_glm_parametric_qf.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="glm-robust-1">GLM robust<a class="anchor" aria-label="anchor" href="#glm-robust-1"></a>
 </h3>
-<embed src="figures/sim_glm_robust_qf.pdf" width="100%" type="application/pdf"></embed><hr>
+<p><img src="figures/sim_glm_robust_qf.png" class="r-plt" alt="" width="100%"></p>
+<hr>
 </div>
 </div>
 <div class="section level2">
