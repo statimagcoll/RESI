@@ -949,10 +949,16 @@ resi_pe_asymptotic <- function(model.full,
   }
 
   # ---- model-level precomputation (extended framework) ----
-  # Treats SigmaX = X'X/n and SigmaXw = X'diag(tau*e^2)X/n as separate
-  # estimators; phi cancels in A^{-1}BA^{-1}, giving a pure influence-function
-  # variance estimate with no chain-rule approximation errors.
-  precomp     <- .resi_precompute_ext(model, type = type)
+  # Treats covariance ingredients as separate estimators. Robust models use
+  # (beta, SigmaXA, SigmaXB); parametric LM uses (beta, phi, SigmaX), and
+  # parametric GLM uses (beta, dispersion, SigmaXA).
+  is_glm <- inherits(model, "glm")
+  parametric_lm <- inherits(model, "lm") && !inherits(model, "glm") &&
+    identical(vcovfunc, stats::vcov)
+  parametric_glm <- is_glm && identical(vcovfunc, stats::vcov)
+  precomp     <- .resi_precompute_ext(model, type = type,
+                                      parametric_lm = parametric_lm,
+                                      parametric_glm = parametric_glm)
   contrast_fn <- .resi_contrast_ext
 
   # ---- vcov matrix for point estimates (same as resi_pe) ----
@@ -1081,28 +1087,32 @@ resi_pe_asymptotic <- function(model.full,
 
 #' Extended precompute: adds SigmaXA, SigmaXB ingredients
 #'
-#' Generalizes to lm and glm (both parametric and robust).
+#' Generalizes to lm and logistic glm, with separate parametric modes.
 #' The sandwich V_beta = SigmaXA^{-1} SigmaXB SigmaXA^{-1} is decomposed into
 #' two moment-matrix estimators treated as independent:
 #'   SigmaXA = -(1/n) sum_i c_i c_i' (bread moments; lm: X_i, glm: sqrt(w_i)*X_i)
 #'   SigmaXB = (1/n) sum_i tau_i r_i^2 X_i X_i'  (HC-weighted meat)
 #' where r_i are the appropriate residuals and tau_i the HC squared weights.
 #' @noRd
-.resi_precompute_ext <- function(model, type = "HC3") {
+.resi_precompute_ext <- function(model, type = "HC3", parametric_lm = FALSE,
+                                 parametric_glm = FALSE) {
   is_glm <- inherits(model, "glm")
   is_lm  <- inherits(model, "lm") && !is_glm
   if (!is_lm && !is_glm)
     stop(".resi_precompute_ext: only lm or glm models supported")
+  if (parametric_lm && !is_lm)
+    stop(".resi_precompute_ext: parametric_lm is only available for lm models")
+  if (parametric_glm && !is_glm)
+    stop(".resi_precompute_ext: parametric_glm is only available for glm models")
 
-  # For CI computation the extended framework always uses a consistent (robust)
-  # variance estimator.  The 'const' type signals the parametric RESI point
-  # estimate but must not carry over to the CI variance: upgrade to HC0 so that
-  # tau_i = 1 (HC0) is used explicitly and 'is_const' does not affect B_full.
+  # The robust extended path treats const as HC0 so tau_i = 1 explicitly.
+  # The parametric lm path uses phi and SigmaXA directly and does not use tau.
   ci_type <- if (type == "const") "HC0" else type
 
   precomp <- .resi_precompute(model, type = ci_type, deriv_method = "zeroB")
   X       <- precomp$X
   n       <- precomp$n
+  p       <- precomp$p
   sqrtw   <- precomp$sqrtw
   tau     <- sqrtw^2          # HC squared weights: tau_i = sqrtw_i^2
 
@@ -1114,12 +1124,34 @@ resi_pe_asymptotic <- function(model.full,
     SigmaXA <- crossprod(X) / n
     SigmaXB <- crossprod(X, tau * r^2 * X) / n
   } else {
-    # glm: SigmaXA = X'WX/n,  SigmaXB = X'diag(tau*(y-mu)^2)X/n
-    # c_i = sqrt(w_i)*X_i (bread contribution),  r_i = y_i - mu_i
-    w_A <- weights(model, type = "working")  # working weights w_i = mu_i(1-mu_i)
-    r   <- residuals(model, type = "response")  # y - mu(beta_hat)
+    # glm: use the unscaled score s_i x_i and working bread w_i x_i x_i'.
+    # For logistic regression s_i = y_i-mu_i and w_i = mu_i(1-mu_i).
+    eta <- model$linear.predictors
+    mu <- fitted(model)
+    y <- model$y
+    prior <- model$prior.weights
+    mu_eta <- model$family$mu.eta(eta)
+    variance_mu <- pmax(model$family$variance(mu), .Machine$double.eps)
+    r <- prior * (y - mu) * mu_eta / variance_mu
+    w_A <- weights(model, type = "working")
     SigmaXA <- crossprod(X * sqrt(w_A), X * sqrt(w_A)) / n   # X'WX/n
     SigmaXB <- crossprod(X, tau * r^2 * X) / n
+
+    # Derivative of the working bread with respect to beta. Numerical
+    # differentiation through the family functions supports non-logistic GLMs.
+    eta_step <- 1e-6 * (1 + abs(eta))
+    weight_at_eta <- function(eta_value) {
+      mu_value <- model$family$linkinv(eta_value)
+      derivative <- model$family$mu.eta(eta_value)
+      prior * derivative^2 /
+        pmax(model$family$variance(mu_value), .Machine$double.eps)
+    }
+    dw_deta <- (weight_at_eta(eta + eta_step) -
+      weight_at_eta(eta - eta_step)) / (2 * eta_step)
+    dSigmaXA_dBeta <- array(0, dim = c(p, p, p))
+    for (k in seq_len(p)) {
+      dSigmaXA_dBeta[, , k] <- crossprod(X, dw_deta * X[, k] * X) / n
+    }
   }
 
   precomp$SigmaXA     <- SigmaXA
@@ -1128,6 +1160,46 @@ resi_pe_asymptotic <- function(model.full,
   precomp$r           <- r          # residuals for direct term
   precomp$w_A         <- w_A        # bread weights (1 for lm, w_i for glm)
   precomp$tau         <- tau
+  precomp$parametric_lm <- parametric_lm
+  precomp$parametric_glm <- parametric_glm
+  if (is_glm) {
+    beta_if <- precomp$SigmaXA_inv %*% sweep(t(X), 2, r, '*')
+    SigmaXA_beta_if <- array(0, dim = c(precomp$p, precomp$p, n))
+    for (i in seq_len(n)) {
+      SigmaXA_beta_if[, , i] <- apply(
+        sweep(dSigmaXA_dBeta, 3, beta_if[, i], '*'), c(1, 2), sum)
+    }
+    family_name <- model$family$family
+    fixed_dispersion <- family_name %in% c("binomial", "poisson")
+    glm_dispersion <- if (fixed_dispersion) 1 else summary(model)$dispersion
+    glm_dispersion_if <- rep(0, n)
+    if (!fixed_dispersion) {
+      pearson <- prior * (y - mu)^2 / variance_mu
+      glm_dispersion_if <- (n / model$df.residual) *
+        (pearson - mean(pearson))
+      dispersion_gradient <- numeric(p)
+      for (k in seq_len(p)) {
+        beta_step <- 1e-6 * (1 + abs(coef(model)[k]))
+        eta_delta <- beta_step * X[, k]
+        mu_plus <- model$family$linkinv(eta + eta_delta)
+        mu_minus <- model$family$linkinv(eta - eta_delta)
+        dispersion_plus <- sum(prior * (y - mu_plus)^2 /
+          pmax(model$family$variance(mu_plus), .Machine$double.eps)) /
+          model$df.residual
+        dispersion_minus <- sum(prior * (y - mu_minus)^2 /
+          pmax(model$family$variance(mu_minus), .Machine$double.eps)) /
+          model$df.residual
+        dispersion_gradient[k] <- (dispersion_plus - dispersion_minus) /
+          (2 * beta_step)
+      }
+      glm_dispersion_if <- glm_dispersion_if +
+        drop(dispersion_gradient %*% beta_if)
+    }
+    precomp$dSigmaXA_dBeta <- dSigmaXA_dBeta
+    precomp$SigmaXA_beta_if <- SigmaXA_beta_if
+    precomp$glm_dispersion <- glm_dispersion
+    precomp$glm_dispersion_if <- glm_dispersion_if
+  }
   precomp$deriv_method <- "extended"
   precomp
 }
@@ -1162,6 +1234,8 @@ resi_pe_asymptotic <- function(model.full,
   w_A         <- precomp_ext$w_A         # bread weights (1 for lm, w_i for glm)
   SigmaXA_inv <- precomp_ext$SigmaXA_inv
   SigmaXB     <- precomp_ext$SigmaXB
+  parametric_lm <- isTRUE(precomp_ext$parametric_lm)
+  parametric_glm <- isTRUE(precomp_ext$parametric_glm)
 
   # H = L_model SigmaXA^{-1}  (m1 x p)
   H <- L_model %*% SigmaXA_inv
@@ -1170,7 +1244,13 @@ resi_pe_asymptotic <- function(model.full,
   # General sandwich: V_beta = SigmaXA^{-1} SigmaXB SigmaXA^{-1}
   # For lm: phi cancels in A^{-1}BA^{-1} giving SigmaXA=X'X/n, SigmaXB=SigmaXw.
   # For glm: A_beta = X'WX/n (SigmaXA), B_beta = HC-weighted meat (SigmaXB).
-  Sigma_beta_L <- .resi_sym(H %*% SigmaXB %*% t(H))
+  Sigma_beta_L <- if (parametric_lm) {
+    .resi_sym(precomp_ext$phi * H %*% t(L_model))
+  } else if (parametric_glm) {
+    .resi_sym(precomp_ext$glm_dispersion * H %*% t(L_model))
+  } else {
+    .resi_sym(H %*% SigmaXB %*% t(H))
+  }
 
   # EVD
   eig   <- eigen(Sigma_beta_L, symmetric = TRUE)
@@ -1185,6 +1265,101 @@ resi_pe_asymptotic <- function(model.full,
   R_beta   <- as.vector(Phat %*% beta_hat)   # m1-vector
   Stilde   <- sqrt(sum(R_beta^2))
   VT_beta  <- as.vector(t(V_eig) %*% beta_hat)   # m1-vector, eigenspace
+
+  if (parametric_lm) {
+    F_mat   <- t(V_eig) %*% H
+    FX      <- F_mat %*% t(X)
+    Wvb     <- W * matrix(VT_beta, m1, m1, byrow = TRUE)
+
+    phi_direct <- (V_eig %*% sweep(FX, 1, sqrtd, '/')) *
+      matrix(r, m1, n, byrow = TRUE)
+
+    phi_hat <- precomp_ext$phi
+    phi_if  <- (n / precomp_ext$model$df.residual) * (r^2 - mean(r^2))
+    phi_core <- VT_beta / (2 * phi_hat * sqrtd)
+    phi_scale <- -V_eig %*% phi_core
+    phi_phi <- phi_scale %*% t(phi_if)
+
+    design_core <- sweep(FX * (Wvb %*% FX), 2, phi_hat, '*') -
+      matrix(VT_beta / (2 * sqrtd), m1, n)
+    phi_XA <- V_eig %*% design_core
+
+    phi_ext <- phi_direct + phi_phi + phi_XA
+    Sigma_R_ext <- .resi_sym(tcrossprod(phi_ext) / n)
+
+    return(list(
+      m1         = m1,
+      n          = n,
+      beta_hat   = beta_hat,
+      Sigma_beta = Sigma_beta_L,
+      R_beta     = R_beta,
+      Stilde     = Stilde,
+      dR_dtheta  = NULL,
+      dR_direct  = NULL,
+      dR_Achain  = NULL,
+      dR_Bchain  = NULL,
+      Sigma_R    = Sigma_R_ext,
+      phi_tilde  = if (m1 == 1L) drop(phi_ext) else NULL
+    ))
+  }
+
+  # The GLM bread depends on beta through the working weights. Its extended
+  # influence therefore includes dSigmaXA/dbeta times the beta influence.
+  A_beta_if <- NULL
+  if (inherits(precomp_ext$model, "glm")) {
+    F_A <- t(V_eig) %*% H
+    A_beta_if <- matrix(0, m1, n)
+    for (i in seq_len(n)) {
+      dA_i <- precomp_ext$SigmaXA_beta_if[, , i]
+      if (parametric_glm) {
+        M_i <- precomp_ext$glm_dispersion *
+          F_A %*% dA_i %*% t(F_A)
+      } else {
+        G_A <- F_A %*% SigmaXB %*% SigmaXA_inv
+        M_i <- F_A %*% dA_i %*% t(G_A) +
+          G_A %*% dA_i %*% t(F_A)
+      }
+      A_beta_if[, i] <- V_eig %*% ((W * M_i) %*% VT_beta)
+    }
+  }
+
+  if (parametric_glm) {
+    F_mat <- t(V_eig) %*% H
+    FX <- F_mat %*% t(X)
+    A_tilde <- sweep(FX, 2, sqrt(w_A), '*')
+    Wvb <- W * matrix(VT_beta, m1, m1, byrow = TRUE)
+
+    phi_direct <- (V_eig %*% sweep(FX, 1, sqrtd, '/')) *
+      matrix(r, m1, n, byrow = TRUE)
+    A_core <- precomp_ext$glm_dispersion *
+      A_tilde * (Wvb %*% A_tilde) -
+      matrix(VT_beta / (2 * sqrtd), m1, n)
+    phi_XA <- V_eig %*% A_core + A_beta_if
+
+    dispersion <- precomp_ext$glm_dispersion
+    dispersion_core <- VT_beta / (2 * dispersion * sqrtd)
+    dispersion_scale <- -V_eig %*% dispersion_core
+    phi_dispersion <- dispersion_scale %*%
+      t(precomp_ext$glm_dispersion_if)
+
+    phi_ext <- phi_direct + phi_XA + phi_dispersion
+    Sigma_R_ext <- .resi_sym(tcrossprod(phi_ext) / n)
+
+    return(list(
+      m1         = m1,
+      n          = n,
+      beta_hat   = beta_hat,
+      Sigma_beta = Sigma_beta_L,
+      R_beta     = R_beta,
+      Stilde     = Stilde,
+      dR_dtheta  = NULL,
+      dR_direct  = NULL,
+      dR_Achain  = NULL,
+      dR_Bchain  = NULL,
+      Sigma_R    = Sigma_R_ext,
+      phi_tilde  = if (m1 == 1L) drop(phi_ext) else NULL
+    ))
+  }
 
   # Projected matrices (m1 x p)
   # F = V'H,  G = F*SigmaXB*SigmaXA^{-1}
@@ -1228,6 +1403,7 @@ resi_pe_asymptotic <- function(model.full,
   XA_core  <- A_tilde * Q_D_mat + D_tilde * Q_mat - matrix(const_XA, m1, n)
   phi_XA_m <- V_eig %*% XA_core
 
+  if (!is.null(A_beta_if)) phi_XA_m <- phi_XA_m + A_beta_if
   phi_ext <- phi_direct + phi_XB_m + phi_XA_m   # m1 x n
 
   # Sigma_R_ext = (1/n) * phi_ext %*% t(phi_ext)  (m1 x m1)

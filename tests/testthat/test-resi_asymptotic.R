@@ -182,6 +182,15 @@ test_that("resi() ci.method='normal' returns CIs without bootstrap", {
   expect_equal(out_rq$ci.method, "qf")
 })
 
+test_that("lm and glm default to quadratic-form CIs", {
+  expect_identical(formals(resi.lm)$ci.method, "qf")
+  expect_identical(formals(resi.glm)$ci.method, "qf")
+  expect_equal(resi(mod.lm, coefficients = FALSE, overall = FALSE)$ci.method,
+               "qf")
+  expect_equal(resi(mod.glm, coefficients = FALSE, overall = FALSE)$ci.method,
+               "qf")
+})
+
 
 # ===========================================================================
 # 9. Correctly handles anova = FALSE or coefficients = FALSE
@@ -255,4 +264,165 @@ test_that("RESI point estimates are identical across ci.method values", {
                label = "GLM anova RESI: normal == qf")
   expect_equal(out_gnorm$coefficients[, "RESI"], out_gqf$coefficients[, "RESI"],
                label = "GLM coeff RESI: normal == qf")
+})
+
+test_that("parametric lm uses the extended phi and design variance", {
+  precomp <- RESI:::.resi_precompute_ext(mod.lm, parametric_lm = TRUE)
+  L <- RESI:::.get_L_coef(mod.lm, "age")
+  contrast <- RESI:::.resi_contrast_ext(precomp, L,
+                                        vcovmat_n = nrow(model.matrix(mod.lm)) * vcov(mod.lm))
+
+  X <- model.matrix(mod.lm)
+  n <- nrow(X)
+  residual <- residuals(mod.lm)
+  SigmaX_inv <- solve(crossprod(X) / n)
+  H <- L %*% SigmaX_inv
+  phi <- summary(mod.lm)$sigma^2
+  Sigma_beta <- phi * H %*% t(L)
+  beta_L <- drop(L %*% coef(mod.lm))
+  root <- sqrt(drop(Sigma_beta))
+
+  direct <- drop(residual * (H %*% t(X)) / root)
+  phi_if <- n / mod.lm$df.residual * (residual^2 - mean(residual^2))
+  phi_term <- -beta_L * phi_if / (2 * phi * root)
+  leverage_L <- drop(H %*% t(X))
+  design_term <- beta_L * (phi * leverage_L^2 - drop(Sigma_beta)) /
+    (2 * drop(Sigma_beta)^(3 / 2))
+  expected_if <- direct + phi_term + design_term
+
+  expect_equal(contrast$Sigma_beta, L %*% (n * vcov(mod.lm)) %*% t(L),
+               tolerance = 1e-10)
+  expect_equal(contrast$phi_tilde, expected_if, tolerance = 1e-10)
+  expect_equal(drop(contrast$Sigma_R), mean(expected_if^2), tolerance = 1e-10)
+
+  public <- resi_pe_asymptotic(mod.lm, vcovfunc = stats::vcov,
+                               coefficients = TRUE, anova = FALSE,
+                               ci.method = "normal")
+  age_se <- sqrt(drop(contrast$Sigma_R) / n)
+  expected_ci <- drop(contrast$R_beta) + qnorm(c(0.025, 0.975)) * age_se
+  expect_equal(unname(unlist(public$coefficients["age", c("2.5%", "97.5%")])),
+               expected_ci, tolerance = 1e-10)
+})
+
+test_that("parametric logistic glm uses the extended beta and bread variance", {
+  precomp <- RESI:::.resi_precompute_ext(mod.glm, parametric_glm = TRUE)
+  L <- RESI:::.get_L_coef(mod.glm, "age")
+  contrast <- RESI:::.resi_contrast_ext(precomp, L)
+
+  X <- model.matrix(mod.glm)
+  n <- nrow(X)
+  residual <- residuals(mod.glm, type = "response")
+  weight <- weights(mod.glm, type = "working")
+  A_inv <- solve(crossprod(X * sqrt(weight)) / n)
+  H <- L %*% A_inv
+  Sigma_beta <- H %*% t(L)
+  beta_L <- drop(L %*% coef(mod.glm))
+  root <- sqrt(drop(Sigma_beta))
+  projection <- drop(H %*% t(X))
+  beta_if <- A_inv %*% sweep(t(X), 2, residual, '*')
+
+  beta_bread <- vapply(seq_len(n), function(i) {
+    dA_i <- matrix(0, ncol(X), ncol(X))
+    for (k in seq_len(ncol(X))) {
+      dA_k <- precomp$dSigmaXA_dBeta[, , k]
+      dA_i <- dA_i + beta_if[k, i] * dA_k
+    }
+    drop(H %*% dA_i %*% t(H))
+  }, numeric(1L))
+
+  direct <- residual * projection / root
+  empirical_bread <- weight * projection^2 - drop(Sigma_beta)
+  bread_term <- beta_L * (empirical_bread + beta_bread) /
+    (2 * drop(Sigma_beta)^(3 / 2))
+  expected_if <- direct + bread_term
+
+  expect_equal(contrast$Sigma_beta,
+               L %*% (n * vcov(mod.glm)) %*% t(L), tolerance = 1e-8)
+  expect_equal(contrast$phi_tilde, expected_if, tolerance = 1e-6)
+  expect_equal(drop(contrast$Sigma_R), mean(expected_if^2), tolerance = 1e-6)
+
+  public <- resi_pe_asymptotic(mod.glm, vcovfunc = stats::vcov,
+                               coefficients = TRUE, anova = FALSE,
+                               ci.method = "normal")
+  expected_ci <- drop(contrast$R_beta) + qnorm(c(0.025, 0.975)) *
+    sqrt(drop(contrast$Sigma_R) / n)
+  expect_equal(unname(unlist(public$coefficients["age", c("2.5%", "97.5%")])),
+               expected_ci, tolerance = 1e-10)
+})
+
+test_that("robust logistic glm uses extended beta, bread, and meat variance", {
+  precomp <- RESI:::.resi_precompute_ext(mod.glm, type = "HC3")
+  L <- RESI:::.get_L_coef(mod.glm, "age")
+  contrast <- RESI:::.resi_contrast_ext(precomp, L)
+
+  X <- model.matrix(mod.glm)
+  n <- nrow(X)
+  residual <- residuals(mod.glm, type = "response")
+  weight <- weights(mod.glm, type = "working")
+  A_inv <- precomp$SigmaXA_inv
+  B <- precomp$SigmaXB
+  H <- L %*% A_inv
+  q <- A_inv %*% B %*% t(H)
+  Sigma_beta <- H %*% B %*% t(H)
+  beta_L <- drop(L %*% coef(mod.glm))
+  root <- sqrt(drop(Sigma_beta))
+  projection <- drop(H %*% t(X))
+  q_projection <- drop(t(q) %*% t(X))
+  beta_if <- A_inv %*% sweep(t(X), 2, residual, '*')
+
+  beta_bread <- vapply(seq_len(n), function(i) {
+    dA_i <- matrix(0, ncol(X), ncol(X))
+    for (k in seq_len(ncol(X))) {
+      dA_k <- precomp$dSigmaXA_dBeta[, , k]
+      dA_i <- dA_i + beta_if[k, i] * dA_k
+    }
+    drop(H %*% dA_i %*% q)
+  }, numeric(1L))
+
+  direct <- sqrt(precomp$tau) * residual * projection / root
+  meat_term <- -beta_L *
+    (precomp$tau * residual^2 * projection^2 - drop(Sigma_beta)) /
+    (2 * drop(Sigma_beta)^(3 / 2))
+  empirical_bread <- weight * projection * q_projection - drop(Sigma_beta)
+  bread_term <- beta_L * (empirical_bread + beta_bread) /
+    drop(Sigma_beta)^(3 / 2)
+  expected_if <- direct + meat_term + bread_term
+
+  expect_equal(contrast$phi_tilde, expected_if, tolerance = 1e-6)
+  expect_equal(drop(contrast$Sigma_R), mean(expected_if^2), tolerance = 1e-6)
+})
+
+test_that("Gaussian identity glm extended methods include dispersion correctly", {
+  gaussian_glm <- glm(charges ~ region * age + bmi + sex, data = data,
+                      family = gaussian())
+  gaussian_lm <- lm(charges ~ region * age + bmi + sex, data = data)
+  L <- RESI:::.get_L_coef(gaussian_glm, "age")
+
+  parametric <- RESI:::.resi_precompute_ext(gaussian_glm,
+                                             parametric_glm = TRUE)
+  parametric_contrast <- RESI:::.resi_contrast_ext(parametric, L)
+  parametric_lm <- RESI:::.resi_precompute_ext(gaussian_lm,
+                                                parametric_lm = TRUE)
+  parametric_lm_contrast <- RESI:::.resi_contrast_ext(parametric_lm, L)
+  expect_lt(max(abs(parametric$dSigmaXA_dBeta)), 1e-7)
+  expect_equal(parametric_contrast$Sigma_beta,
+               L %*% (nrow(model.matrix(gaussian_glm)) * vcov(gaussian_glm)) %*%
+                 t(L), tolerance = 1e-8)
+  expect_equal(parametric_contrast$phi_tilde,
+               parametric_lm_contrast$phi_tilde, tolerance = 1e-5)
+
+  robust_glm <- RESI:::.resi_precompute_ext(gaussian_glm, type = "HC3")
+  robust_lm <- RESI:::.resi_precompute_ext(gaussian_lm, type = "HC3")
+  robust_glm_contrast <- RESI:::.resi_contrast_ext(robust_glm, L)
+  robust_lm_contrast <- RESI:::.resi_contrast_ext(robust_lm, L)
+  expect_equal(robust_glm_contrast$Sigma_beta,
+               robust_lm_contrast$Sigma_beta, tolerance = 1e-8)
+  expect_equal(robust_glm_contrast$phi_tilde,
+               robust_lm_contrast$phi_tilde, tolerance = 1e-6)
+
+  public <- resi_pe_asymptotic(gaussian_glm, vcovfunc = stats::vcov,
+                               coefficients = TRUE, anova = TRUE,
+                               ci.method = "qf")
+  expect_true(all(is.finite(as.matrix(public$coefficients[, c("2.5%", "97.5%")]))) )
+  expect_true(all(is.finite(as.matrix(public$anova[, c("2.5%", "97.5%")]))) )
 })
