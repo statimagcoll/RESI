@@ -7,6 +7,7 @@ description: >
   and robust variance estimators.
 output:
   html_document:
+    self_contained: false
     toc: true
     toc_float: true
     toc_depth: 3
@@ -14,6 +15,7 @@ output:
     theme: flatly
 ---
 
+```{=html}
 <!--
 AI INSTRUCTIONS FOR FUTURE SESSIONS
 ====================================
@@ -22,16 +24,23 @@ It lives at RESI/vignettes/articles/ci_validation.Rmd and is registered in
 RESI/_pkgdown.yml under the "articles:" section.
 
 PRE-COMPUTED FIGURES
-All 36 PDFs referenced below are committed to
+All 36 source PDFs and their web-ready PNG versions are committed to
   RESI/vignettes/articles/figures/
 and were produced by the simulation pipeline described in the
 "Reproducing these figures" section of this document.
 
+The article embeds 3600-pixel-wide, full-color PNG files because browsers do not reliably
+display a PDF as an HTML <img>. Keep both formats: PDFs preserve vector output,
+while the high-resolution PNGs are the assets rendered by pkgdown. The HTML is
+not self-contained because embedding all full-resolution assets would exceed
+normal website file-size limits. Target the width rather than the longest edge
+because the coefficient figures are tall.
+
 TO REGENERATE FIGURES after changing the simulation code or the estimator:
   1. Run the `eval=FALSE` code chunks in this document from the project root.
-  2. Copy the output PDFs back to vignettes/articles/figures/ (the code chunk
-     already does this as the last step).
-  3. Commit the updated PDFs.
+  2. Copy and rasterize the output PDFs in vignettes/articles/figures/ (the
+    final code chunk does both).
+  3. Commit the updated PDFs and PNGs.
 
 FIGURE SOURCES
   calibration_*.pdf      ← simCalibrationFigures(..., deriv_method="extended")
@@ -50,6 +59,7 @@ All results use the extended influence-function Sigma_R estimator
 (.resi_contrast_ext(), deriv_method="extended"). If the estimator changes,
 regenerate all figures and update the exposition in section 2.
 -->
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
@@ -58,96 +68,68 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
 
 # Overview
 
-This article presents simulation-based validation of the asymptotic confidence
-interval (CI) methods available in the RESI package via `resi_pe_asymptotic()`
-and `resi()`.
+This article presents simulation-based validation of the asymptotic confidence interval (CI) methods available in the RESI package via `resi_pe_asymptotic()` and `resi()`.
 
-All asymptotic methods share the same $\hat\Sigma_R$ estimator — the
-**extended influence-function** approach that treats the sandwich bread
-$\hat\Sigma_{XA}$ and meat $\hat\Sigma_{XB}$ as independent estimators
-(argument `deriv_method = "extended"` internally) — and differ only in how
-they invert the asymptotic distribution of the Wald statistic
-$T^2 = n\tilde{S}^2$.
+All asymptotic methods share the same $\hat\Sigma_R$ estimator — the **extended influence-function** approach that treats the sandwich bread $\hat\Sigma_{XA}$ and meat $\hat\Sigma_{XB}$ as independent estimators (argument `deriv_method = "extended"` internally) — and differ only in how they invert the asymptotic distribution of the Wald statistic $T^2 = n\tilde{S}^2$.
 
 | `ci.method` | Description |
-|---|---|
+|------------------------------------|------------------------------------|
 | `"qf"` **(default)** | Quadratic-form CI: inverts the exact weighted chi-square distribution via the Imhof/Davies algorithm |
 | `"normal"` | Truncated-normal CI using a bias-corrected normal approximation |
 | `"cf"` | Cornish-Fisher CI: inverts a Cornish-Fisher expansion of the weighted chi-square |
 
 Results are shown for four estimation settings:
 
-| Setting | Model | Variance estimator |
-|---|---|---|
-| lm parametric | `lm()` | `stats::vcov` |
-| lm robust | `lm()` | `sandwich::vcovHC` (HC3) |
-| glm parametric | `glm(..., family=binomial)` | `stats::vcov` |
-| glm robust | `glm(..., family=binomial)` | `sandwich::vcovHC` (HC3) |
+| Setting        | Model                       | Variance estimator       |
+|----------------|-----------------------------|--------------------------|
+| lm parametric  | `lm()`                      | `stats::vcov`            |
+| lm robust      | `lm()`                      | `sandwich::vcovHC` (HC3) |
+| glm parametric | `glm(..., family=binomial)` | `stats::vcov`            |
+| glm robust     | `glm(..., family=binomial)` | `sandwich::vcovHC` (HC3) |
 
-For background on the RESI, see the
-[RESI package website](https://statimagcoll.github.io/RESI/) and
-[Jones et al. (2025)](https://doi.org/10.18637/jss.v112.i03).
+For background on the RESI, see the [RESI package website](https://statimagcoll.github.io/RESI/) and [Jones et al. (2025)](https://doi.org/10.18637/jss.v112.i03).
 
----
+------------------------------------------------------------------------
 
 # Simulation design
 
 ## Plasmode simulation
 
-All evaluations use a **plasmode simulation design**
-([Gadbury et al. 2008](https://doi.org/10.1177/0962280207080302))
-built around the `insurance` dataset ($N = 1338$) shipped with the package.
-Bootstrap resampling (with replacement) from the full dataset gives the
-empirical sampling distribution.  RESI values estimated on the full dataset
-via `resi_pe()` serve as the population targets.
+All evaluations use a **plasmode simulation design** ([Gadbury et al. 2008](https://doi.org/10.1177/0962280207080302)) built around the `insurance` dataset ($N = 1338$) shipped with the package. Bootstrap resampling (with replacement) from the full dataset gives the empirical sampling distribution. RESI values estimated on the full dataset via `resi_pe()` serve as the population targets.
 
 Two models are evaluated:
 
-- **Linear model** (`lm`):
-  `log10(charges) ~ ns(age, df=3) * sex + bmi + smoker + region`
-- **Logistic model** (`glm`, binomial):
-  `I(charges > 15000) ~ ns(age, df=3) * sex + bmi + smoker + region`
+- **Linear model** (`lm`): `log10(charges) ~ ns(age, df=3) * sex + bmi + smoker + region`
+- **Logistic model** (`glm`, binomial): `I(charges > 15000) ~ ns(age, df=3) * sex + bmi + smoker + region`
 
-Each simulation cell (model × variance estimator × sample size) uses
-**1 000 replicates**. Results are shown for sample sizes
-$n \in \{50, 100, 200, 500, 1000, 2000, 5000\}$.
+Each simulation cell (model × variance estimator × sample size) uses **1 000 replicates**. Results are shown for sample sizes $n \in \{50, 100, 200, 500, 1000, 2000, 5000\}$.
 
 ## Metrics
 
 For each model coefficient and ANOVA term the following quantities are reported:
 
-- **Coverage**: proportion of replicates in which the 95% CI contains the
-  population RESI value.
+- **Coverage**: proportion of replicates in which the 95% CI contains the population RESI value.
 - **Width**: median CI width.
-- **Bias** and **MSE**: mean signed and mean squared deviation of $\hat{S}$
-  from the population value.
+- **Bias** and **MSE**: mean signed and mean squared deviation of $\hat{S}$ from the population value.
 
 Bootstrap CIs (1 000 replicates, non-parametric) provide the reference standard.
 
 ## Variance calibration
 
-The calibration study examines whether the analytic $\hat\sigma^2_R$ (the CI
-width estimator) is consistent for the true Monte Carlo variance of $\hat{R}$
-across replications.  Each calibration figure has four panels:
+The calibration study examines whether the analytic $\hat\sigma^2_R$ (the CI width estimator) is consistent for the true Monte Carlo variance of $\hat{R}$ across replications. Each calibration figure has four panels:
 
-1. **Bias of $\hat\theta$**: signed deviation of the parameter estimates
-   (model coefficients and, for `lm`, $\hat\phi = \hat\sigma^2$) from their
-   full-data targets.
-2. **Sandwich covariance normalized bias**: $(n\,\widehat{\mathrm{Var}}(\hat\beta_k) -
-   n\,\mathrm{Var}_{\mathrm{MC}}(\hat\beta_k)) / n\,\mathrm{Var}_{\mathrm{MC}}(\hat\beta_k)$.
-3. **Bias of $\hat{R}$** (RESI point estimate).
-4. **$\sigma^2_R$ ratios**: solid line = $\sigma^2_{R,\text{MC}} /
-   \sigma^2_{R,\text{extended}}$ (Monte Carlo variance over extended
-   estimator); dashed = ratio against the initial delta-method derivation.
-   A ratio of 1 (dashed reference line) indicates perfect calibration.
+1.  **Bias of** $\hat\theta$: signed deviation of the parameter estimates (model coefficients and, for `lm`, $\hat\phi = \hat\sigma^2$) from their full-data targets.
+2.  **Sandwich covariance normalized bias**: $(n\,\widehat{\mathrm{Var}}(\hat\beta_k) -
+    n\,\mathrm{Var}_{\mathrm{MC}}(\hat\beta_k)) / n\,\mathrm{Var}_{\mathrm{MC}}(\hat\beta_k)$.
+3.  **Bias of** $\hat{R}$ (RESI point estimate).
+4.  $\sigma^2_R$ ratios: solid line = $\sigma^2_{R,\text{MC}} /
+    \sigma^2_{R,\text{extended}}$ (Monte Carlo variance over extended estimator); dashed = ratio against the initial delta-method derivation. A ratio of 1 (dashed reference line) indicates perfect calibration.
 
----
+------------------------------------------------------------------------
 
 # How to reproduce these figures
 
-The chunks below are **not evaluated** when the article is rendered.
-Run them from a working directory of your choice; then copy the resulting
-PDFs into `vignettes/articles/figures/` inside the package source tree.
+The chunks below are **not evaluated** when the article is rendered. Run them from a working directory of your choice; then copy the resulting PDFs into `vignettes/articles/figures/` inside the package source tree.
 
 ## Step 1 — run plasmode simulations
 
@@ -209,11 +191,11 @@ simEstimatorFigures(sim.dir     = "resiBootSim",
                     figures.dir = "method_comparison")
 ```
 
-## Step 4 — copy figures into the package
+## Step 4 — copy and rasterize figures for the website
 
 ```{r copy-figs, eval=FALSE, echo=TRUE}
 # Adjust pkg_dir to the root of your RESI package source tree
-pkg_dir  <- "path/to/RESI"
+pkg_dir  <- "/path/to/RESI"
 figs_dir <- file.path(pkg_dir, "vignettes", "articles", "figures")
 dir.create(figs_dir, recursive = TRUE, showWarnings = FALSE)
 
@@ -223,277 +205,277 @@ file.copy(list.files("resiAsympQFSim/figures",
                      pattern = "\\.pdf$", full.names = TRUE), figs_dir)
 file.copy(list.files("method_comparison",
                      pattern = "\\.pdf$", full.names = TRUE), figs_dir)
+
+# Browsers do not reliably render PDF files in HTML <img> elements. Create a
+# PNG companion for every source PDF; pkgdown displays these PNG files below.
+# install.packages(c("magick", "pdftools")) # needed once for regeneration
+pdf_files <- list.files(figs_dir, pattern = "\\.pdf$", full.names = TRUE)
+for (pdf_file in pdf_files) {
+  cat(pdf_file)
+  pages <- magick::image_read_pdf(pdf_file, density = 700)
+  stopifnot(length(pages) == 1L)
+  pages <- magick::image_resize(pages, "3400x")
+  magick::image_write(
+    pages,
+    path = sub("\\.pdf$", ".png", pdf_file),
+    format = "png"
+  )
+}
 ```
 
----
+------------------------------------------------------------------------
 
 # Variance estimator calibration {.tabset}
 
-These figures show whether $\hat\sigma^2_R$ — the width estimator shared by
-all three asymptotic CIs — is well-calibrated as a function of sample size.
+These figures show whether $\hat\sigma^2_R$ — the width estimator shared by all three asymptotic CIs — is well-calibrated as a function of sample size.
 
 ## LM parametric
 
 ```{r calib-lm-param}
-knitr::include_graphics("figures/calibration_lm_parametric.pdf")
+knitr::include_graphics("figures/calibration_lm_parametric.png")
 ```
 
 ## LM robust
 
 ```{r calib-lm-robust}
-knitr::include_graphics("figures/calibration_lm_robust.pdf")
+knitr::include_graphics("figures/calibration_lm_robust.png")
 ```
 
 ## GLM parametric
 
 ```{r calib-glm-param}
-knitr::include_graphics("figures/calibration_glm_parametric.pdf")
+knitr::include_graphics("figures/calibration_glm_parametric.png")
 ```
 
 ## GLM robust
 
 ```{r calib-glm-robust}
-knitr::include_graphics("figures/calibration_glm_robust.pdf")
+knitr::include_graphics("figures/calibration_glm_robust.png")
 ```
 
----
+------------------------------------------------------------------------
 
 # CI method comparison {.tabset}
 
-Coverage (top) and width (bottom) across all four CI methods — Bootstrap,
-Normal, QF, and Cornish-Fisher — as a function of sample size.
-The nominal coverage is 95% (dashed reference line).
-Each panel shows results for one regression term; terms are labelled with
-their population RESI value.
+Coverage (top) and width (bottom) across all four CI methods — Bootstrap, Normal, QF, and Cornish-Fisher — as a function of sample size. The nominal coverage is 95% (dashed reference line). Each panel shows results for one regression term; terms are labelled with their population RESI value.
 
 ## LM parametric — coefficients
 
 ```{r cmp-lm-param-coef}
-knitr::include_graphics("figures/compare_lm_parametric_coefficients.pdf")
+knitr::include_graphics("figures/compare_lm_parametric_coefficients.png")
 ```
 
 ## LM parametric — ANOVA
 
 ```{r cmp-lm-param-anova}
-knitr::include_graphics("figures/compare_lm_parametric_anova.pdf")
+knitr::include_graphics("figures/compare_lm_parametric_anova.png")
 ```
 
 ## LM robust — coefficients
 
 ```{r cmp-lm-rob-coef}
-knitr::include_graphics("figures/compare_lm_robust_coefficients.pdf")
+knitr::include_graphics("figures/compare_lm_robust_coefficients.png")
 ```
 
 ## LM robust — ANOVA
 
 ```{r cmp-lm-rob-anova}
-knitr::include_graphics("figures/compare_lm_robust_anova.pdf")
+knitr::include_graphics("figures/compare_lm_robust_anova.png")
 ```
 
 ## GLM parametric — coefficients
 
 ```{r cmp-glm-param-coef}
-knitr::include_graphics("figures/compare_glm_parametric_coefficients.pdf")
+knitr::include_graphics("figures/compare_glm_parametric_coefficients.png")
 ```
 
 ## GLM parametric — ANOVA
 
 ```{r cmp-glm-param-anova}
-knitr::include_graphics("figures/compare_glm_parametric_anova.pdf")
+knitr::include_graphics("figures/compare_glm_parametric_anova.png")
 ```
 
 ## GLM robust — coefficients
 
 ```{r cmp-glm-rob-coef}
-knitr::include_graphics("figures/compare_glm_robust_coefficients.pdf")
+knitr::include_graphics("figures/compare_glm_robust_coefficients.png")
 ```
 
 ## GLM robust — ANOVA
 
 ```{r cmp-glm-rob-anova}
-knitr::include_graphics("figures/compare_glm_robust_anova.pdf")
+knitr::include_graphics("figures/compare_glm_robust_anova.png")
 ```
 
----
+------------------------------------------------------------------------
 
 # Coverage quantile comparison {.tabset}
 
-These figures show the distribution of per-term coverage across the sample-size
-grid, displayed as quantile bands.  Unlike section 4, which shows mean coverage
-per term, this view reveals how variable coverage is across terms and highlights
-any terms where a method systematically under- or over-covers.
+These figures show the distribution of per-term coverage across the sample-size grid, displayed as quantile bands. Unlike section 4, which shows mean coverage per term, this view reveals how variable coverage is across terms and highlights any terms where a method systematically under- or over-covers.
 
 ## LM parametric — coefficients
 
 ```{r covq-lm-param-coef}
-knitr::include_graphics("figures/covquant_lm_parametric_coefficients.pdf")
+knitr::include_graphics("figures/covquant_lm_parametric_coefficients.png")
 ```
 
 ## LM parametric — ANOVA
 
 ```{r covq-lm-param-anova}
-knitr::include_graphics("figures/covquant_lm_parametric_anova.pdf")
+knitr::include_graphics("figures/covquant_lm_parametric_anova.png")
 ```
 
 ## LM robust — coefficients
 
 ```{r covq-lm-rob-coef}
-knitr::include_graphics("figures/covquant_lm_robust_coefficients.pdf")
+knitr::include_graphics("figures/covquant_lm_robust_coefficients.png")
 ```
 
 ## LM robust — ANOVA
 
 ```{r covq-lm-rob-anova}
-knitr::include_graphics("figures/covquant_lm_robust_anova.pdf")
+knitr::include_graphics("figures/covquant_lm_robust_anova.png")
 ```
 
 ## GLM parametric — coefficients
 
 ```{r covq-glm-param-coef}
-knitr::include_graphics("figures/covquant_glm_parametric_coefficients.pdf")
+knitr::include_graphics("figures/covquant_glm_parametric_coefficients.png")
 ```
 
 ## GLM parametric — ANOVA
 
 ```{r covq-glm-param-anova}
-knitr::include_graphics("figures/covquant_glm_parametric_anova.pdf")
+knitr::include_graphics("figures/covquant_glm_parametric_anova.png")
 ```
 
 ## GLM robust — coefficients
 
 ```{r covq-glm-rob-coef}
-knitr::include_graphics("figures/covquant_glm_robust_coefficients.pdf")
+knitr::include_graphics("figures/covquant_glm_robust_coefficients.png")
 ```
 
 ## GLM robust — ANOVA
 
 ```{r covq-glm-rob-anova}
-knitr::include_graphics("figures/covquant_glm_robust_anova.pdf")
+knitr::include_graphics("figures/covquant_glm_robust_anova.png")
 ```
 
----
+------------------------------------------------------------------------
 
 # Point estimate bias and MSE {.tabset}
 
-These figures show how the RESI **point estimate** behaves across CI methods
-(bias and MSE per term) as a function of sample size.  Since all methods use
-the same plug-in estimator $\hat{S}$, bias and MSE should be identical across
-methods; any divergence reflects numerical differences in small samples.
+These figures show how the RESI **point estimate** behaves across CI methods (bias and MSE per term) as a function of sample size. Since all methods use the same plug-in estimator $\hat{S}$, bias and MSE should be identical across methods; any divergence reflects numerical differences in small samples.
 
 ## LM parametric — coefficients
 
 ```{r est-lm-param-coef}
-knitr::include_graphics("figures/estimator_lm_parametric_coefficients.pdf")
+knitr::include_graphics("figures/estimator_lm_parametric_coefficients.png")
 ```
 
 ## LM parametric — ANOVA
 
 ```{r est-lm-param-anova}
-knitr::include_graphics("figures/estimator_lm_parametric_anova.pdf")
+knitr::include_graphics("figures/estimator_lm_parametric_anova.png")
 ```
 
 ## LM robust — coefficients
 
 ```{r est-lm-rob-coef}
-knitr::include_graphics("figures/estimator_lm_robust_coefficients.pdf")
+knitr::include_graphics("figures/estimator_lm_robust_coefficients.png")
 ```
 
 ## LM robust — ANOVA
 
 ```{r est-lm-rob-anova}
-knitr::include_graphics("figures/estimator_lm_robust_anova.pdf")
+knitr::include_graphics("figures/estimator_lm_robust_anova.png")
 ```
 
 ## GLM parametric — coefficients
 
 ```{r est-glm-param-coef}
-knitr::include_graphics("figures/estimator_glm_parametric_coefficients.pdf")
+knitr::include_graphics("figures/estimator_glm_parametric_coefficients.png")
 ```
 
 ## GLM parametric — ANOVA
 
 ```{r est-glm-param-anova}
-knitr::include_graphics("figures/estimator_glm_parametric_anova.pdf")
+knitr::include_graphics("figures/estimator_glm_parametric_anova.png")
 ```
 
 ## GLM robust — coefficients
 
 ```{r est-glm-rob-coef}
-knitr::include_graphics("figures/estimator_glm_robust_coefficients.pdf")
+knitr::include_graphics("figures/estimator_glm_robust_coefficients.png")
 ```
 
 ## GLM robust — ANOVA
 
 ```{r est-glm-rob-anova}
-knitr::include_graphics("figures/estimator_glm_robust_anova.pdf")
+knitr::include_graphics("figures/estimator_glm_robust_anova.png")
 ```
 
----
+------------------------------------------------------------------------
 
 # t/F vs z/$\chi^2$ estimator comparison (lm) {.tabset}
 
-The `t2S`/`f2S` functions convert test statistics using a
-**t- or F-distribution** quantile (accounting for residual degrees of
-freedom); `z2S`/`chisq2S` use the **normal or chi-square** quantile.
-These figures show how the two estimator families compare in bias and MSE
-for the `lm` model, based on bootstrap simulation replicates.
+The `t2S`/`f2S` functions convert test statistics using a **t- or F-distribution** quantile (accounting for residual degrees of freedom); `z2S`/`chisq2S` use the **normal or chi-square** quantile. These figures show how the two estimator families compare in bias and MSE for the `lm` model, based on bootstrap simulation replicates.
 
 ## LM parametric — coefficients
 
 ```{r estcmp-lm-param-coef}
-knitr::include_graphics("figures/estimator_compare_lm_parametric_coefficients.pdf")
+knitr::include_graphics("figures/estimator_compare_lm_parametric_coefficients.png")
 ```
 
 ## LM parametric — ANOVA
 
 ```{r estcmp-lm-param-anova}
-knitr::include_graphics("figures/estimator_compare_lm_parametric_anova.pdf")
+knitr::include_graphics("figures/estimator_compare_lm_parametric_anova.png")
 ```
 
 ## LM robust — coefficients
 
 ```{r estcmp-lm-rob-coef}
-knitr::include_graphics("figures/estimator_compare_lm_robust_coefficients.pdf")
+knitr::include_graphics("figures/estimator_compare_lm_robust_coefficients.png")
 ```
 
 ## LM robust — ANOVA
 
 ```{r estcmp-lm-rob-anova}
-knitr::include_graphics("figures/estimator_compare_lm_robust_anova.pdf")
+knitr::include_graphics("figures/estimator_compare_lm_robust_anova.png")
 ```
 
----
+------------------------------------------------------------------------
 
 # QF method detail {.tabset}
 
-Per-term coverage and width for the quadratic-form (QF) CI — the package
-default — across the full sample-size grid.
+Per-term coverage and width for the quadratic-form (QF) CI — the package default — across the full sample-size grid.
 
 ## LM parametric
 
 ```{r qf-lm-param}
-knitr::include_graphics("figures/sim_lm_parametric_qf.pdf")
+knitr::include_graphics("figures/sim_lm_parametric_qf.png")
 ```
 
 ## LM robust
 
 ```{r qf-lm-rob}
-knitr::include_graphics("figures/sim_lm_robust_qf.pdf")
+knitr::include_graphics("figures/sim_lm_robust_qf.png")
 ```
 
 ## GLM parametric
 
 ```{r qf-glm-param}
-knitr::include_graphics("figures/sim_glm_parametric_qf.pdf")
+knitr::include_graphics("figures/sim_glm_parametric_qf.png")
 ```
 
 ## GLM robust
 
 ```{r qf-glm-rob}
-knitr::include_graphics("figures/sim_glm_robust_qf.pdf")
+knitr::include_graphics("figures/sim_glm_robust_qf.png")
 ```
 
----
+------------------------------------------------------------------------
 
 # Session info
 

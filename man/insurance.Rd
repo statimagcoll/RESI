@@ -17,7 +17,7 @@ A data frame with 1338 rows and 7 variables:
 }
 }
 \source{
-\url{https://www.kaggle.com/datasets/teertha/ushealthinsurancedataset}
+Kaggle dataset teertha ushealthinsurancedataset. url checker thinks the link is broken.
 }
 \usage{
 insurance
