@@ -1302,26 +1302,25 @@ simCalibrationSim <- function(
     R_true <- coef_tab_true[coef_terms_true, "RESI"]
     names(R_true) <- coef_terms_true   # data.frame[rows,col] drops names
 
-    # sigma2S_true: Sigma_R[k,k] from the delta-method variance of R_hat,
-    #   evaluated at the population values (full-model coefficients + HC0 Sigma_theta).
-    #   HC0 is used as the "true" population covariance (consistent estimator).
-    #   For parametric: vcov_is_model=TRUE triggers the parametric derivative;
-    #     type="HC0" supplies HC0-based Sigma_theta via the B matrix.
-    #   For robust: vcovfunc=HC0 triggers the robust derivative; type="HC0" same.
-    #   sigma2S_true_k = [dR_dtheta * Sigma_theta_HC0 * dR_dtheta^T]_{kk}
-    #                  = n_full * (hw / z_ref)^2 from the normal CI
-    asym_true <- tryCatch(
-      resi_pe_asymptotic(full_mod, vcovfunc = true_vcovfunc_r,
-                         ci.method = "normal", type = "HC0",
-                         deriv_method = deriv_method),
-      error = function(e) NULL
-    )
-    if (!is.null(asym_true)) {
-      tab_a <- asym_true$coefficients
-      tab_a <- tab_a[rownames(tab_a) != "(Intercept)", , drop = FALSE]
-      hw_true <- (tab_a[, ci_hi_col] - tab_a[, ci_lo_col]) / 2
-      names(hw_true) <- rownames(tab_a)   # data.frame[,col] drops names
-      sigma2S_true <- n_full * (hw_true / z_ref)^2
+    # sigma2S_true: Sigma_R[k,k] = Var(R_hat) evaluated at the full-sample
+    #   population values, ALWAYS via the robust (type="HC0") extended
+    #   framework -- i.e. parametric_lm/parametric_glm = FALSE regardless of
+    #   the setting. HC0 is a heteroskedasticity-consistent estimator, so it
+    #   is the right reference for "the truth" even in the parametric
+    #   scenarios, where R_true itself is still computed above using
+    #   vcovfunc = stats::vcov. Decoupling these two means resi_pe_asymptotic()
+    #   cannot be used directly here (its vcovfunc == stats::vcov check would
+    #   force parametric_lm = TRUE); call the internal precompute/contrast
+    #   functions directly instead.
+    precomp_true_hc0 <- tryCatch(.resi_precompute_ext(full_mod, type = "HC0"),
+                                 error = function(e) NULL)
+    if (!is.null(precomp_true_hc0)) {
+      sigma2S_true <- setNames(vapply(coef_terms_true, function(tm) {
+        L_tm <- .get_L_coef(full_mod, tm)
+        ct   <- tryCatch(.resi_contrast_ext(precomp_true_hc0, L_tm),
+                         error = function(e) NULL)
+        if (is.null(ct)) NA_real_ else as.numeric(ct$Sigma_R)
+      }, numeric(1L)), coef_terms_true)
     } else {
       sigma2S_true <- setNames(rep(NA_real_, length(R_true)), names(R_true))
     }

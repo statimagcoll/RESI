@@ -73,7 +73,7 @@ This article presents simulation-based validation of the asymptotic confidence i
 All asymptotic methods share the same $\hat\Sigma_R$ estimator — the **extended influence-function** approach that treats the sandwich bread $\hat\Sigma_{XA}$ and meat $\hat\Sigma_{XB}$ as independent estimators (argument `deriv_method = "extended"` internally) — and differ only in how they invert the asymptotic distribution of the Wald statistic $T^2 = n\tilde{S}^2$.
 
 | `ci.method` | Description |
-|------------------------------------|------------------------------------|
+|----|----|
 | `"qf"` **(default)** | Quadratic-form CI: inverts the exact weighted chi-square distribution via the Imhof/Davies algorithm |
 | `"normal"` | Truncated-normal CI using a bias-corrected normal approximation |
 | `"cf"` | Cornish-Fisher CI: inverts a Cornish-Fisher expansion of the weighted chi-square |

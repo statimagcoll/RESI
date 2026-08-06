@@ -1175,8 +1175,7 @@ resi_pe_asymptotic <- function(model.full,
     glm_dispersion_if <- rep(0, n)
     if (!fixed_dispersion) {
       pearson <- prior * (y - mu)^2 / variance_mu
-      glm_dispersion_if <- (n / model$df.residual) *
-        (pearson - mean(pearson))
+      glm_dispersion_if <- pearson - mean(pearson)
       dispersion_gradient <- numeric(p)
       for (k in seq_len(p)) {
         beta_step <- 1e-6 * (1 + abs(coef(model)[k]))
@@ -1275,7 +1274,7 @@ resi_pe_asymptotic <- function(model.full,
       matrix(r, m1, n, byrow = TRUE)
 
     phi_hat <- precomp_ext$phi
-    phi_if  <- (n / precomp_ext$model$df.residual) * (r^2 - mean(r^2))
+    phi_if  <- r^2 - mean(r^2)
     phi_core <- VT_beta / (2 * phi_hat * sqrtd)
     phi_scale <- -V_eig %*% phi_core
     phi_phi <- phi_scale %*% t(phi_if)

@@ -283,7 +283,7 @@ test_that("parametric lm uses the extended phi and design variance", {
   root <- sqrt(drop(Sigma_beta))
 
   direct <- drop(residual * (H %*% t(X)) / root)
-  phi_if <- n / mod.lm$df.residual * (residual^2 - mean(residual^2))
+  phi_if <- residual^2 - mean(residual^2)
   phi_term <- -beta_L * phi_if / (2 * phi * root)
   leverage_L <- drop(H %*% t(X))
   design_term <- beta_L * (phi * leverage_L^2 - drop(Sigma_beta)) /
