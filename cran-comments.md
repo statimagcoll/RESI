@@ -1,3 +1,9 @@
+## CRAN Submission 1.5.0
+
+- Parametric estimator uses robust CIs -- this provides valid coverage for the expected value of the possibly biased estimator.
+- Simulation calibration evaluation uses a true value that is consistent with the Monte Carlo simulation variance of R (RESI vector).
+
+
 ## CRAN Submission 1.4.2
 
 ### New features
