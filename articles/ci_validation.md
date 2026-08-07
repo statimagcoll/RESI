@@ -25,9 +25,9 @@ Results are shown for four estimation settings:
 | Setting | Model | Variance estimator |
 |----|----|----|
 | lm parametric | [`lm()`](https://rdrr.io/r/stats/lm.html) | [`stats::vcov`](https://rdrr.io/r/stats/vcov.html) |
-| lm robust | [`lm()`](https://rdrr.io/r/stats/lm.html) | [`sandwich::vcovHC`](https://sandwich.R-Forge.R-project.org/reference/vcovHC.html) (HC3) |
+| lm robust | [`lm()`](https://rdrr.io/r/stats/lm.html) | [`sandwich::vcovHC`](https://zeileis.codeberg.page/sandwich/reference/vcovHC.html) (HC3) |
 | glm parametric | `glm(..., family=binomial)` | [`stats::vcov`](https://rdrr.io/r/stats/vcov.html) |
-| glm robust | `glm(..., family=binomial)` | [`sandwich::vcovHC`](https://sandwich.R-Forge.R-project.org/reference/vcovHC.html) (HC3) |
+| glm robust | `glm(..., family=binomial)` | [`sandwich::vcovHC`](https://zeileis.codeberg.page/sandwich/reference/vcovHC.html) (HC3) |
 
 For background on the RESI, see the [RESI package
 website](https://statimagcoll.github.io/RESI/) and [Jones et
@@ -57,6 +57,36 @@ Two models are evaluated:
 Each simulation cell (model × variance estimator × sample size) uses **1
 000 replicates**. Results are shown for sample sizes
 $`n \in \{50, 100, 200, 500, 1000, 2000, 5000\}`$.
+
+### What “population target” means here
+
+> **Note.** For every setting, the population target $`S_{\text{true}}`$
+> (and $`\theta_{\text{true}}`$) used by the **Bias**, **Coverage**, and
+> calibration checks below is computed by applying that *same setting’s*
+> `vcovfunc` to the full `insurance` data ($`n = 1338`$) — HC0 for the
+> robust settings, [`stats::vcov`](https://rdrr.io/r/stats/vcov.html)
+> (classical, homoskedastic) for the parametric settings. It is **not**
+> an estimator-independent gold-standard effect size.
+>
+> Under heteroskedasticity (present in the `insurance` data), the
+> classical and HC-sandwich standard errors for a coefficient differ, so
+> parametric-$`S`$ and robust-$`S`$ are, in general, genuinely different
+> population quantities — not two estimators competing for one shared
+> truth. Consequently:
+>
+> - The **Bias(**$`\hat\theta`$**)** and **Bias(**$`\hat{R}`$**)**
+>   panels demonstrate that each estimator converges to *its own*
+>   self-referential target as $`n \to \infty`$ (i.e. the simulation
+>   machinery is internally consistent), **not** that the parametric
+>   RESI point estimate is unbiased or consistent for the
+>   heteroskedasticity-robust effect size. The parametric estimator is
+>   not, in general, unbiased for that quantity, and these simulations
+>   are not designed to detect (or penalize) that discrepancy — it would
+>   show up as ~zero bias here regardless.
+> - The same caveat applies to the **Coverage** and **CI method
+>   comparison** figures further down: “coverage” means coverage of the
+>   setting’s own self-referential target, evaluated using that
+>   setting’s own variance definition.
 
 ### Metrics
 
@@ -185,7 +215,7 @@ file.copy(list.files("method_comparison",
 pdf_files <- list.files(figs_dir, pattern = "\\.pdf$", full.names = TRUE)
 for (pdf_file in pdf_files) {
   cat(pdf_file)
-  pages <- magick::image_read_pdf(pdf_file, density = 700)
+  pages <- magick::image_read_pdf(pdf_file, density = 1000)
   stopifnot(length(pages) == 1L)
   pages <- magick::image_resize(pages, "3400x")
   magick::image_write(
@@ -424,6 +454,6 @@ default — across the full sample-size grid.
     ##  [5] xfun_0.60         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  
     ##  [9] rmarkdown_2.31    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      
     ## [13] pkgdown_2.2.1     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2
-    ## [17] compiler_4.6.1    tools_4.6.1       ragg_1.5.2        bslib_0.11.0     
+    ## [17] compiler_4.6.1    tools_4.6.1       ragg_1.5.2        bslib_0.12.0     
     ## [21] evaluate_1.0.5    yaml_2.3.12       otel_0.2.0        jsonlite_2.0.0   
     ## [25] rlang_1.3.0       fs_2.1.0

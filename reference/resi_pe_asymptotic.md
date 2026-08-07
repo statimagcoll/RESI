@@ -36,7 +36,7 @@ resi_pe_asymptotic(
 - vcovfunc:
 
   Variance estimator for RESI point estimates. Default:
-  [`sandwich::vcovHC`](https://sandwich.R-Forge.R-project.org/reference/vcovHC.html).
+  [`sandwich::vcovHC`](https://zeileis.codeberg.page/sandwich/reference/vcovHC.html).
 
 - coefficients:
 

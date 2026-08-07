@@ -13,7 +13,7 @@ structure within subjects."><meta property="og:image" content="https://statimagc
 
     <a class="navbar-brand me-2" href="../index.html">RESI: Robust Effect Size Inference in R</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -88,7 +88,7 @@ structure within subjects.</p>
 <span class="r-in"><span><span class="va">mod</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="va">charges</span> <span class="op">~</span> <span class="va">region</span> <span class="op">*</span> <span class="va">age</span> <span class="op">+</span> <span class="va">bmi</span> <span class="op">+</span> <span class="va">sex</span>, data <span class="op">=</span> <span class="fu">RESI</span><span class="fu">::</span><span class="va"><a href="insurance.html">insurance</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># run a Wald test with robust variance</span></span></span>
-<span class="r-in"><span><span class="va">wt</span> <span class="op">=</span> <span class="fu">lmtest</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/lmtest/man/waldtest.html" class="external-link">waldtest</a></span><span class="op">(</span><span class="va">mod</span>, vcov <span class="op">=</span> <span class="fu">sandwich</span><span class="fu">::</span><span class="va"><a href="https://sandwich.R-Forge.R-project.org/reference/vcovHC.html" class="external-link">vcovHC</a></span>, test <span class="op">=</span> <span class="st">"Chisq"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">wt</span> <span class="op">=</span> <span class="fu">lmtest</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/lmtest/man/waldtest.html" class="external-link">waldtest</a></span><span class="op">(</span><span class="va">mod</span>, vcov <span class="op">=</span> <span class="fu">sandwich</span><span class="fu">::</span><span class="va"><a href="https://zeileis.codeberg.page/sandwich/reference/vcovHC.html" class="external-link">vcovHC</a></span>, test <span class="op">=</span> <span class="st">"Chisq"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># get Chi-sq value and degrees of freedom</span></span></span>
 <span class="r-in"><span><span class="va">chisq</span> <span class="op">=</span> <span class="va">wt</span><span class="op">$</span><span class="va">Chisq</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span></span></span>

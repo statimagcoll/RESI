@@ -11,7 +11,7 @@ either a normal approximation (Zhang et al., 2025) or a quadratic-form
 
     <a class="navbar-brand me-2" href="../index.html">RESI: Robust Effect Size Inference in R</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -53,7 +53,7 @@ either a normal approximation (Zhang et al., 2025) or a quadratic-form
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">resi_pe_asymptotic</span><span class="op">(</span></span>
 <span>  <span class="va">model.full</span>,</span>
 <span>  <span class="va">data</span>,</span>
-<span>  vcovfunc <span class="op">=</span> <span class="fu">sandwich</span><span class="fu">::</span><span class="va"><a href="https://sandwich.R-Forge.R-project.org/reference/vcovHC.html" class="external-link">vcovHC</a></span>,</span>
+<span>  vcovfunc <span class="op">=</span> <span class="fu">sandwich</span><span class="fu">::</span><span class="va"><a href="https://zeileis.codeberg.page/sandwich/reference/vcovHC.html" class="external-link">vcovHC</a></span>,</span>
 <span>  coefficients <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  anova <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  alpha <span class="op">=</span> <span class="fl">0.05</span>,</span>
@@ -80,7 +80,7 @@ either a normal approximation (Zhang et al., 2025) or a quadratic-form
 
 <dt id="arg-vcovfunc">vcovfunc<a class="anchor" aria-label="anchor" href="#arg-vcovfunc"></a></dt>
 <dd><p>Variance estimator for RESI point estimates. Default:
-<code><a href="https://sandwich.R-Forge.R-project.org/reference/vcovHC.html" class="external-link">sandwich::vcovHC</a></code>.</p></dd>
+<code><a href="https://zeileis.codeberg.page/sandwich/reference/vcovHC.html" class="external-link">sandwich::vcovHC</a></code>.</p></dd>
 
 
 <dt id="arg-coefficients">coefficients<a class="anchor" aria-label="anchor" href="#arg-coefficients"></a></dt>

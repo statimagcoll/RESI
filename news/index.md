@@ -1,8 +1,15 @@
 # Changelog
 
-## RESI 1.4.2
+## RESI 1.5.0
 
-CRAN release: 2026-07-24
+### RESI 1.5.0
+
+#### Bug Fixes
+
+- Parametric estimator uses robust CIs – this provides valid coverage
+  for the expected value of the possibly biased estimator.
+- Simulation calibration evaluation uses a true value that is consistent
+  with the Monte Carlo simulation variance of R (RESI vector).
 
 ### RESI 1.4.2
 
@@ -15,7 +22,7 @@ CRAN release: 2026-07-24
   `resi_pe.lmrob`, `resi_pe.glmrob`, `resi.lmrob`, and `resi.glmrob`
   methods. Both default to `vcovfunc = stats::vcov`, which uses the
   model’s built-in robust sandwich variance. `glmrob` redirects
-  [`sandwich::vcovHC`](https://sandwich.R-Forge.R-project.org/reference/vcovHC.html)
+  [`sandwich::vcovHC`](https://zeileis.codeberg.page/sandwich/reference/vcovHC.html)
   to [`stats::vcov`](https://rdrr.io/r/stats/vcov.html) with a warning
   since `vcovHC` does not support `glmrob`
   ([\#12](https://github.com/statimagcoll/RESI/issues/12)).

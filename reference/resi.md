@@ -350,7 +350,7 @@ resi(
 
   The variance estimator function for constructing the Wald test
   statistic. By default,
-  [vcovHC](https://sandwich.R-Forge.R-project.org/reference/vcovHC.html)
+  [vcovHC](https://zeileis.codeberg.page/sandwich/reference/vcovHC.html)
   (the robust (sandwich) variance estimator).
 
 - alpha:
@@ -516,7 +516,7 @@ Sizes.\<doi:10.18637/jss.v112.i03\>
 ## See also
 
 [`resi_pe`](https://statimagcoll.github.io/RESI/reference/resi_pe.md),
-[vcovHC](https://sandwich.R-Forge.R-project.org/reference/vcovHC.html),
+[vcovHC](https://zeileis.codeberg.page/sandwich/reference/vcovHC.html),
 [`f2S`](https://statimagcoll.github.io/RESI/reference/f2S.md),
 [`chisq2S`](https://statimagcoll.github.io/RESI/reference/chisq2S.md),
 [`z2S`](https://statimagcoll.github.io/RESI/reference/z2S.md),
@@ -711,8 +711,8 @@ if(requireNamespace("splines")){
 #> 
 #> Response: smoker
 #>                          Df  Chisq Pr(>Chisq)     RESI 0.5%    99.5%
-#> splines::ns(age, df = 3)  3 1.4735    0.68841 0.000000    0 0.089389
-#> region                    3 7.2960    0.06304 0.056663    0 0.135462
+#> splines::ns(age, df = 3)  3 1.4735    0.68841 0.000000    0 0.089509
+#> region                    3 7.2960    0.06304 0.056663    0 0.137583
 
 
 ## RESI on a survival model with alternate Z2S

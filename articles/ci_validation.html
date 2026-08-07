@@ -30,7 +30,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">RESI: Robust Effect Size Inference in R</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -186,7 +186,7 @@ weighted chi-square</td>
 <td>lm robust</td>
 <td><code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code></td>
 <td>
-<code><a href="https://sandwich.R-Forge.R-project.org/reference/vcovHC.html" class="external-link">sandwich::vcovHC</a></code> (HC3)</td>
+<code><a href="https://zeileis.codeberg.page/sandwich/reference/vcovHC.html" class="external-link">sandwich::vcovHC</a></code> (HC3)</td>
 </tr>
 <tr class="odd">
 <td>glm parametric</td>
@@ -197,7 +197,7 @@ weighted chi-square</td>
 <td>glm robust</td>
 <td><code>glm(..., family=binomial)</code></td>
 <td>
-<code><a href="https://sandwich.R-Forge.R-project.org/reference/vcovHC.html" class="external-link">sandwich::vcovHC</a></code> (HC3)</td>
+<code><a href="https://zeileis.codeberg.page/sandwich/reference/vcovHC.html" class="external-link">sandwich::vcovHC</a></code> (HC3)</td>
 </tr>
 </tbody>
 </table>
@@ -233,6 +233,51 @@ population targets.</p>
 <p>Each simulation cell (model × variance estimator × sample size) uses
 <strong>1 000 replicates</strong>. Results are shown for sample sizes
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>∈</mo><mo stretchy="false" form="prefix">{</mo><mn>50</mn><mo>,</mo><mn>100</mn><mo>,</mo><mn>200</mn><mo>,</mo><mn>500</mn><mo>,</mo><mn>1000</mn><mo>,</mo><mn>2000</mn><mo>,</mo><mn>5000</mn><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">n \in \{50, 100, 200, 500, 1000, 2000, 5000\}</annotation></semantics></math>.</p>
+</div>
+<div class="section level3">
+<h3 class="unnumbered" id="what-population-target-means-here">What “population target” means here<a class="anchor" aria-label="anchor" href="#what-population-target-means-here"></a>
+</h3>
+<blockquote>
+<p><strong>Note.</strong> For every setting, the population target
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>S</mi><mtext mathvariant="normal">true</mtext></msub><annotation encoding="application/x-tex">S_{\text{true}}</annotation></semantics></math>
+(and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>θ</mi><mtext mathvariant="normal">true</mtext></msub><annotation encoding="application/x-tex">\theta_{\text{true}}</annotation></semantics></math>)
+used by the <strong>Bias</strong>, <strong>Coverage</strong>, and
+calibration checks below is computed by applying that <em>same
+setting’s</em> <code>vcovfunc</code> to the full <code>insurance</code>
+data
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>1338</mn></mrow><annotation encoding="application/x-tex">n = 1338</annotation></semantics></math>)
+— HC0 for the robust settings, <code><a href="https://rdrr.io/r/stats/vcov.html" class="external-link">stats::vcov</a></code> (classical,
+homoskedastic) for the parametric settings. It is <strong>not</strong>
+an estimator-independent gold-standard effect size.</p>
+<p>Under heteroskedasticity (present in the <code>insurance</code>
+data), the classical and HC-sandwich standard errors for a coefficient
+differ, so
+parametric-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>S</mi><annotation encoding="application/x-tex">S</annotation></semantics></math>
+and
+robust-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>S</mi><annotation encoding="application/x-tex">S</annotation></semantics></math>
+are, in general, genuinely different population quantities — not two
+estimators competing for one shared truth. Consequently:</p>
+<ul>
+<li>The
+<strong>Bias(</strong><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>θ</mi><mo accent="true">̂</mo></mover><annotation encoding="application/x-tex">\hat\theta</annotation></semantics></math><strong>)</strong>
+and
+<strong>Bias(</strong><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>R</mi><mo accent="true">̂</mo></mover><annotation encoding="application/x-tex">\hat{R}</annotation></semantics></math><strong>)</strong>
+panels demonstrate that each estimator converges to <em>its own</em>
+self-referential target as
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>→</mo><mi>∞</mi></mrow><annotation encoding="application/x-tex">n \to \infty</annotation></semantics></math>
+(i.e. the simulation machinery is internally consistent),
+<strong>not</strong> that the parametric RESI point estimate is unbiased
+or consistent for the heteroskedasticity-robust effect size. The
+parametric estimator is not, in general, unbiased for that quantity, and
+these simulations are not designed to detect (or penalize) that
+discrepancy — it would show up as ~zero bias here regardless.</li>
+<li>The same caveat applies to the <strong>Coverage</strong> and
+<strong>CI method comparison</strong> figures further down: “coverage”
+means coverage of the setting’s own self-referential target, evaluated
+using that setting’s own variance definition.</li>
+</ul>
+</blockquote>
 </div>
 <div class="section level3">
 <h3 id="metrics">Metrics<a class="anchor" aria-label="anchor" href="#metrics"></a>
@@ -380,7 +425,7 @@ the package source tree.</p>
 <span><span class="va">pdf_files</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">figs_dir</span>, pattern <span class="op">=</span> <span class="st">"\\.pdf$"</span>, full.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="kw">for</span> <span class="op">(</span><span class="va">pdf_file</span> <span class="kw">in</span> <span class="va">pdf_files</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">pdf_file</span><span class="op">)</span></span>
-<span>  <span class="va">pages</span> <span class="op">&lt;-</span> <span class="fu">magick</span><span class="fu">::</span><span class="fu">image_read_pdf</span><span class="op">(</span><span class="va">pdf_file</span>, density <span class="op">=</span> <span class="fl">700</span><span class="op">)</span></span>
+<span>  <span class="va">pages</span> <span class="op">&lt;-</span> <span class="fu">magick</span><span class="fu">::</span><span class="fu">image_read_pdf</span><span class="op">(</span><span class="va">pdf_file</span>, density <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">pages</span><span class="op">)</span> <span class="op">==</span> <span class="fl">1L</span><span class="op">)</span></span>
 <span>  <span class="va">pages</span> <span class="op">&lt;-</span> <span class="fu">magick</span><span class="fu">::</span><span class="fu">image_resize</span><span class="op">(</span><span class="va">pages</span>, <span class="st">"3400x"</span><span class="op">)</span></span>
 <span>  <span class="fu">magick</span><span class="fu">::</span><span class="fu">image_write</span><span class="op">(</span></span>
@@ -661,7 +706,7 @@ package default — across the full sample-size grid.</p>
 <span><span class="co">##  [5] xfun_0.60         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  </span></span>
 <span><span class="co">##  [9] rmarkdown_2.31    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      </span></span>
 <span><span class="co">## [13] pkgdown_2.2.1     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2</span></span>
-<span><span class="co">## [17] compiler_4.6.1    tools_4.6.1       ragg_1.5.2        bslib_0.11.0     </span></span>
+<span><span class="co">## [17] compiler_4.6.1    tools_4.6.1       ragg_1.5.2        bslib_0.12.0     </span></span>
 <span><span class="co">## [21] evaluate_1.0.5    yaml_2.3.12       otel_0.2.0        jsonlite_2.0.0   </span></span>
 <span><span class="co">## [25] rlang_1.3.0       fs_2.1.0</span></span></code></pre>
 </div>
