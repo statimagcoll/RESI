@@ -1,13 +1,18 @@
 # Changelog
 
-## RESI 1.5.0
+## RESI 1.5.1
+
+### RESI 1.5.1
+
+- Minor bug fixes with website rendering.
 
 ### RESI 1.5.0
 
 #### Bug Fixes
 
-- Parametric estimator uses robust CIs – this provides valid coverage
-  for the expected value of the possibly biased estimator.
+- Parametric estimator uses robust CIs (via type=‘HC3’) – this provides
+  valid coverage for the expected value of the possibly biased
+  estimator.
 - Simulation calibration evaluation uses a true value that is consistent
   with the Monte Carlo simulation variance of R (RESI vector).
 
