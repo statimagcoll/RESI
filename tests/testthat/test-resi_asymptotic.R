@@ -275,6 +275,8 @@ test_that("parametric lm uses the extended phi and design variance", {
   X <- model.matrix(mod.lm)
   n <- nrow(X)
   residual <- residuals(mod.lm)
+  h <- hatvalues(mod.lm)
+  sqrtw <- 1 / pmax(1 - h, .Machine$double.eps)   # HC3 (default type)
   SigmaX_inv <- solve(crossprod(X) / n)
   H <- L %*% SigmaX_inv
   phi <- summary(mod.lm)$sigma^2
@@ -282,7 +284,7 @@ test_that("parametric lm uses the extended phi and design variance", {
   beta_L <- drop(L %*% coef(mod.lm))
   root <- sqrt(drop(Sigma_beta))
 
-  direct <- drop(residual * (H %*% t(X)) / root)
+  direct <- drop(sqrtw * residual * (H %*% t(X)) / root)
   phi_if <- residual^2 - mean(residual^2)
   phi_term <- -beta_L * phi_if / (2 * phi * root)
   leverage_L <- drop(H %*% t(X))
@@ -312,6 +314,8 @@ test_that("parametric logistic glm uses the extended beta and bread variance", {
   X <- model.matrix(mod.glm)
   n <- nrow(X)
   residual <- residuals(mod.glm, type = "response")
+  h <- hatvalues(mod.glm)
+  sqrtw <- 1 / pmax(1 - h, .Machine$double.eps)   # HC3 (default type)
   weight <- weights(mod.glm, type = "working")
   A_inv <- solve(crossprod(X * sqrt(weight)) / n)
   H <- L %*% A_inv
@@ -330,7 +334,7 @@ test_that("parametric logistic glm uses the extended beta and bread variance", {
     drop(H %*% dA_i %*% t(H))
   }, numeric(1L))
 
-  direct <- residual * projection / root
+  direct <- sqrtw * residual * projection / root
   empirical_bread <- weight * projection^2 - drop(Sigma_beta)
   bread_term <- beta_L * (empirical_bread + beta_bread) /
     (2 * drop(Sigma_beta)^(3 / 2))

@@ -212,7 +212,7 @@ file.copy(list.files("method_comparison",
 pdf_files <- list.files(figs_dir, pattern = "\\.pdf$", full.names = TRUE)
 for (pdf_file in pdf_files) {
   cat(pdf_file)
-  pages <- magick::image_read_pdf(pdf_file, density = 700)
+  pages <- magick::image_read_pdf(pdf_file, density = 1000)
   stopifnot(length(pages) == 1L)
   pages <- magick::image_resize(pages, "3400x")
   magick::image_write(

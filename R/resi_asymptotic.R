@@ -1105,16 +1105,46 @@ resi_pe_asymptotic <- function(model.full,
   if (parametric_glm && !is_glm)
     stop(".resi_precompute_ext: parametric_glm is only available for glm models")
 
-  # The robust extended path treats const as HC0 so tau_i = 1 explicitly.
-  # The parametric lm path uses phi and SigmaXA directly and does not use tau.
-  ci_type <- if (type == "const") "HC0" else type
+  type <- match.arg(type, c("HC3", "const", "HC", "HC0", "HC1", "HC2",
+                            "HC4", "HC4m", "HC5"))
+  if (type == "HC") type <- "HC0"
 
-  precomp <- .resi_precompute(model, type = ci_type, deriv_method = "zeroB")
-  X       <- precomp$X
-  n       <- precomp$n
-  p       <- precomp$p
-  sqrtw   <- precomp$sqrtw
-  tau     <- sqrtw^2          # HC squared weights: tau_i = sqrtw_i^2
+  X <- model.matrix(model)
+  if (any(alias <- is.na(coef(model)))) X <- X[, !alias, drop = FALSE]
+  n <- nrow(X)
+  p <- ncol(X)
+
+  # HC leverage weights, sqrtw_i, s.t. tau_i = sqrtw_i^2 is the type's HC weight.
+  # "const" falls through to the rep(1, n) default, same as "HC0".
+  h <- hatvalues(model)
+  one_m_h <- pmax(1 - h, .Machine$double.eps)
+  p_int <- max(1L, as.integer(round(sum(h))))
+  sqrtw <- switch(toupper(type),
+    "HC0"  = rep(1, n),
+    "HC1"  = rep(sqrt(n / max(n - p, 1L)), n),
+    "HC2"  = 1 / sqrt(one_m_h),
+    "HC3"  = 1 / one_m_h,
+    "HC4"  = {
+      nhp <- (n / p_int) * h
+      one_m_h^(-pmin(4, nhp) / 2)
+    },
+    "HC4M" = {
+      nhp <- (n / p_int) * h
+      delta <- pmin(1, nhp) + pmin(1.5, nhp)
+      one_m_h^(-delta / 2)
+    },
+    "HC5"  = {
+      nhp <- (n / p_int) * h
+      k <- 0.7
+      deltaCap <- max(4, (n / p_int) * k * max(h))
+      delta <- pmin(nhp, deltaCap)
+      one_m_h^(-delta / 4)
+    },
+    rep(1, n)   # fallback (const)
+  )
+  tau <- sqrtw^2          # HC squared weights: tau_i = sqrtw_i^2
+  precomp <- list(model = model, X = X, n = n, p = p, sqrtw = sqrtw)
+  if (is_lm) precomp$phi <- summary(model)$sigma^2
 
   if (is_lm) {
     # lm: SigmaXA = X'X/n,  SigmaXB = X'diag(tau*e^2)X/n
@@ -1270,8 +1300,10 @@ resi_pe_asymptotic <- function(model.full,
     FX      <- F_mat %*% t(X)
     Wvb     <- W * matrix(VT_beta, m1, m1, byrow = TRUE)
 
+    # beta's own contribution is type-weighted, decoupled from the parametric
+    # (phi * SigmaXA^-1) covariance used to define Sigma_beta_L/R itself.
     phi_direct <- (V_eig %*% sweep(FX, 1, sqrtd, '/')) *
-      matrix(r, m1, n, byrow = TRUE)
+      matrix(sqrt(tau) * r, m1, n, byrow = TRUE)
 
     phi_hat <- precomp_ext$phi
     phi_if  <- r^2 - mean(r^2)
@@ -1328,8 +1360,10 @@ resi_pe_asymptotic <- function(model.full,
     A_tilde <- sweep(FX, 2, sqrt(w_A), '*')
     Wvb <- W * matrix(VT_beta, m1, m1, byrow = TRUE)
 
+    # beta's own contribution is type-weighted, decoupled from the parametric
+    # (dispersion * SigmaXA^-1) covariance used to define Sigma_beta_L/R itself.
     phi_direct <- (V_eig %*% sweep(FX, 1, sqrtd, '/')) *
-      matrix(r, m1, n, byrow = TRUE)
+      matrix(sqrt(tau) * r, m1, n, byrow = TRUE)
     A_core <- precomp_ext$glm_dispersion *
       A_tilde * (Wvb %*% A_tilde) -
       matrix(VT_beta / (2 * sqrtd), m1, n)

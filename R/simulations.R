@@ -1303,17 +1303,27 @@ simCalibrationSim <- function(
     names(R_true) <- coef_terms_true   # data.frame[rows,col] drops names
 
     # sigma2S_true: Sigma_R[k,k] = Var(R_hat) evaluated at the full-sample
-    #   population values, ALWAYS via the robust (type="HC0") extended
-    #   framework -- i.e. parametric_lm/parametric_glm = FALSE regardless of
-    #   the setting. HC0 is a heteroskedasticity-consistent estimator, so it
-    #   is the right reference for "the truth" even in the parametric
-    #   scenarios, where R_true itself is still computed above using
-    #   vcovfunc = stats::vcov. Decoupling these two means resi_pe_asymptotic()
-    #   cannot be used directly here (its vcovfunc == stats::vcov check would
-    #   force parametric_lm = TRUE); call the internal precompute/contrast
-    #   functions directly instead.
-    precomp_true_hc0 <- tryCatch(.resi_precompute_ext(full_mod, type = "HC0"),
-                                 error = function(e) NULL)
+    #   population values, via the SAME branch (parametric_lm/parametric_glm)
+    #   as the estimator actually being sampled for this setting. Matching the
+    #   branch is essential: for the parametric settings, R_hat is built from
+    #   the classical (phi_hat*bread) covariance, not the HC sandwich, so its
+    #   true asymptotic variance must come from the parametric_lm/glm branch
+    #   too -- using the robust branch here would compare the MC variance of
+    #   one estimator against the analytic variance of a different one.
+    #   type is hard-coded to "HC0" (unweighted, tau_i = 1) for the truth
+    #   regardless of setting: this is the population reference, not a
+    #   finite-sample CI, so there is no leverage correction to make.
+    #   Decoupling from resi_pe_asymptotic()'s own vcovfunc-based dispatch
+    #   means it cannot be called directly here; call the internal
+    #   precompute/contrast functions directly instead, passing the matching
+    #   flags explicitly.
+    precomp_true_hc0 <- tryCatch(
+      .resi_precompute_ext(full_mod, type = "HC0",
+                           parametric_lm  = (s$type == "lm"  &&
+                                              s$vcov_name == "parametric"),
+                           parametric_glm = (s$type == "glm" &&
+                                              s$vcov_name == "parametric")),
+      error = function(e) NULL)
     if (!is.null(precomp_true_hc0)) {
       sigma2S_true <- setNames(vapply(coef_terms_true, function(tm) {
         L_tm <- .get_L_coef(full_mod, tm)
@@ -1391,9 +1401,9 @@ simCalibrationSim <- function(
           # Extended: Sigma_R is the total; store in dir, Achain/Bchain = 0
           ct_tm <- tryCatch(.resi_contrast_ext(precomp_hc0, L_tm), error = function(e) NULL)
           if (!is.null(ct_tm)) {
-            J_dir_list[[tm]]    <- matrix(0, 1, precomp_hc0$m)
-            J_Achain_list[[tm]] <- matrix(0, 1, precomp_hc0$m)
-            J_Bchain_list[[tm]] <- matrix(0, 1, precomp_hc0$m)
+            J_dir_list[[tm]]    <- matrix(0, 1, precomp_hc0$p)
+            J_Achain_list[[tm]] <- matrix(0, 1, precomp_hc0$p)
+            J_Bchain_list[[tm]] <- matrix(0, 1, precomp_hc0$p)
             sig2S_true_dir[tm]    <- as.numeric(ct_tm$Sigma_R)
             sig2S_true_Achain[tm] <- 0
             sig2S_true_Bchain[tm] <- 0
