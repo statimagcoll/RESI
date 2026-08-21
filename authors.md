@@ -15,7 +15,7 @@
 ## Citation
 
 Source:
-[`inst/CITATION`](https://github.com/statimagcoll/RESI/blob/v1.5.1/inst/CITATION)
+[`inst/CITATION`](https://github.com/statimagcoll/RESI/blob/master/inst/CITATION)
 
 Jones M, Kang K, Vandekar S (2025). “RESI: An R Package for Robust
 Effect Sizes.” *Journal of Statistical Software*, **112**(3), 1–27.

@@ -1,5 +1,7 @@
 # Changelog
 
+## RESI (development version)
+
 ## RESI 1.5.1
 
 CRAN release: 2026-08-21
