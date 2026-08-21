@@ -2,6 +2,8 @@
 
 ## RESI 1.5.1
 
+CRAN release: 2026-08-21
+
 ### RESI 1.5.1
 
 - Minor bug fixes with website rendering.
