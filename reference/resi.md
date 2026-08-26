@@ -584,7 +584,7 @@ resi_obj
 #> 
 #> Notes:
 #> 1. The RESI was calculated using a robust covariance estimator.
-#> 2. Confidence intervals (CIs) constructed using 50 non-parametric bootstraps. 
+#> 2. Confidence intervals were constructed using the quadratic form method.
 #> 
 
 # fit a reduced model for comparison
@@ -645,7 +645,7 @@ resi(model.full = mod, model.reduced = mod_red, nboot = 10)
 #> 
 #> Notes:
 #> 1. The RESI was calculated using a robust covariance estimator.
-#> 2. Confidence intervals (CIs) constructed using 10 non-parametric bootstraps. 
+#> 2. Confidence intervals were constructed using the quadratic form method.
 #> 
 
 # used stored bootstrap results to get a different alpha-level confidence interval

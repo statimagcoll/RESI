@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">RESI: Robust Effect Size Inference in R</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.1.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,6 +40,14 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="resi-development-version">RESI (development version)<a class="anchor" aria-label="anchor" href="#resi-development-version"></a></h2>
 </div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.5.1.9001" id="resi-1519001">RESI 1.5.1.9001<a class="anchor" aria-label="anchor" href="#resi-1519001"></a></h2>
+<ul><li>Fixed <code><a href="../reference/resi_pe.html">resi_pe.lmerMod()</a></code> handling for spline terms like <code>ns(Days, 3)</code> by reconstructing the auxiliary fixed-effects model data from the original model call and replacing deprecated <code>lme4::nobars</code> usage with <code><a href="https://rdrr.io/pkg/reformulas/man/nobars.html" class="external-link">reformulas::nobars</a></code>.</li>
+<li>
+<code><a href="../reference/resi.html">resi()</a></code> now uses strict asymptotic CI dispatch for non-bootstrap methods (<code>qf</code>, <code>cf</code>, <code>normal</code>) with no automatic fallback to other methods.</li>
+<li>Updated <code>print.resi()</code> notes to report the actual CI method used (quadratic form, Cornish-Fisher, Gaussian normal, or bootstrap).</li>
+<li>Added regression tests for mixed-model spline handling, strict CI method behavior, CI note text, and improved determinism in randomized test fixtures.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.5.1" id="resi-151">RESI 1.5.1<a class="anchor" aria-label="anchor" href="#resi-151"></a></h2><p class="text-muted">CRAN release: 2026-08-21</p>
 <div class="section level3">

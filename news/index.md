@@ -2,6 +2,23 @@
 
 ## RESI (development version)
 
+## RESI 1.5.1.9001
+
+- Fixed
+  [`resi_pe.lmerMod()`](https://statimagcoll.github.io/RESI/reference/resi_pe.md)
+  handling for spline terms like `ns(Days, 3)` by reconstructing the
+  auxiliary fixed-effects model data from the original model call and
+  replacing deprecated `lme4::nobars` usage with
+  [`reformulas::nobars`](https://rdrr.io/pkg/reformulas/man/nobars.html).
+- [`resi()`](https://statimagcoll.github.io/RESI/reference/resi.md) now
+  uses strict asymptotic CI dispatch for non-bootstrap methods (`qf`,
+  `cf`, `normal`) with no automatic fallback to other methods.
+- Updated `print.resi()` notes to report the actual CI method used
+  (quadratic form, Cornish-Fisher, Gaussian normal, or bootstrap).
+- Added regression tests for mixed-model spline handling, strict CI
+  method behavior, CI note text, and improved determinism in randomized
+  test fixtures.
+
 ## RESI 1.5.1
 
 CRAN release: 2026-08-21
