@@ -29,6 +29,8 @@ mod.na = lm(charges ~ region * age + bmi + sex, data = data.nas)
 mod.log.na = glm(smoker ~ age + region + bmi, data = data.nas, family = "binomial")
 
 #nls
+# Keep test fixtures deterministic across CI runners and package load order.
+set.seed(54)
 x <- seq(0, 100, 1)
 y<-((runif(1, 10, 20)*x)/(runif(1, 0, 10) + x)) +
   rnorm(101, 0, 1)
@@ -99,6 +101,7 @@ mod.lme.int = nlme::lme(distance ~ 1, data = nlme::Orthodont, random = ~ 1)
 
 if(requireNamespace("lme4")){
   mod.lmerMod = lme4::lmer(Reaction ~ Days + (Days | Subject), lme4::sleepstudy)
+  mod.lmerMod.ns = lme4::lmer(Reaction ~ splines::ns(Days, 3) + (1 | Subject), lme4::sleepstudy)
   data.lmer = nlme::Orthodont
   data.lmer$nsex <- as.numeric(data.lmer$Sex=="Male")
   data.lmer$nsexage <- with(data.lmer, nsex*age)
@@ -311,6 +314,17 @@ test_that("RESI estimates are in between the confidence limits", {
   expect_true(all(resi.obj$coefficients$`CS-RESI` >= resi.obj$coefficients$`CS 2.5%`) & all(resi.obj$coefficients$RESI <= resi.obj$coefficients$`CS 97.5%`))
   expect_true(all(resi.obj$anova$`L-RESI` >= resi.obj$anova$`L 2.5%`) & all(resi.obj$anova$RESI <= resi.obj$anova$`L 97.5%`))
   expect_true(all(resi.obj$anova$`CS-RESI` >= resi.obj$anova$`CS 2.5%`) & all(resi.obj$anova$RESI <= resi.obj$anova$`CS 97.5%`))}
+})
+
+test_that("lmer spline model with ns(Days, 3) runs in resi_pe", {
+  skip_if_not_installed("lme4")
+  out <- resi_pe(mod.lmerMod.ns, anova = FALSE)
+  expect_s3_class(out, "resi")
+  rn <- rownames(out$coefficients)
+  expect_true("(Intercept)" %in% rn)
+  rn_non_intercept <- rn[rn != "(Intercept)"]
+  expect_true(length(rn_non_intercept) == 3)
+  expect_true(all(grepl("ns\\(Days, 3\\)[123]$", rn_non_intercept)))
 })
 
 # Regression test: bootstrap must succeed for models with transformed responses.

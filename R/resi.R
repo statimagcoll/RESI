@@ -244,60 +244,49 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
 
   # ---- asymptotic CIs (skip bootstrap) ----
   if (ci.method != "boot") {
-    asym_out <- tryCatch(
-      resi_pe_asymptotic(model.full   = model.full,
-                         data         = data,
-                         vcovfunc     = vcovfunc,
-                         coefficients = coefficients,
-                         anova        = anova,
-                         alpha        = alpha,
-                         ci.method    = ci.method,
-                         unbiased     = unbiased,
-                         Anova.args   = Anova.args,
-                         vcov.args    = vcov.args),
-      error = function(e) {
-        warning("Asymptotic CI computation failed: ", conditionMessage(e),
-                "\nFalling back to bootstrap.")
-        NULL
-      }
-    )
-    if (!is.null(asym_out)) {
-      alpha.order <- sort(c(alpha / 2, 1 - alpha / 2))
-      ci_cols     <- paste0(alpha.order * 100, "%")
-      if (coefficients && !is.null(output$coefficients) && !is.null(asym_out$coefficients)) {
-        # Match row names and add CI columns
-        rn <- rownames(output$coefficients)
-        rn_asym <- rownames(asym_out$coefficients)
-        for (col in ci_cols) {
-          if (col %in% colnames(asym_out$coefficients)) {
-            output$coefficients[rn %in% rn_asym, col] <-
-              asym_out$coefficients[rn_asym %in% rn, col]
-          }
+    asym_out <- resi_pe_asymptotic(model.full   = model.full,
+                                   data         = data,
+                                   vcovfunc     = vcovfunc,
+                                   coefficients = coefficients,
+                                   anova        = anova,
+                                   alpha        = alpha,
+                                   ci.method    = ci.method,
+                                   unbiased     = unbiased,
+                                   Anova.args   = Anova.args,
+                                   vcov.args    = vcov.args)
+    alpha.order <- sort(c(alpha / 2, 1 - alpha / 2))
+    ci_cols     <- paste0(alpha.order * 100, "%")
+    if (coefficients && !is.null(output$coefficients) && !is.null(asym_out$coefficients)) {
+      # Match row names and add CI columns
+      rn <- rownames(output$coefficients)
+      rn_asym <- rownames(asym_out$coefficients)
+      for (col in ci_cols) {
+        if (col %in% colnames(asym_out$coefficients)) {
+          output$coefficients[rn %in% rn_asym, col] <-
+            asym_out$coefficients[rn_asym %in% rn, col]
         }
       }
-      if (anova && !is.null(output$anova) && !is.null(asym_out$anova)) {
-        rn <- rownames(output$anova)
-        rn_asym <- rownames(asym_out$anova)
-        for (col in ci_cols) {
-          if (col %in% colnames(asym_out$anova)) {
-            output$anova[rn %in% rn_asym, col] <-
-              asym_out$anova[rn_asym %in% rn, col]
-          }
-        }
-      }
-      output$ci.method  <- ci.method
-      # Store model and vcov settings so S3 methods can recompute CIs at a
-      # different alpha without re-running resi().
-      output$model.full <- model.full
-      output$vcovfunc   <- vcovfunc
-      output$vcov.args  <- vcov.args
-      output$Anova.args <- Anova.args
-      output$unbiased   <- unbiased
-      class(output) <- "resi"
-      return(output)
     }
-    # if we fell through (error), continue to bootstrap
-    ci.method <- "boot"
+    if (anova && !is.null(output$anova) && !is.null(asym_out$anova)) {
+      rn <- rownames(output$anova)
+      rn_asym <- rownames(asym_out$anova)
+      for (col in ci_cols) {
+        if (col %in% colnames(asym_out$anova)) {
+          output$anova[rn %in% rn_asym, col] <-
+            asym_out$anova[rn_asym %in% rn, col]
+        }
+      }
+    }
+    output$ci.method  <- ci.method
+    # Store model and vcov settings so S3 methods can recompute CIs at a
+    # different alpha without re-running resi().
+    output$model.full <- model.full
+    output$vcovfunc   <- vcovfunc
+    output$vcov.args  <- vcov.args
+    output$Anova.args <- Anova.args
+    output$unbiased   <- unbiased
+    class(output) <- "resi"
+    return(output)
   }
 
   # bootstrapping
@@ -407,6 +396,9 @@ resi.default = function(model.full, model.reduced = NULL, data, anova = TRUE,
   if(store.boot){
     #output$boot.results = boot.results
     output$boot.results = boot_out
+  }
+  if (is.null(output$ci.method)) {
+    output$ci.method <- "boot"
   }
   class(output) = "resi"
   return(output)

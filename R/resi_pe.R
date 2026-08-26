@@ -839,11 +839,25 @@ resi_pe.lmerMod <- function(model.full, anova = TRUE, vcovfunc = clubSandwich::v
 
   # CS-RESI: extract primary cluster variable and compute per-observation weights
   id_var <- names(lme4::ranef(model.full))[[1]]
-  data_mf <- as.data.frame(model.frame(model.full))
+  data_mf_raw <- as.data.frame(model.frame(model.full))
+  # model.frame(lmerMod) may only include transformed spline columns (e.g.,
+  # "ns(Days, 3)") and omit the raw variable names needed to re-fit formulas.
+  # Reconstruct rows from the original data call when available.
+  data_mf <- tryCatch({
+    data_arg <- model.full@call$data
+    if (is.null(data_arg)) stop("No data call stored")
+    data_full <- as.data.frame(eval(data_arg, envir = environment(formula(model.full))))
+    used_rows <- rownames(data_mf_raw)
+    if (!is.null(used_rows) && length(used_rows) > 0 && all(used_rows %in% rownames(data_full))) {
+      data_full[used_rows, , drop = FALSE]
+    } else {
+      data_full
+    }
+  }, error = function(e) data_mf_raw)
   n_i <- table(data_mf[[id_var]])
   data_mf$w_cs <- 1 / as.numeric(n_i[match(as.character(data_mf[[id_var]]), names(n_i))])
   # weighted independence lm (fixed effects only, random effects stripped)
-  fix_form <- lme4::nobars(formula(model.full))
+  fix_form <- reformulas::nobars(formula(model.full))
   mod_ind_lm <- lm(fix_form, data = data_mf, weights = w_cs)
   # rescale residuals to undo the weight transformation (mirrors geeglm CS approach)
   mod_ind_lm$residuals <- mod_ind_lm$residuals / sqrt(mod_ind_lm$weights)

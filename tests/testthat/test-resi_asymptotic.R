@@ -191,6 +191,31 @@ test_that("lm and glm default to quadratic-form CIs", {
                "qf")
 })
 
+test_that("print.resi CI note reflects the ci.method used", {
+  out_qf <- resi(mod.lm, coefficients = FALSE, overall = FALSE, anova = FALSE,
+                 ci.method = "qf")
+  txt_qf <- paste(capture.output(print(out_qf)), collapse = "\n")
+  expect_true(grepl("quadratic form method", txt_qf, fixed = TRUE))
+  expect_false(grepl("non-parametric bootstraps", txt_qf, fixed = TRUE))
+
+  set.seed(20260826)
+  out_boot <- resi(mod.lm, data = data, coefficients = TRUE, overall = FALSE,
+                   anova = FALSE, ci.method = "boot", nboot = 10)
+  txt_boot <- paste(capture.output(print(out_boot)), collapse = "\n")
+  expect_true(grepl("non-parametric bootstraps", txt_boot, fixed = TRUE))
+})
+
+test_that("qf failures are not auto-fallback to cf or bootstrap", {
+  testthat::local_mocked_bindings(
+    resi_pe_asymptotic = function(...) stop("forced asymptotic failure"),
+    .package = "RESI"
+  )
+  expect_error(
+    resi(mod.lm, ci.method = "qf", nboot = 3),
+    "forced asymptotic failure"
+  )
+})
+
 
 # ===========================================================================
 # 9. Correctly handles anova = FALSE or coefficients = FALSE
