@@ -595,7 +595,7 @@
       if (q > 1e4 || nc > 1e4) {
         sq  <- sqrt(max(q,  0))
         snc <- sqrt(max(nc, 0))
-        return(pnorm(snc - sq, lower.tail = FALSE) + pnorm(-snc - sq))
+        return(pnorm(snc - sq) + pnorm(-snc - sq))
       }
       pchisq(q, df = 1, ncp = nc, lower.tail = FALSE)
     }

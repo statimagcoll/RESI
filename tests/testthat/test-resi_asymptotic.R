@@ -147,6 +147,12 @@ test_that("Normal and QF anova CIs are close for large n (lm)", {
               label = "normal vs QF CI widths agree within 30%")
 })
 
+test_that("QF CI is correct when the noncentrality exceeds the pnorm-branch threshold", {
+  # n * S^2 / Sigma_R > 1e4 uses the (Z + sqrt(ncp))^2 identity.
+  ct <- list(m1 = 1L, n = 20000, R_beta = 3.33, Stilde = 3.33, Sigma_R = matrix(20))
+  expect_equal(.resi_ci_qf(ct), .resi_ci_normal_unsigned(ct), tolerance = 1e-3)
+})
+
 
 # ===========================================================================
 # 7. CI bounds agree on coefficients: normal and QF both use signed normal

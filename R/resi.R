@@ -752,14 +752,65 @@ resi.lme = function(model.full, alpha = 0.05, nboot = 1000, anova = TRUE, vcovfu
   return(output)
 }
 
-#' @describeIn resi RESI point and interval estimation for lmerMod models
+#' @describeIn resi RESI point and asymptotic interval estimation for lmerMod
+#'   models whose random effects are nested in an outermost cluster. CIs use
+#'   cluster-level influence functions (`ci.method` one of `"normal"`, `"qf"`,
+#'   `"cf"`; coefficients get the signed normal CI for `"qf"`). Use
+#'   `vcovfunc = stats::vcov` for model-based or `clubSandwich::vcovCR` (e.g.
+#'   `vcov.args = list(type = "CR2")`) for cluster-robust intervals.
+#'   `ci.design = TRUE` (default) treats the cluster covariate profiles as
+#'   sampled; `FALSE` gives intervals conditional on the observed design.
+#'   `ci.method = "none"` returns point estimates only. ANOVA CIs are for the
+#'   joint Wald test of each term's columns (Type II without interactions).
+#' @param ci.design Logical; for `lmerMod` CIs, include the variability of
+#'   the cluster-level design.
 #' @export
 resi.lmerMod = function(model.full, alpha = 0.05, nboot = 1000, anova = TRUE,
-                         vcovfunc = clubSandwich::vcovCR, vcov.args = list(), ...){
-  warning("\nConfidence Interval procedure not developed for lmerMod, returning point estimates only")
+                         vcovfunc = clubSandwich::vcovCR, vcov.args = list(),
+                         ci.method = c("normal", "qf", "cf", "none"),
+                         ci.design = TRUE, ...){
+  ci.method <- match.arg(ci.method)
+  dots <- list(...)
+  robust <- !identical(vcovfunc, stats::vcov)
+  pe_vcovfunc <- vcovfunc
+  if (ci.method != "none" && robust) {
+    design <- .resiMixedModelDesign(model.full, "lmerMod")
+    Vhat <- .resiMixedVcov(model.full, vcovfunc, vcov.args,
+                           .resiMixedCluster(dots$cluster, design, model.full, "lmerMod"))(model.full)
+    pe_vcovfunc <- function(object, ...) Vhat
+  }
   output = list(alpha = alpha, nboot = 0)
-  output = c(output, resi_pe(model.full, vcovfunc = vcovfunc, vcov.args = vcov.args, anova = anova, ...)) # RESI point estimates
+  output = c(output, resi_pe(model.full, vcovfunc = pe_vcovfunc, vcov.args = vcov.args, anova = anova, ...)) # RESI point estimates
   output$boot.method = "nonparam"
+  if (ci.method != "none") {
+    if (!robust) Vhat <- as.matrix(stats::vcov(model.full))
+    ci_cluster <- dots$cluster
+    if (!is.null(ci_cluster) && !(is.character(ci_cluster) && length(ci_cluster) == 1L)) ci_cluster <- NULL
+    cis <- .resi_ci_mixed(model.full, Vhat, robust,
+                          n_coef = setNames(output$coefficients$n, rownames(output$coefficients)),
+                          n_anova = if (anova) setNames(output$anova$n, rownames(output$anova)),
+                          ci.method = ci.method, alpha = alpha, design = ci.design,
+                          cluster = ci_cluster,
+                          n_level_coef = setNames(output$coefficients$`n level`, rownames(output$coefficients)),
+                          n_level_anova = if (anova) setNames(output$anova$`n level`, rownames(output$anova)))[[ci.method]]
+    ci_cols <- paste0(sort(c(alpha / 2, 1 - alpha / 2)) * 100, "%")
+    pos <- match("RESI", names(output$coefficients))
+    output$coefficients <- cbind(output$coefficients[seq_len(pos)],
+                                 setNames(as.data.frame(cis$coefficients), ci_cols),
+                                 output$coefficients[-seq_len(pos)])
+    if (anova) {
+      anova_class <- class(output$anova)
+      pos <- match("RESI", names(output$anova))
+      anova_df <- as.data.frame(output$anova)
+      output$anova <- cbind(anova_df[seq_len(pos)],
+                            setNames(as.data.frame(cis$anova), ci_cols),
+                            anova_df[-seq_len(pos)])
+      class(output$anova) <- anova_class
+    }
+    output$ci.method <- ci.method
+  } else {
+    warning("\nci.method = 'none': returning point estimates only")
+  }
   class(output) = "resi"
   return(output)
 }

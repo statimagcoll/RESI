@@ -279,6 +279,8 @@ resi(model.full, ...)
   anova = TRUE,
   vcovfunc = clubSandwich::vcovCR,
   vcov.args = list(),
+  ci.method = c("normal", "qf", "cf", "none"),
+  ci.design = TRUE,
   ...
 )
 
@@ -336,6 +338,9 @@ resi(model.full, ...)
 One of `"boot"` (bootstrap), `"qf"` (quadratic-form inversion, default for lm and glm),
 `"normal"` (normal approximation), or `"cf"` (Cornish-Fisher inversion).
 See `resi_pe_asymptotic` for details on the asymptotic methods.}
+
+\item{ci.design}{Logical; for `lmerMod` CIs, include the variability of
+the cluster-level design.}
 }
 \value{
 Returns a list that includes function arguments, RESI point estimates,
@@ -416,7 +421,16 @@ and then try rerunning \code{resi}.
 
 \item \code{resi(lme)}: RESI point and interval estimation for LME (nlme) models
 
-\item \code{resi(lmerMod)}: RESI point and interval estimation for lmerMod models
+\item \code{resi(lmerMod)}: RESI point and asymptotic interval estimation for lmerMod
+models whose random effects are nested in an outermost cluster. CIs use
+cluster-level influence functions (`ci.method` one of `"normal"`, `"qf"`,
+`"cf"`; coefficients get the signed normal CI for `"qf"`). Use
+`vcovfunc = stats::vcov` for model-based or `clubSandwich::vcovCR` (e.g.
+`vcov.args = list(type = "CR2")`) for cluster-robust intervals.
+`ci.design = TRUE` (default) treats the cluster covariate profiles as
+sampled; `FALSE` gives intervals conditional on the observed design.
+`ci.method = "none"` returns point estimates only. ANOVA CIs are for the
+joint Wald test of each term's columns (Type II without interactions).
 
 \item \code{resi(glmmTMB)}: RESI point and interval estimation for glmmTMB models - Gaussian only
 

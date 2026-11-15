@@ -17,6 +17,7 @@ Collate:
   'summary.resi.R'
   'resi.R'
   'resi_pe.R'
+  'resi_pe_mixed.R'
   'Anova.resi.R'
   'data.R'
   'chisq2S.R'
@@ -36,6 +37,8 @@ Collate:
   'print.R'
   'omnibus.R'
   'simulations.R'
+  'mixed_simulations.R'
+  'resi_mixed_ci.R'
   'resi_asymptotic.R'
 Imports:
     aod,
@@ -58,6 +61,9 @@ Suggests:
     glmtoolbox,
     knitr,
     lme4,
+    Matrix,
+    mlmRev,
+    numDeriv,
     pscl,
     R.rsp,
     regtools,
