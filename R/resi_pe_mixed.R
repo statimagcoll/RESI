@@ -238,9 +238,11 @@
     vcov.args$type <- "CR3"
   }
   if (!is.null(cluster)) vcov.args$cluster <- cluster
-  fast_cr2 <- identical(vcovfunc, clubSandwich::vcovCR) && inherits(model.full, "lmerMod") &&
+  fast_cr2 <- identical(vcovfunc, clubSandwich::vcovCR) &&
     identical(vcov.args$type, "CR2") && all(names(vcov.args) %in% c("type", "cluster")) &&
-    !is.null(vcov.args$cluster) && all(stats::weights(model.full) == 1)
+    !is.null(vcov.args$cluster) &&
+    ((inherits(model.full, "lmerMod") && all(stats::weights(model.full) == 1)) ||
+       (inherits(model.full, "lme") && is.null(.mixedCiLmeUnsupported(model.full))))
   function(object) {
     if (fast_cr2) {
       out <- tryCatch(.mixedCiCR2(object, vcov.args$cluster), error = function(e) NULL)

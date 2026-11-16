@@ -1,4 +1,4 @@
-# Asymptotic RESI confidence intervals for lmerMod fits with random effects
+# Asymptotic RESI confidence intervals for lmerMod and nlme::lme fits with random effects
 # nested in an outermost cluster (derivation: AIgams notes/resi_mixed_ci.qmd).
 #
 # Var(R_hat) is estimated from school-level (outermost-cluster) influence
@@ -41,19 +41,100 @@
 }
 
 .mixedCiBase <- function(fit, cluster) {
-  fl <- lme4::getME(fit, "flist")
+  base <- if (inherits(fit, "lme")) .mixedCiBaseLme(fit) else {
+    list(X = lme4::getME(fit, "X"), y = lme4::getME(fit, "y"), Zt = lme4::getME(fit, "Zt"),
+         Lambdat = lme4::getME(fit, "Lambdat"), Lind = lme4::getME(fit, "Lind"),
+         theta = lme4::getME(fit, "theta"), sigma = stats::sigma(fit),
+         REML = lme4::isREML(fit), beta = lme4::fixef(fit),
+         flist = as.list(lme4::getME(fit, "flist")))
+  }
+  fl <- base$flist
   if (is.null(cluster)) cluster <- names(fl)[which.min(vapply(fl, nlevels, integer(1L)))]
   cl <- if (length(cluster) == 1L && cluster %in% names(fl)) fl[[cluster]] else cluster
   cl <- droplevels(as.factor(cl))
-  Zt <- lme4::getME(fit, "Zt")
-  zt <- methods::as(Zt, "TsparseMatrix")
+  zt <- methods::as(base$Zt, "TsparseMatrix")
   if (any(tapply(as.integer(cl)[zt@j + 1L], zt@i, function(x) length(unique(x))) > 1L)) {
     stop("Mixed-model RESI CIs require every random effect to be nested within `cluster`.")
   }
-  list(X = lme4::getME(fit, "X"), y = lme4::getME(fit, "y"), Zt = Zt,
-       Lambdat = lme4::getME(fit, "Lambdat"), Lind = lme4::getME(fit, "Lind"),
-       theta = lme4::getME(fit, "theta"), sigma = stats::sigma(fit),
-       REML = lme4::isREML(fit), cluster = cl)
+  base$cluster <- cl
+  base
+}
+
+# Reasons an nlme::lme fit is outside the supported class (homoscedastic,
+# independent within-group errors; unstructured, diagonal or identity
+# random-effect covariances), or NULL when supported.
+.mixedCiLmeUnsupported <- function(fit) {
+  ms <- fit$modelStruct
+  if (!is.null(ms$varStruct)) return("`weights` (variance functions) are not supported")
+  if (!is.null(ms$corStruct)) return("`correlation` structures are not supported")
+  ok <- vapply(ms$reStruct, function(pd) inherits(pd, c("pdLogChol", "pdSymm", "pdDiag", "pdIdent")),
+               logical(1L))
+  if (!all(ok)) return("random-effect covariance classes other than pdSymm/pdLogChol/pdDiag/pdIdent are not supported")
+  NULL
+}
+
+# The lme4 representation of an lme fit: V = sigma^2 (I + Z Lambda Lambda' Z'),
+# with Lambda block diagonal in the per-level relative Cholesky factors and
+# theta their free entries (lower triangle for unstructured, diagonal for
+# pdDiag, one shared value for pdIdent), so the deviance Hessian respects the
+# model's covariance constraints.
+.mixedCiBaseLme <- function(fit) {
+  why <- .mixedCiLmeUnsupported(fit)
+  if (!is.null(why)) stop("Mixed-model RESI CIs for lme: ", why, ".")
+  design <- .resiMixedModelDesign(fit, "lme")
+  data <- design$data
+  X <- stats::model.matrix(stats::terms(stats::formula(fit)), data = data,
+                           contrasts.arg = fit$contrasts)
+  beta <- nlme::fixef(fit)
+  if (!identical(colnames(X), names(beta))) stop("Could not rebuild the lme fixed-effect design.")
+  y <- nlme::getResponse(fit)
+  re <- fit$modelStruct$reStruct
+  n <- nrow(X)
+  zi <- zj <- integer(0); zx <- numeric(0)
+  li <- lj <- lt <- integer(0)
+  theta <- numeric(0)
+  offset <- 0L
+  # reStruct is stored innermost first; getGroups(level = k) and fit$groups
+  # run outermost first, so levels are matched by name.
+  for (k in seq_along(re)) {
+    pd <- re[[k]]
+    Zk <- stats::model.matrix(stats::formula(pd), data = data)
+    q <- ncol(Zk)
+    grp <- droplevels(as.factor(nlme::getGroups(fit, level = match(names(re)[k], names(fit$groups)))))
+    J <- nlevels(grp)
+    gi <- as.integer(grp)
+    for (c in seq_len(q)) {
+      zi <- c(zi, seq_len(n)); zj <- c(zj, offset + (gi - 1L) * q + c); zx <- c(zx, Zk[, c])
+    }
+    D <- as.matrix(pd)
+    if (inherits(pd, c("pdDiag", "pdIdent"))) {
+      Lk <- diag(sqrt(diag(D)), q)
+      pos <- cbind(seq_len(q), seq_len(q))
+      tid <- if (inherits(pd, "pdIdent")) rep(1L, q) else seq_len(q)
+      th <- if (inherits(pd, "pdIdent")) Lk[1, 1] else diag(Lk)
+    } else {
+      Lk <- t(chol(D))
+      pos <- which(lower.tri(Lk, diag = TRUE), arr.ind = TRUE)
+      pos <- pos[order(pos[, 2], pos[, 1]), , drop = FALSE]
+      tid <- seq_len(nrow(pos))
+      th <- Lk[pos]
+    }
+    # Lambdat = t(Lambda): entry (r, c) of the lower factor sits at (c, r).
+    for (j in seq_len(J)) {
+      li <- c(li, offset + (j - 1L) * q + pos[, 2])
+      lj <- c(lj, offset + (j - 1L) * q + pos[, 1])
+      lt <- c(lt, length(theta) + tid)
+    }
+    theta <- c(theta, th)
+    offset <- offset + J * q
+  }
+  Zt <- Matrix::t(Matrix::sparseMatrix(i = zi, j = zj, x = zx, dims = c(n, offset)))
+  Lambdat <- Matrix::sparseMatrix(i = li, j = lj, x = seq_along(li), dims = c(offset, offset))
+  Lind <- lt[Lambdat@x]
+  Lambdat@x <- theta[Lind]
+  list(X = X, y = as.numeric(y), Zt = Zt, Lambdat = Lambdat, Lind = Lind,
+       theta = theta, sigma = fit$sigma, REML = identical(fit$method, "REML"),
+       beta = beta, flist = rev(design$groups))
 }
 
 # Per-cluster information contributions I_s (g x p^2) and scores U_s (g x p).
@@ -65,7 +146,7 @@
 }
 
 # CR2 cluster-robust covariance (Pustejovsky & Tipton, 2018) with working
-# covariance V, matching clubSandwich::vcovCR(fit, type = "CR2") for lmerMod
+# covariance V, matching clubSandwich::vcovCR(fit, type = "CR2") for lmerMod and lme
 # fits with random effects nested in `cluster`, without its n_s x n_s matrix
 # roots. clubSandwich adjusts W_s e_s by A_s = V_s^{1/2} G_s^{-1/2} V_s^{1/2},
 # G_s = V_s^{1/2} (V_s - X_s M X_s') V_s^{1/2}. With V_s = sigma^2 (I + Z_s Z_s')
@@ -193,8 +274,8 @@
 #' Mixed-model RESI confidence intervals (internal)
 #'
 #' Computes asymptotic CIs for the coefficient (signed) and ANOVA (unsigned)
-#' RESI of an `lmerMod` fit, for terms normalized by `n_coef`/`n_anova`.
-#' @param fit `lmerMod` fit whose random effects are nested in `cluster`.
+#' RESI of an `lmerMod` or `lme` fit, for terms normalized by `n_coef`/`n_anova`.
+#' @param fit `lmerMod` or `lme` fit whose random effects are nested in `cluster`.
 #' @param Vhat Covariance of the fixed effects used for the point estimates.
 #' @param robust Logical; `Vhat` is a cluster-robust sandwich.
 #' @param n_coef,n_anova Named term-specific normalizing counts.
@@ -218,12 +299,12 @@
   base <- .mixedCiBase(fit, cluster)
   gls <- .mixedCiGls(base, base$theta, base$sigma)
   pieces <- .mixedCiClusterPieces(base, gls)
-  beta <- lme4::fixef(fit)
+  beta <- base$beta
   Vhat <- as.matrix(Vhat)[names(beta), names(beta)]
   p <- length(beta)
   assign <- attr(base$X, "assign")
   terms <- .mixedFixedTermLabels(fit)
-  fl <- lme4::getME(fit, "flist")
+  fl <- base$flist
   unit_counts <- function(n_k, lev) {
     if (n_k == nlevels(base$cluster)) return(NULL)
     if (is.null(lev) || !(lev %in% names(fl))) {

@@ -737,19 +737,32 @@ resi.gee = function(model.full, data, nboot = 1000, alpha = 0.05,
   return(output)
 }
 
-#' @describeIn resi RESI point and interval estimation for LME (nlme) models
+#' @describeIn resi RESI point and asymptotic interval estimation for LME
+#'   (nlme) models whose random effects are nested in an outermost cluster;
+#'   identical method and arguments to the `lmerMod` method. Supported fits
+#'   have independent homoscedastic within-group errors (no `weights` or
+#'   `correlation`) and pdSymm/pdLogChol/pdDiag/pdIdent random-effect
+#'   covariances; other fits return point estimates only, with a warning.
 #' @importFrom nlme getGroups
 #' @export
-resi.lme = function(model.full, alpha = 0.05, nboot = 1000, anova = TRUE, vcovfunc = clubSandwich::vcovCR,
-                     vcov.args = list(), ...){
-  warning("\nConfidence Interval procedure not developed for lme, returning point estimates only")
-  output = list(alpha = alpha, nboot = 0)
-  # RESI point estimates
-  output = c(output, resi_pe(model.full = model.full, vcovfunc = vcovfunc, vcov.args = vcov.args,
-                             anova = anova, ...))
-  output$boot.method = "nonparam"
-  class(output) = "resi"
-  return(output)
+resi.lme = function(model.full, alpha = 0.05, nboot = 1000, anova = TRUE,
+                     vcovfunc = clubSandwich::vcovCR, vcov.args = list(),
+                     ci.method = c("normal", "qf", "cf", "none"),
+                     ci.design = TRUE, ...){
+  ci.method <- match.arg(ci.method)
+  why <- .mixedCiLmeUnsupported(model.full)
+  if (ci.method != "none" && !is.null(why)) {
+    warning("\nConfidence intervals not available for this lme fit (", why,
+            "); returning point estimates only")
+    output = list(alpha = alpha, nboot = 0)
+    output = c(output, resi_pe(model.full = model.full, vcovfunc = vcovfunc, vcov.args = vcov.args,
+                               anova = anova, ...))
+    output$boot.method = "nonparam"
+    class(output) = "resi"
+    return(output)
+  }
+  .resiMixedWithCi(model.full, "lme", alpha, anova, vcovfunc, vcov.args,
+                   ci.method, ci.design, ...)
 }
 
 #' @describeIn resi RESI point and asymptotic interval estimation for lmerMod
@@ -762,21 +775,27 @@ resi.lme = function(model.full, alpha = 0.05, nboot = 1000, anova = TRUE, vcovfu
 #'   sampled; `FALSE` gives intervals conditional on the observed design.
 #'   `ci.method = "none"` returns point estimates only. ANOVA CIs are for the
 #'   joint Wald test of each term's columns (Type II without interactions).
-#' @param ci.design Logical; for `lmerMod` CIs, include the variability of
-#'   the cluster-level design.
+#' @param ci.design Logical; for `lmerMod` and `lme` CIs, include the
+#'   variability of the cluster-level design.
 #' @export
 resi.lmerMod = function(model.full, alpha = 0.05, nboot = 1000, anova = TRUE,
                          vcovfunc = clubSandwich::vcovCR, vcov.args = list(),
                          ci.method = c("normal", "qf", "cf", "none"),
                          ci.design = TRUE, ...){
   ci.method <- match.arg(ci.method)
+  .resiMixedWithCi(model.full, "lmerMod", alpha, anova, vcovfunc, vcov.args,
+                   ci.method, ci.design, ...)
+}
+
+.resiMixedWithCi <- function(model.full, engine, alpha, anova, vcovfunc, vcov.args,
+                             ci.method, ci.design, ...) {
   dots <- list(...)
   robust <- !identical(vcovfunc, stats::vcov)
   pe_vcovfunc <- vcovfunc
   if (ci.method != "none" && robust) {
-    design <- .resiMixedModelDesign(model.full, "lmerMod")
+    design <- .resiMixedModelDesign(model.full, engine)
     Vhat <- .resiMixedVcov(model.full, vcovfunc, vcov.args,
-                           .resiMixedCluster(dots$cluster, design, model.full, "lmerMod"))(model.full)
+                           .resiMixedCluster(dots$cluster, design, model.full, engine))(model.full)
     pe_vcovfunc <- function(object, ...) Vhat
   }
   output = list(alpha = alpha, nboot = 0)
@@ -800,12 +819,14 @@ resi.lmerMod = function(model.full, alpha = 0.05, nboot = 1000, anova = TRUE,
                                  output$coefficients[-seq_len(pos)])
     if (anova) {
       anova_class <- class(output$anova)
+      anova_heading <- attr(output$anova, "heading")
       pos <- match("RESI", names(output$anova))
       anova_df <- as.data.frame(output$anova)
       output$anova <- cbind(anova_df[seq_len(pos)],
                             setNames(as.data.frame(cis$anova), ci_cols),
                             anova_df[-seq_len(pos)])
       class(output$anova) <- anova_class
+      attr(output$anova, "heading") <- anova_heading
     }
     output$ci.method <- ci.method
   } else {

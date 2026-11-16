@@ -106,3 +106,41 @@ test_that("resi() on lmerMod returns ordered RESI intervals for each method", {
                  "point estimates only")
   expect_false("2.5%" %in% names(none$coefficients))
 })
+
+test_that("resi() on lme reproduces the lmerMod intervals and falls back when unsupported", {
+  skip_if_not_installed("lme4")
+  skip_if_not_installed("mlmRev")
+  skip_if_not_installed("clubSandwich")
+  skip_if_not_installed("numDeriv")
+  eg <- egsingle_ci_data()
+  sub <- droplevels(subset(eg, schoolid %in% levels(schoolid)[1:20]))
+  sub$math[c(5, 50, 500)] <- NA
+  fit_lmer <- lme4::lmer(form_ci, data = sub, REML = TRUE)
+  fit_lme <- nlme::lme(math ~ year + female + black + hispanic + size_100 + lowinc_10,
+                       random = ~ 1 | schoolid/childid, data = sub, na.action = na.omit)
+  base <- .mixedCiBase(fit_lme, "schoolid")
+  gls <- .mixedCiGls(base, base$theta, base$sigma)
+  expect_equal(unname(gls$beta), unname(nlme::fixef(fit_lme)), tolerance = 1e-8)
+  expect_equal(.mixedCiDeviance(base, c(base$theta, base$sigma)),
+               -2 * as.numeric(stats::logLik(fit_lme)), tolerance = 1e-8)
+  cols <- c("RESI", "2.5%", "97.5%")
+  for (args in list(list(vcovfunc = stats::vcov),
+                    list(vcov.args = list(type = "CR2"), cluster = "schoolid"))) {
+    a <- suppressMessages(do.call(resi, c(list(fit_lme, ci.method = "qf", level = 2), args)))
+    b <- suppressMessages(do.call(resi, c(list(fit_lmer, ci.method = "qf", level = 2), args)))
+    expect_equal(unname(as.matrix(a$coefficients[cols])), unname(as.matrix(b$coefficients[cols])),
+                 tolerance = 1e-4)
+    expect_equal(unname(as.matrix(as.data.frame(a$anova)[cols])),
+                 unname(as.matrix(as.data.frame(b$anova)[cols])), tolerance = 1e-4)
+  }
+  slope <- nlme::lme(Reaction ~ Days, random = ~ Days | Subject, data = lme4::sleepstudy)
+  expect_equal(unname(.mixedCiCR2(slope, "Subject")),
+               unname(as.matrix(clubSandwich::vcovCR(slope, cluster = lme4::sleepstudy$Subject,
+                                                     type = "CR2"))),
+               tolerance = 1e-8)
+  hetero <- nlme::lme(Reaction ~ Days, random = ~ 1 | Subject, data = lme4::sleepstudy,
+                      weights = nlme::varIdent(form = ~ 1 | Days > 4))
+  expect_warning(out <- suppressMessages(resi(hetero, vcovfunc = stats::vcov)),
+                 "not available for this lme fit")
+  expect_false("2.5%" %in% names(out$coefficients))
+})
