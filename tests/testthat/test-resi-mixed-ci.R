@@ -31,6 +31,24 @@ test_that("fast CR2 equals clubSandwich CR2 and GLS pieces reproduce lme4", {
   expect_equal(unname(colSums(pieces$U_s)), rep(0, ncol(base$X)), tolerance = 1e-6)
 })
 
+test_that("fast CR2 matches clubSandwich for random slopes and singular fits", {
+  skip_if_not_installed("lme4")
+  skip_if_not_installed("clubSandwich")
+  ss <- lme4::sleepstudy
+  slope <- lme4::lmer(Reaction ~ Days + (Days | Subject), data = ss)
+  expect_equal(unname(.mixedCiCR2(slope, "Subject")),
+               unname(as.matrix(clubSandwich::vcovCR(slope, cluster = ss$Subject, type = "CR2"))),
+               tolerance = 1e-8)
+  set.seed(1)
+  d <- data.frame(g = factor(rep(1:30, each = 4)), x = rnorm(120))
+  d$y <- d$x + rnorm(120)
+  sing <- suppressMessages(lme4::lmer(y ~ x + (1 | g), data = d))
+  skip_if_not(lme4::isSingular(sing))
+  expect_equal(unname(.mixedCiCR2(sing, "g")),
+               unname(as.matrix(clubSandwich::vcovCR(sing, cluster = d$g, type = "CR2"))),
+               tolerance = 1e-8)
+})
+
 test_that("design-variance linearization matches resampling of school profiles", {
   skip_if_not_installed("lme4")
   skip_if_not_installed("mlmRev")

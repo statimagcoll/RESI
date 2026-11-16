@@ -85,10 +85,15 @@
     Zs <- as.matrix(Zs[, Matrix::colSums(Zs != 0) > 0, drop = FALSE])
     # Thin left singular vectors of Zs via the small q_s x q_s eigenproblem
     # (LAPACK dgesdd occasionally fails to converge on these matrices).
-    ez <- eigen(crossprod(Zs), symmetric = TRUE)
-    keep <- ez$values > max(ez$values) * 1e-12
-    sv <- list(d = sqrt(ez$values[keep]))
-    sv$u <- Zs %*% (ez$vectors[, keep, drop = FALSE] %*% diag(1 / sv$d, length(sv$d)))
+    # (Zs has no columns when theta = 0, i.e. a singular fit.)
+    if (ncol(Zs) == 0L) {
+      sv <- list(d = numeric(0), u = matrix(0, length(idx), 0L))
+    } else {
+      ez <- eigen(crossprod(Zs), symmetric = TRUE)
+      keep <- ez$values > max(ez$values) * 1e-12
+      sv <- list(d = sqrt(ez$values[keep]))
+      sv$u <- Zs %*% (ez$vectors[, keep, drop = FALSE] %*% diag(1 / sv$d, length(sv$d)))
+    }
     vpow <- function(B, a) {
       base$sigma^(2 * a) * (B + sv$u %*% (((1 + sv$d^2)^a - 1) * crossprod(sv$u, B)))
     }
