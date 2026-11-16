@@ -584,20 +584,17 @@
   # For m1>1: use imhof
   if (m1 == 1L) {
     q <- T2_obs / lambda[1]
-    # For large q or ncp, use the exact identity chi^2(1,lambda) = (Z + sqrt(lambda))^2:
-    #   P(chi^2(1,lambda) >= q) = pnorm(sqrt(lambda) - sqrt(q)) + pnorm(-sqrt(lambda) - sqrt(q))
-    # This avoids pnchisq convergence failures (which arise when q and ncp are both large,
-    # e.g. ~1e12, as happens in ill-conditioned GLMs at small n).  The formula is
-    # algebraically exact and pnorm is numerically stable at arbitrarily large arguments.
+    # Exact identity chi^2(1,lambda) = (Z + sqrt(lambda))^2:
+    #   P(chi^2(1,lambda) >= q) = pnorm(sqrt(lambda) - sqrt(q)) + pnorm(-sqrt(lambda) - sqrt(q)).
+    # Used for all q and lambda: pnchisq loses precision (or returns 0 in the
+    # tails) once q and lambda reach the hundreds, whereas pnorm is accurate
+    # at any argument.
     prob_fn <- function(S_b) {
       nc <- nc_fun(S_b)
       if (!is.finite(nc)) return(1.0)
-      if (q > 1e4 || nc > 1e4) {
-        sq  <- sqrt(max(q,  0))
-        snc <- sqrt(max(nc, 0))
-        return(pnorm(snc - sq) + pnorm(-snc - sq))
-      }
-      pchisq(q, df = 1, ncp = nc, lower.tail = FALSE)
+      sq  <- sqrt(max(q,  0))
+      snc <- sqrt(max(nc, 0))
+      pnorm(snc - sq) + pnorm(-snc - sq)
     }
   } else {
     prob_fn <- function(S_b) {

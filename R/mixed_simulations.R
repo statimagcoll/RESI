@@ -318,6 +318,9 @@ hybridPlasmodeSim <- function(formula, data, school = "schoolid", child = "child
         lme4::lmer(formula, data = design, REML = TRUE, control = control))),
         error = function(e) NULL)
       if (is.null(fit)) return(NULL)
+      # A resampled design can miss a rare factor level; such replicates are
+      # counted as failed fits rather than estimating a different model.
+      if (length(lme4::fixef(fit)) != length(beta)) return(NULL)
       point <- resi_pe(fit, anova = TRUE, vcovfunc = stats::vcov, level = 2)
       list(params = .mixedSimParams(fit),
            fe_se = setNames(sqrt(diag(as.matrix(stats::vcov(fit)))), fe_names),

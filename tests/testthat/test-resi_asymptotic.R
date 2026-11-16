@@ -147,10 +147,17 @@ test_that("Normal and QF anova CIs are close for large n (lm)", {
               label = "normal vs QF CI widths agree within 30%")
 })
 
-test_that("QF CI is correct when the noncentrality exceeds the pnorm-branch threshold", {
-  # n * S^2 / Sigma_R > 1e4 uses the (Z + sqrt(ncp))^2 identity.
+test_that("QF CI for one df is correct for large and moderate noncentrality", {
+  # Large n * S^2 / Sigma_R: the QF interval approaches the normal interval.
   ct <- list(m1 = 1L, n = 20000, R_beta = 3.33, Stilde = 3.33, Sigma_R = matrix(20))
   expect_equal(.resi_ci_qf(ct), .resi_ci_normal_unsigned(ct), tolerance = 1e-3)
+  # Moderate: the bounds invert the noncentral chi-square(1) test exactly.
+  ct <- list(m1 = 1L, n = 50, R_beta = 0.6, Stilde = 0.6, Sigma_R = matrix(1.3))
+  ci <- .resi_ci_qf(ct)
+  q <- ct$n * ct$Stilde^2 / 1.3
+  tail_at <- function(s) pchisq(q, 1, ncp = ct$n * s^2 / 1.3, lower.tail = FALSE)
+  expect_equal(tail_at(ci[[1]]), 0.025, tolerance = 1e-3)
+  expect_equal(tail_at(ci[[2]]), 0.975, tolerance = 1e-3)
 })
 
 
