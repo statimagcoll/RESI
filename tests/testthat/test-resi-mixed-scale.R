@@ -73,3 +73,29 @@ test_that("nlme mixed-model RESI uses the same normalizer API", {
   expect_equal(pe$coefficients["age", "Var prop Subject"], 0)
   expect_equal(pe$anova["Sex", "Var prop Subject"], 1)
 })
+
+test_that("a random slope at a coarser level sets the term's n to that level's count", {
+  skip_if_not_installed("lme4")
+  skip_if_not_installed("nlme")
+  skip_if_not_installed("mlmRev")
+  egsingle <- local({
+    env <- new.env()
+    utils::data("egsingle", package = "mlmRev", envir = env)
+    env$egsingle
+  })
+  slope_school <- suppressWarnings(lme4::lmer(
+    math ~ year + female + size + (year | schoolid) + (1 | childid:schoolid), data = egsingle))
+  pe <- resi_pe(slope_school, vcovfunc = stats::vcov, level = 2)
+  expect_equal(pe$coefficients[c("year", "femaleMale"), "n"], c(60, 1721))
+  expect_equal(pe$coefficients["year", "n level"], "schoolid")
+  expect_equal(pe$anova["year", "n"], 60)
+  expect_equal(pe$coefficients["year", "Variation level"], "observation within childid:schoolid")
+
+  slope_child <- lme4::lmer(
+    math ~ year + female + size + (1 | schoolid) + (year | childid:schoolid), data = egsingle)
+  expect_equal(resi_pe(slope_child, vcovfunc = stats::vcov, level = 2)$coefficients["year", "n"], 1721)
+
+  slope_lme <- nlme::lme(math ~ year + female + size,
+                         random = list(schoolid = ~ year, childid = ~ 1), data = egsingle)
+  expect_equal(resi_pe(slope_lme, vcovfunc = stats::vcov, level = 2)$coefficients["year", "n"], 60)
+})

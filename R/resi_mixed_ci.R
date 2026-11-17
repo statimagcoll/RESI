@@ -1,3 +1,7 @@
+# [AI-generated: GitHub Copilot, 2026-11-15]
+# [Prompt summary: asymptotic RESI CIs (normal/QF/CF; model-based and CR2) for
+#  lmerMod and lme fits, coverage of the Lyu-Welsh and fixed-m targets.]
+
 # Asymptotic RESI confidence intervals for lmerMod and nlme::lme fits with random effects
 # nested in an outermost cluster (derivation: AIgams notes/resi_mixed_ci.qmd).
 #
@@ -286,6 +290,10 @@
 #' @param cluster Name of the outermost grouping factor.
 #' @param n_level_coef,n_level_anova Optional named grouping-factor names
 #'   whose counts are `n_coef`/`n_anova` (the `n level` columns).
+#' @param ref.df Denominator degrees of freedom of the reference
+#'   distributions (t / F instead of normal / chi-square); `Inf` for the
+#'   normal / chi-square references. `NULL` (default) uses g - 1 (g = number
+#'   of clusters) when `robust` and `Inf` otherwise.
 #' @return A list with, for each requested `ci.method`, `coefficients` and
 #'   `anova` matrices of LCI and UCI, and `se`, the estimated SD of each
 #'   one-degree-of-freedom RESI estimate.
@@ -294,9 +302,11 @@
 .resi_ci_mixed <- function(fit, Vhat, robust, n_coef, n_anova = NULL,
                            ci.method = c("normal", "qf", "cf"), alpha = 0.05,
                            design = TRUE, cluster = NULL,
-                           n_level_coef = NULL, n_level_anova = NULL) {
+                           n_level_coef = NULL, n_level_anova = NULL,
+                           ref.df = NULL) {
   ci.method <- match.arg(ci.method, several.ok = TRUE)
   base <- .mixedCiBase(fit, cluster)
+  if (is.null(ref.df)) ref.df <- if (robust) nlevels(base$cluster) - 1 else Inf
   gls <- .mixedCiGls(base, base$theta, base$sigma)
   pieces <- .mixedCiClusterPieces(base, gls)
   beta <- base$beta
@@ -350,8 +360,10 @@
     cn <- contrasts[[i]]
     idx <- (ends[i] - nrow(cn$L) + 1L):ends[i]
     Jpsi <- if (robust) NULL else Jpsi_all[idx, , drop = FALSE]
-    .mixedCiContrast(cn$L, cn$n, beta, Vhat, gls$info, pieces, robust,
-                     design, cn$counts, Jpsi, if (robust) NULL else Vpsi)
+    ct <- .mixedCiContrast(cn$L, cn$n, beta, Vhat, gls$info, pieces, robust,
+                           design, cn$counts, Jpsi, if (robust) NULL else Vpsi)
+    ct$df <- ref.df
+    ct
   })
   out <- lapply(setNames(ci.method, ci.method), function(method) {
     res <- lapply(seq_along(cts), function(i) {

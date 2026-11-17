@@ -458,13 +458,27 @@
   m4     <- mean(phi_tilde^4)
   gamma1 <- m3 / (sqrt(n) * Sigma_R^(3 / 2))
   gamma2 <- (m4 / Sigma_R^2 - 3) / n
+  scale  <- 1
+  df     <- .resi_ref_df(contrast)
+  # The t-type CF needs the first four moments of sqrt(df / W): df > 4.
+  if (is.finite(df) && df <= 4) return(.resi_ci_normal_signed(contrast, alpha))
+  if (is.finite(df)) {
+    # Moments of Z * sqrt(df / W), W ~ chi^2_df independent of Z.
+    b <- .resi_inv_chisq_moment(c(1, 1.5, 2), df)
+    k2 <- b[1]
+    k3 <- gamma1 * b[2]
+    k4 <- (gamma2 + 3) * b[3] - 3 * k2^2
+    scale  <- sqrt(k2)
+    gamma1 <- k3 / k2^1.5
+    gamma2 <- k4 / k2^2
+  }
 
   cf_w <- function(p) {
     z <- qnorm(p)
-    z +
+    scale * (z +
       (gamma1      / 6 ) * (z^2 - 1) +
       (gamma2      / 24) * (z^3 - 3 * z) -
-      (gamma1^2    / 36) * (2 * z^3 - 5 * z)
+      (gamma1^2    / 36) * (2 * z^3 - 5 * z))
   }
 
   # These are the correct intervals
@@ -493,7 +507,7 @@
   # sandwich estimates can collapse below 1, shrinking the CI inappropriately.
   # se       <- max(sqrt(as.numeric(Sigma_R) / n), 1 / sqrt(n))
   se       <- sqrt(as.numeric(Sigma_R) / n)
-  z        <- qnorm(1 - alpha / 2)
+  z        <- .resi_qref(1 - alpha / 2, .resi_ref_df(contrast))
   c(LCI = S_signed - z * se, UCI = S_signed + z * se)
 }
 
@@ -515,7 +529,8 @@
   # asymptotically. So P(Stilde >= UCI | S=0) = alpha gives
   # UCI = sqrt(qchisq(1-alpha, df=m1) / n).
   # For m1=1: sqrt(qchisq(1-alpha, 1)/n) = qnorm(1-alpha/2)/sqrt(n).
-  UCI_null <- sqrt(qchisq(1 - alpha, df = m1) / n)
+  df <- .resi_ref_df(contrast)
+  UCI_null <- .resi_null_upper(alpha, m1, n, df)
 
   if (Shat <= 0) {
     return(c(LCI = 0, UCI = UCI_null))
@@ -529,7 +544,7 @@
   se      <- sqrt(pmax(sigma2S, 0) / n)
 
   # truncate_ci handles boundary; centered at Shat
-  bounds <- .resi_truncate_ci(Shat, se, n, m1, alpha)
+  bounds <- .resi_truncate_ci(Shat, se, n, m1, alpha, df)
 
   # When LCI clips to 0, the directional delta-method UCI can underestimate
   # spread for m1>1 (single-direction 1D normal vs chi(m1) null distribution).
@@ -583,25 +598,43 @@
   # For m1=1: use pchisq (no imhof precision issues)
   # For m1>1: use imhof
   if (m1 == 1L) {
-    q <- T2_obs / lambda[1]
     # Exact identity chi^2(1,lambda) = (Z + sqrt(lambda))^2:
     #   P(chi^2(1,lambda) >= q) = pnorm(sqrt(lambda) - sqrt(q)) + pnorm(-sqrt(lambda) - sqrt(q)).
     # Used for all q and lambda: pnchisq loses precision (or returns 0 in the
     # tails) once q and lambda reach the hundreds, whereas pnorm is accurate
     # at any argument.
-    prob_fn <- function(S_b) {
+    prob_at <- function(S_b, t) {
       nc <- nc_fun(S_b)
       if (!is.finite(nc)) return(1.0)
-      sq  <- sqrt(max(q,  0))
+      sq  <- sqrt(max(t / lambda[1],  0))
       snc <- sqrt(max(nc, 0))
       pnorm(snc - sq) + pnorm(-snc - sq)
     }
   } else {
-    prob_fn <- function(S_b) {
+    prob_at <- function(S_b, t) {
       nc <- nc_fun(S_b)
       # Cap individual non-centrality components to avoid imhof overflow
       nc <- pmin(nc, 1e10 * max(T2_obs, 1))
-      suppressWarnings(CompQuadForm::imhof(T2_obs, lambda = lambda, delta = nc)$Qq)
+      suppressWarnings(CompQuadForm::imhof(t, lambda = lambda, delta = nc)$Qq)
+    }
+  }
+  df <- .resi_ref_df(contrast)
+  prob_fn <- if (!is.finite(df)) {
+    function(S_b) prob_at(S_b, T2_obs)
+  } else {
+    # t-type reference: the Gaussian noise of Q is replaced by t_df noise,
+    # Q = sum_k lambda_k (Z_k sqrt(df / W) + sqrt(nc_k))^2, W ~ chi^2_df, leaving
+    # the signal unscaled (Sigma already carries the variance-estimation
+    # uncertainty). Given W = w this is the chi-square-reference law at
+    # S_b sqrt(w / df) exceeding T2_obs w / df; under H0 T2 / m1 ~ F(m1, df).
+    # Averaged over W with a fixed Gauss-Laguerre rule (adaptive integrate()
+    # failed in some replicates).
+    nodes <- .resi_w_nodes(df)
+    w_scaled <- nodes$w / df
+    function(S_b) {
+      sum(nodes$p * vapply(w_scaled, function(w) {
+        min(max(prob_at(S_b * sqrt(w), T2_obs * w), 0), 1)
+      }, numeric(1L)))
     }
   }
 
@@ -646,7 +679,7 @@
   # Null upper bound: (1-alpha) quantile of Stilde under H0.
   # Under H0, n*Stilde^2 ~ chi^2_{m1} asymptotically, so
   # UCI_null = sqrt(qchisq(1-alpha, df=m1) / n).
-  UCI_null <- sqrt(qchisq(1 - alpha, df = m1) / n)
+  UCI_null <- .resi_null_upper(alpha, m1, n, df)
 
   if (p0 >= 1 - alpha / 2) {
     # T2_obs is in the lower alpha/2 tail of the null distribution;
@@ -689,6 +722,7 @@
 #' Sigma_R and delta_k scaled so that sum delta_k^2 = n*S_b^2.
 #' @noRd
 .resi_ci_cf <- function(contrast, alpha = 0.05) {
+  df <- .resi_ref_df(contrast)
   Sigma_R <- contrast$Sigma_R
   R_beta  <- contrast$R_beta
   Stilde  <- contrast$Stilde
@@ -751,13 +785,54 @@
   # can diverge near S_b = 0 (gamma1 is large for the central distribution),
   # so we use the exact chi-square approximation there -- the same approach
   # as the QF CI.  CF is only applied for the inversion at nonzero S_b.
-  UCI_null <- sqrt(qchisq(1 - alpha, df = m1) / n)
+  UCI_null <- .resi_null_upper(alpha, m1, n, df)
 
-  # P(T2 >= T2_obs | S = 0) under chi^2_{m1} approximation
-  p0 <- pchisq(T2_obs, df = m1, lower.tail = FALSE)
+  # P(T2 >= T2_obs | S = 0) under the chi^2_{m1} (or m1 * F(m1, df)) approximation
+  p0 <- .resi_pnull(T2_obs, m1, df)
 
   # Degenerate: no signal at all
   if (T2_obs == 0) return(c(LCI = 0, UCI = UCI_null))
+
+  if (is.finite(df)) {
+    # t-type reference (as in .resi_ci_qf): t_df noise, unscaled signal. Given
+    # W = w, P(T2 >= T2_obs) is the chi-square-reference probability at
+    # S_b sqrt(w / df) of exceeding T2_obs w / df; the CDF is read off the CF
+    # quantile function on a probability grid and averaged over
+    # W ~ chi^2_df with a Gauss-Laguerre rule.
+    pgrid <- pnorm(seq(-4, 4, length.out = 321L))
+    mid <- 161L
+    nodes <- .resi_w_nodes(df)
+    w_scaled <- nodes$w / df
+    cdf_at <- function(S_b, x) {
+      q <- cf_quant(S_b, pgrid)
+      if (anyNA(q)) return(NA_real_)
+      # The CF polynomial can be non-monotone in the far tails: enforce
+      # monotonicity outward from the median.
+      q[mid:321L] <- cummax(q[mid:321L])
+      q[mid:1L] <- cummin(q[mid:1L])
+      stats::approx(q, pgrid, x, yleft = 0, yright = 1, ties = "ordered")$y
+    }
+    prob_fn <- function(S_b) {
+      1 - sum(nodes$p * vapply(w_scaled, function(w) cdf_at(S_b * sqrt(w), T2_obs * w), numeric(1L)))
+    }
+    p0 <- .resi_pnull(T2_obs, m1, df)
+    LCI <- if (p0 >= alpha / 2) 0 else tryCatch(
+      uniroot(function(s) prob_fn(s) - alpha / 2, lower = 0, upper = Stilde,
+              tol = se_S * 1e-3, extendInt = "upX")$root,
+      error = function(e) 0)
+    if (p0 >= 1 - alpha / 2) return(c(LCI = max(LCI, 0), UCI = UCI_null))
+    upper_search <- Shat + se_S * c(3, 6, 12, 25, 50, 100) * qnorm(1 - alpha / 2)
+    bracket_up <- NA_real_
+    for (up in upper_search) {
+      pup <- prob_fn(up)
+      if (!is.na(pup) && pup >= 1 - alpha / 2) { bracket_up <- up; break }
+    }
+    UCI <- if (is.na(bracket_up)) UCI_null else tryCatch(
+      uniroot(function(s) prob_fn(s) - (1 - alpha / 2), lower = Stilde,
+              upper = bracket_up, tol = se_S * 1e-3)$root,
+      error = function(e) UCI_null)
+    return(c(LCI = max(LCI, 0), UCI = UCI))
+  }
 
   # ---- Lower bound ----
   # LCI = 0 when the null distribution already has >= alpha/2 probability above T2_obs.
@@ -1494,8 +1569,8 @@ resi_pe_asymptotic <- function(model.full,
 
 #' Truncated CI for unsigned RESI (Algorithm 1, Zhang et al. 2025)
 #' @noRd
-.resi_truncate_ci <- function(Shat, se, n, m1, alpha = 0.05) {
-  z1 <- qnorm(1 - alpha / 2)
+.resi_truncate_ci <- function(Shat, se, n, m1, alpha = 0.05, df = Inf) {
+  z1 <- .resi_qref(1 - alpha / 2, df)
   SL <- Shat - z1 * se
   SU <- Shat + z1 * se
 
@@ -1503,12 +1578,52 @@ resi_pe_asymptotic <- function(model.full,
 
   # probability mass at/below zero under H0: P(T^2 > n*Shat^2 | S=0)
   # Under H0, T^2 ~ chi^2_{m1}, so P(T^2 > m1 + n*Shat^2) (since Shat^2 = (T^2-m1)/n)
-  gamma_p <- pchisq(m1 + n * Shat^2, df = m1, lower.tail = FALSE)
+  gamma_p <- .resi_pnull(m1 + n * Shat^2, m1, df)
 
   if (gamma_p < alpha / 2) {
-    SU <- Shat + qnorm(1 - (alpha - gamma_p)) * se
+    SU <- Shat + .resi_qref(1 - (alpha - gamma_p), df) * se
   } else {
-    SU <- Shat + qnorm(1 - alpha) * se
+    SU <- Shat + .resi_qref(1 - alpha, df) * se
   }
   c(0, SU)
 }
+
+# [AI-generated: GitHub Copilot, 2026-11-17]
+# [Prompt summary: t / F(m1, df) reference distributions for RESI CIs whose
+#  covariance is estimated from df + 1 clusters (CR2 mixed-model intervals).]
+# Reference distributions. `df` is the denominator degrees of freedom of the
+# variance estimate (contrast$df; Inf/NULL = known variance, i.e. the normal and
+# chi-square references). A finite df gives t and F(m1, df) references, used
+# when the covariance is estimated from df + 1 clusters (cluster-robust CR2).
+.resi_ref_df <- function(contrast) if (is.null(contrast$df)) Inf else contrast$df
+
+.resi_qref <- function(p, df) if (is.finite(df)) qt(p, df) else qnorm(p)
+
+# P(T^2 >= x) under H0 with Sigma_R = I.
+.resi_pnull <- function(x, m1, df) {
+  if (is.finite(df)) pf(x / m1, m1, df, lower.tail = FALSE) else
+    pchisq(x, df = m1, lower.tail = FALSE)
+}
+
+# (1 - alpha) quantile of Stilde under H0.
+.resi_null_upper <- function(alpha, m1, n, df) {
+  if (is.finite(df)) sqrt(m1 * qf(1 - alpha, m1, df) / n) else sqrt(qchisq(1 - alpha, df = m1) / n)
+}
+
+# E[(df / W)^r], W ~ chi^2_df (finite for r < df / 2).
+# Generalized Gauss-Laguerre rule for E[h(W)], W ~ chi^2_df (Golub-Welsch on
+# X = W / 2 ~ Gamma(df / 2, 1)), used to average over the t-type noise in the
+# finite-df QF and CF intervals. With 20 nodes the shifted-t tail
+# probabilities are accurate to < 4e-4 for df >= 4 and < 1e-5 for df >= 9.
+.resi_w_nodes <- function(df, K = 20L) {
+  a <- df / 2
+  k <- seq_len(K - 1L)
+  J <- diag(2 * (0:(K - 1L)) + a)
+  off <- sqrt(k * (k + a - 1))
+  J[cbind(k, k + 1L)] <- off
+  J[cbind(k + 1L, k)] <- off
+  e <- eigen(J, symmetric = TRUE)
+  list(w = 2 * e$values, p = e$vectors[1L, ]^2)
+}
+
+.resi_inv_chisq_moment <- function(r, df) exp(r * log(df / 2) + lgamma(df / 2 - r) - lgamma(df / 2))

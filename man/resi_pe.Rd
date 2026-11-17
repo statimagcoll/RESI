@@ -258,7 +258,11 @@ resi_pe(...)
 coefficient and ANOVA term. If `NULL` (default), the count is
 term-specific (Lyu & Welsh, 2022): terms constant within the outermost
 grouping factor (including the intercept) use the number of outermost
-groups, and all other terms use the number of groups at `level`.}
+groups, and all other terms use the number of groups at `level`. A term
+with a random slope at a coarser grouping factor than this uses the
+number of groups of the coarsest such factor (e.g. the number of schools
+for `year` in `(year | school)`), since that variance component drives
+the variance of its coefficient.}
 
 \item{level}{Random-effect hierarchy level or grouping-factor name whose
 group count normalizes terms that vary within the outermost grouping

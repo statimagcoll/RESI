@@ -100,6 +100,15 @@ test_that("resi() on lmerMod returns ordered RESI intervals for each method", {
   robust <- resi(fit, vcov.args = list(type = "CR2"), cluster = "schoolid",
                  ci.method = "normal", level = 2)
   check(robust)
+  # CR2 intervals use the t(g - 1) reference: signed normal widths scale by
+  # qt / qnorm relative to the normal reference.
+  Vcr2 <- .mixedCiCR2(fit, "schoolid")
+  n_coef <- setNames(robust$coefficients$n, rownames(robust$coefficients))
+  ci_z <- .resi_ci_mixed(fit, Vcr2, TRUE, n_coef, ci.method = "normal",
+                         cluster = "schoolid", ref.df = Inf)$normal$coefficients
+  expect_equal(robust$coefficients[["97.5%"]] - robust$coefficients[["2.5%"]],
+               unname(ci_z[, 2] - ci_z[, 1]) * qt(0.975, 19) / qnorm(0.975),
+               tolerance = 1e-6)
   expect_equal(robust$coefficients$Robust.SE,
                unname(sqrt(diag(.mixedCiCR2(fit, "schoolid")))))
   expect_warning(none <- resi(fit, vcovfunc = stats::vcov, ci.method = "none", level = 2),

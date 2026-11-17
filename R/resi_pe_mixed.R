@@ -32,7 +32,30 @@
   }
   list(X = X, assign = attr(X, "assign"), terms = attr(stats::terms(
     if (engine == "lmerMod") reformulas::nobars(formula(model.full)) else formula(model.full)
-  ), "term.labels"), groups = groups, data = data)
+  ), "term.labels"), groups = groups, data = data,
+  slopes = .resiMixedSlopeLevels(model.full, engine, colnames(X)))
+}
+
+# [AI-generated: GitHub Copilot, 2026-11-17]
+# [Prompt summary: a term with a random slope at level k is normalized by the
+#  number of level-k units (SNV decision for Model B).]
+# For each fixed-effect column, the grouping factors at which it has a random
+# slope (random-effect columns are matched to fixed-effect columns by name;
+# random intercepts are ignored).
+.resiMixedSlopeLevels <- function(model.full, engine, x_names) {
+  re_cols <- if (engine == "lmerMod") {
+    lme4::getME(model.full, "cnms")
+  } else {
+    re <- model.full$modelStruct$reStruct
+    setNames(lapply(seq_along(re), function(k) colnames(as.matrix(re[[k]]))), names(re))
+  }
+  out <- setNames(rep(list(character(0)), length(x_names)), x_names)
+  for (k in seq_along(re_cols)) {
+    for (col in setdiff(intersect(re_cols[[k]], x_names), "(Intercept)")) {
+      out[[col]] <- union(out[[col]], names(re_cols)[[k]])
+    }
+  }
+  out
 }
 
 .resiMixedHasVariation <- function(x) {
@@ -188,6 +211,21 @@
     )
     n_levels <- ifelse(is_between_cluster, top_cluster_name, selected_level)
     names(n_levels) <- names(term_levels)
+    # A random slope at a coarser level than the term's n level drives the
+    # variance of its coefficient, so the term is normalized by the number of
+    # units at that level (e.g. g for a school-level random slope).
+    if (!is.null(design$slopes)) {
+      for (term in names(term_levels)[-1L]) {
+        cols <- colnames(X)[assign == match(term, term_labels)]
+        slope_levels <- unique(unlist(design$slopes[cols]))
+        idx <- match(slope_levels, hierarchy_names)
+        idx <- idx[!is.na(idx)]
+        if (length(idx) && min(idx) < match(n_levels[[term]], hierarchy_names)) {
+          n_levels[[term]] <- hierarchy_names[[min(idx)]]
+          term_ns[[term]] <- hierarchy_counts[[min(idx)]]
+        }
+      }
+    }
   }
 
   coefficient_terms <- character(ncol(X))
@@ -333,7 +371,11 @@
 #'   coefficient and ANOVA term. If `NULL` (default), the count is
 #'   term-specific (Lyu & Welsh, 2022): terms constant within the outermost
 #'   grouping factor (including the intercept) use the number of outermost
-#'   groups, and all other terms use the number of groups at `level`.
+#'   groups, and all other terms use the number of groups at `level`. A term
+#'   with a random slope at a coarser grouping factor than this uses the
+#'   number of groups of the coarsest such factor (e.g. the number of schools
+#'   for `year` in `(year | school)`), since that variance component drives
+#'   the variance of its coefficient.
 #' @param level Random-effect hierarchy level or grouping-factor name whose
 #'   group count normalizes terms that vary within the outermost grouping
 #'   factor. Numeric levels are ordered from outermost to innermost grouping

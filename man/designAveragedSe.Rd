@@ -14,7 +14,9 @@ designAveragedSe(
 )
 }
 \arguments{
-\item{fit}{A `lmerMod` fit of `y ~ X + (1 | school/child)`.}
+\item{fit}{A `lmerMod` fit with a school random intercept and child-level
+random effects (intercept and optionally slopes), e.g.
+`y ~ X + (1 | school/child)`.}
 
 \item{g}{Number of schools.}
 

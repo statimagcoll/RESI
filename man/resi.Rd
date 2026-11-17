@@ -433,7 +433,9 @@ models whose random effects are nested in an outermost cluster. CIs use
 cluster-level influence functions (`ci.method` one of `"normal"`, `"qf"`,
 `"cf"`; coefficients get the signed normal CI for `"qf"`). Use
 `vcovfunc = stats::vcov` for model-based or `clubSandwich::vcovCR` (e.g.
-`vcov.args = list(type = "CR2")`) for cluster-robust intervals.
+`vcov.args = list(type = "CR2")`) for cluster-robust intervals;
+cluster-robust intervals use t / F references with g - 1 denominator
+degrees of freedom (g = number of clusters).
 `ci.design = TRUE` (default) treats the cluster covariate profiles as
 sampled; `FALSE` gives intervals conditional on the observed design.
 `ci.method = "none"` returns point estimates only. ANOVA CIs are for the

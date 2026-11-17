@@ -20,7 +20,9 @@ hybridPlasmodeSim(
 )
 }
 \arguments{
-\item{formula}{Model formula of the form `y ~ X + (1 | school/child)`.}
+\item{formula}{Model formula with a school random intercept and child-level
+random effects, e.g. `y ~ X + (1 | school/child)` or
+`y ~ X + (1 | school) + (year | child:school)`.}
 
 \item{data}{Data frame containing the variables in `formula`.}
 

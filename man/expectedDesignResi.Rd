@@ -7,7 +7,9 @@
 expectedDesignResi(fit, m, school = "schoolid", child = "childid:schoolid")
 }
 \arguments{
-\item{fit}{A `lmerMod` fit of `y ~ X + (1 | school/child)`.}
+\item{fit}{A `lmerMod` fit with a school random intercept and child-level
+random effects (intercept and optionally slopes), e.g.
+`y ~ X + (1 | school/child)`.}
 
 \item{m}{Average number of students per school.}
 

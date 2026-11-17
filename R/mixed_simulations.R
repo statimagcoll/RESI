@@ -1,6 +1,12 @@
+# [AI-generated: GitHub Copilot, 2026-11-15]
+# [Prompt summary: Lyu-Welsh limiting RESI targets and hybrid plasmode
+#  calibration of mixed-model RESI on mlmRev::egsingle.]
+
 # Mixed-model RESI calibration: Lyu & Welsh (2022) limiting targets and the
-# hybrid plasmode simulation for a three-level random-intercept lmer model
-# `y ~ X + (1 | school/child)` (developed on mlmRev::egsingle).
+# hybrid plasmode simulation for a three-level lmer model with a school random
+# intercept and child-level random effects, e.g. `y ~ X + (1 | school/child)`
+# or `y ~ X + (1 | school) + (year | child:school)` (developed on
+# mlmRev::egsingle).
 #
 # Design convention (matches the plasmode): schools are drawn uniformly from
 # the observed school profiles and students within a school in proportion to
@@ -13,10 +19,23 @@
 # n_k = N students for within-school terms, matching resi_pe(level = 2).
 
 .mixedVarComps <- function(fit, school, child) {
-  vc <- as.data.frame(lme4::VarCorr(fit))
-  list(tau2_school = vc$vcov[vc$grp == school & is.na(vc$var2)],
-       tau2_child = vc$vcov[vc$grp == child & is.na(vc$var2)],
+  vc <- lme4::VarCorr(fit)
+  if (length(vc[[school]]) != 1L) {
+    stop("Only a random intercept is supported at the school level (", school, ").")
+  }
+  G_child <- as.matrix(vc[[child]])
+  attributes(G_child) <- list(dim = dim(G_child), dimnames = dimnames(G_child))
+  list(tau2_school = as.numeric(vc[[school]]),
+       G_child = G_child, tau2_child = G_child[1L, 1L],
        sigma2 = stats::sigma(fit)^2)
+}
+
+# Child-level random-effects design Z (observations x q) of `fit`.
+.mixedChildZ <- function(fit, child) {
+  mm <- lme4::getME(fit, "mmList")
+  hit <- which(sub(".*\\|\\s*", "", names(mm)) == child)
+  if (length(hit) != 1L) stop("Expected one random-effects term for ", child, ".")
+  as.matrix(mm[[hit]])
 }
 
 .mixedBetweenColumns <- function(X, school_id) {
@@ -30,27 +49,36 @@
 }
 
 # Per-school sufficient statistics of the GLS information for a three-level
-# random-intercept model with the school effect integrated out:
+# model with a school random intercept integrated out:
 #   A_s = sum_j X_j' W_j^{-1} X_j,  b_s = sum_j X_j' W_j^{-1} 1,
-#   c_s = sum_j 1' W_j^{-1} 1,      W_j = sigma2 I + tau2_child 11',
-# so school s contributes A_s - b_s b_s' / (1 / tau2_school + c_s).
-lyuSchoolStats <- function(X, school_id, child_id, tau2_child, sigma2) {
+#   c_s = sum_j 1' W_j^{-1} 1,      W_j = sigma2 I + Z_j G Z_j',
+# so school s contributes A_s - b_s b_s' / (1 / tau2_school + c_s). Z holds the
+# child-level random-effects columns (default: a random intercept, G = tau2)
+# and W_j^{-1} = (I - Z_j M_j Z_j') / sigma2 with M_j = (sigma2 I + G Z_j'Z_j)^{-1} G.
+lyuSchoolStats <- function(X, school_id, child_id, G_child, sigma2,
+                           Z = matrix(1, nrow(X), 1L)) {
+  G_child <- as.matrix(G_child)
   child_id <- droplevels(as.factor(child_id))
   school_of_child <- tapply(as.character(school_id), child_id, `[`, 1L)
-  T_j <- as.numeric(table(child_id))
-  k_j <- tau2_child / (sigma2 + T_j * tau2_child)
-  sx <- rowsum(X, child_id)
   rows <- split(seq_len(nrow(X)), child_id)
+  q <- ncol(Z)
+  per_child <- lapply(rows, function(r) {
+    Xj <- X[r, , drop = FALSE]
+    Zj <- Z[r, , drop = FALSE]
+    M <- solve(sigma2 * diag(q) + G_child %*% crossprod(Zj), G_child)
+    XZ <- crossprod(Xj, Zj)
+    z1 <- colSums(Zj)
+    list(A = (crossprod(Xj) - XZ %*% M %*% t(XZ)) / sigma2,
+         b = (colSums(Xj) - drop(XZ %*% M %*% z1)) / sigma2,
+         c = (length(r) - drop(z1 %*% M %*% z1)) / sigma2)
+  })
   schools <- unique(as.character(school_id))
   stats <- lapply(schools, function(s) {
     js <- which(school_of_child == s)
-    A <- Reduce(`+`, lapply(js, function(j) {
-      Xj <- X[rows[[j]], , drop = FALSE]
-      (crossprod(Xj) - k_j[j] * tcrossprod(sx[j, ])) / sigma2
-    }))
-    b <- colSums(sx[js, , drop = FALSE] * (1 - k_j[js] * T_j[js])) / sigma2
-    c <- sum(T_j[js] * (1 - k_j[js] * T_j[js])) / sigma2
-    list(A = A, b = b, c = c, n_child = length(js))
+    list(A = Reduce(`+`, lapply(per_child[js], `[[`, "A")),
+         b = Reduce(`+`, lapply(per_child[js], `[[`, "b")),
+         c = sum(vapply(per_child[js], `[[`, numeric(1L), "c")),
+         n_child = length(js))
   })
   names(stats) <- schools
   stats
@@ -68,7 +96,7 @@ lyuSchoolStats <- function(X, school_id, child_id, tau2_child, sigma2) {
        anova = data.frame(RESI = anova_resi, row.names = term_labels))
 }
 
-#' Lyu-Welsh limiting RESI for a three-level random-intercept lmer fit
+#' Lyu-Welsh limiting RESI for a three-level lmer fit
 #'
 #' Evaluates the g, m -> Inf limit (Lyu & Welsh, 2022) of the per-unit
 #' covariance of the fixed effects and the corresponding RESI at the fitted
@@ -76,7 +104,9 @@ lyuSchoolStats <- function(X, school_id, child_id, tau2_child, sigma2) {
 #' C = g^{-1} sum_s x_s x_s'. Within-school columns: the school intercept acts
 #' as a fixed effect, so I_w / N = N^{-1} sum_s (A_s - b_s b_s' / c_s). The
 #' between and within blocks are asymptotically independent.
-#' @param fit A `lmerMod` fit of `y ~ X + (1 | school/child)`.
+#' @param fit A `lmerMod` fit with a school random intercept and child-level
+#'   random effects (intercept and optionally slopes), e.g.
+#'   `y ~ X + (1 | school/child)`.
 #' @param school,child Names of the school and child grouping factors in
 #'   `lme4::getME(fit, "flist")`.
 #' @return List with `coefficients` and `anova` RESI tables, the logical
@@ -93,7 +123,7 @@ lyuLimitResi <- function(fit, school = "schoolid", child = "childid:schoolid") {
   Vb <- vc$tau2_school * solve(crossprod(Xb) / nrow(Xb))
 
   st <- lyuSchoolStats(X[, !between, drop = FALSE], school_id, fl[[child]],
-                       vc$tau2_child, vc$sigma2)
+                       vc$G_child, vc$sigma2, .mixedChildZ(fit, child))
   N <- sum(vapply(st, `[[`, numeric(1L), "n_child"))
   Iw <- Reduce(`+`, lapply(st, function(s) s$A - tcrossprod(s$b) / s$c))
   Vw <- solve(Iw / N)
@@ -115,7 +145,7 @@ lyuLimitResi <- function(fit, school = "schoolid", child = "childid:schoolid") {
   fl <- lme4::getME(fit, "flist")
   vc <- .mixedVarComps(fit, school, child)
   school_id <- fl[[school]]
-  st <- lyuSchoolStats(X, school_id, fl[[child]], vc$tau2_child, vc$sigma2)
+  st <- lyuSchoolStats(X, school_id, fl[[child]], vc$G_child, vc$sigma2, .mixedChildZ(fit, child))
   n_s <- vapply(st, `[[`, numeric(1L), "n_child")
   r <- m / mean(n_s)
   list(I_s = lapply(st, function(s) {
@@ -215,7 +245,9 @@ designAveragedSe <- function(fit, g, m, n_rep = 2000L,
 #' covariance. RESI and per-unit SE targets are the Lyu-Welsh g, m -> Inf
 #' limit at the full-data ML estimates ([lyuLimitResi()]).
 #'
-#' @param formula Model formula of the form `y ~ X + (1 | school/child)`.
+#' @param formula Model formula with a school random intercept and child-level
+#'   random effects, e.g. `y ~ X + (1 | school/child)` or
+#'   `y ~ X + (1 | school) + (year | child:school)`.
 #' @param data Data frame containing the variables in `formula`.
 #' @param school,child Names of the school and child id columns of `data`.
 #' @param n_schools,n_per_site Vectors crossed to form the simulation grid.
@@ -252,15 +284,27 @@ hybridPlasmodeSim <- function(formula, data, school = "schoolid", child = "child
   vc <- .mixedVarComps(truth_fit, school_grp, child_grp)
   resid_sd <- stats::sigma(truth_fit)
 
-  # BLUP pools centred to mean zero and rescaled so their (1/G) variance equals
-  # the fitted component, undoing BLUP shrinkage; draws are with replacement.
-  rescale_blup <- function(blup, target_var) {
-    centered <- blup - mean(blup)
-    centered * sqrt(target_var / mean(centered^2))
+  # BLUP pools centred to mean zero and rescaled so their (1/G) covariance
+  # equals the fitted component, undoing BLUP shrinkage; draws are with
+  # replacement (whole rows for vector-valued child effects).
+  msqrt <- function(S, inverse = FALSE) {
+    e <- eigen(S, symmetric = TRUE)
+    d <- pmax(e$values, 0)
+    d <- if (inverse) ifelse(d > 1e-12 * max(d), 1 / sqrt(d), 0) else sqrt(d)
+    e$vectors %*% (d * t(e$vectors))
+  }
+  rescale_blup <- function(blup, target_cov) {
+    centered <- scale(as.matrix(blup), scale = FALSE)
+    centered %*% msqrt(crossprod(centered) / nrow(centered), inverse = TRUE) %*%
+      msqrt(as.matrix(target_cov))
   }
   re <- lme4::ranef(truth_fit)
-  school_pool <- rescale_blup(re[[school_grp]][[1L]], vc$tau2_school)
-  child_pool <- rescale_blup(re[[child_grp]][[1L]], vc$tau2_child)
+  school_pool <- drop(rescale_blup(re[[school_grp]][[1L]], vc$tau2_school))
+  child_pool <- rescale_blup(re[[child_grp]], vc$G_child)
+  child_bar <- Filter(function(b) identical(deparse(b[[3L]]), child_grp),
+                      reformulas::findbars(formula))
+  if (length(child_bar) != 1L) stop("Expected one random-effects term for ", child_grp, ".")
+  child_z_formula <- stats::as.formula(call("~", child_bar[[1L]][[2L]]))
 
   school_profiles <- levels(data[[school]])
   rows_by_school <- split(seq_len(nrow(data)), data[[school]])
@@ -291,9 +335,12 @@ hybridPlasmodeSim <- function(formula, data, school = "schoolid", child = "child
 
   generate_outcome <- function(design) {
     school_effect <- sample(school_pool, nlevels(design[[school]]), replace = TRUE)
-    child_effect <- sample(child_pool, nlevels(design[[child]]), replace = TRUE)
+    child_effect <- child_pool[sample.int(nrow(child_pool), nlevels(design[[child]]),
+                                          replace = TRUE), , drop = FALSE]
+    child_part <- rowSums(stats::model.matrix(child_z_formula, data = design) *
+                            child_effect[design[[child]], , drop = FALSE])
     fixed_part <- stats::model.matrix(fixed_rhs, data = design) %*% beta
-    drop(fixed_part) + school_effect[design[[school]]] + child_effect[design[[child]]] +
+    drop(fixed_part) + school_effect[design[[school]]] + child_part +
       stats::rnorm(nrow(design), sd = resid_sd)
   }
 

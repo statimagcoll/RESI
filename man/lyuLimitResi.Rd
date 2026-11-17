@@ -2,12 +2,14 @@
 % Please edit documentation in R/mixed_simulations.R
 \name{lyuLimitResi}
 \alias{lyuLimitResi}
-\title{Lyu-Welsh limiting RESI for a three-level random-intercept lmer fit}
+\title{Lyu-Welsh limiting RESI for a three-level lmer fit}
 \usage{
 lyuLimitResi(fit, school = "schoolid", child = "childid:schoolid")
 }
 \arguments{
-\item{fit}{A `lmerMod` fit of `y ~ X + (1 | school/child)`.}
+\item{fit}{A `lmerMod` fit with a school random intercept and child-level
+random effects (intercept and optionally slopes), e.g.
+`y ~ X + (1 | school/child)`.}
 
 \item{school, child}{Names of the school and child grouping factors in
 `lme4::getME(fit, "flist")`.}
