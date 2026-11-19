@@ -37,6 +37,7 @@ Collate:
   'omnibus.R'
   'simulations.R'
   'resi_asymptotic.R'
+  'resi_pe_gam.R'
 Imports:
     aod,
     boot,
@@ -51,6 +52,7 @@ Imports:
     splines
 Suggests:
     gee,
+    mgcv,
     geepack,
     robustbase,
   reformulas,
