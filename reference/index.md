@@ -78,6 +78,9 @@ Functions for summarizing and visualization.
 
 Functions used for evaluating new RESI estimators and CI methods.
 
+- [`hybridPlasmodeSim()`](https://statimagcoll.github.io/RESI/reference/hybridPlasmodeSim.md)
+  : Hybrid plasmode calibration simulation for three-level mixed-model
+  RESI
 - [`insurancePlasmodeSim()`](https://statimagcoll.github.io/RESI/reference/insurancePlasmodeSim.md)
   : Insurance Plasmode Simulation for RESI Evaluation
 - [`simCalibrationFigures()`](https://statimagcoll.github.io/RESI/reference/simCalibrationFigures.md)

@@ -307,6 +307,8 @@
 <span>  anova <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  vcovfunc <span class="op">=</span> <span class="fu">clubSandwich</span><span class="fu">::</span><span class="va"><a href="http://jepusto.github.io/clubSandwich/reference/vcovCR.html" class="external-link">vcovCR</a></span>,</span>
 <span>  vcov.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  ci.method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"normal"</span>, <span class="st">"qf"</span>, <span class="st">"cf"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
+<span>  ci.design <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -318,6 +320,8 @@
 <span>  anova <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  vcovfunc <span class="op">=</span> <span class="fu">clubSandwich</span><span class="fu">::</span><span class="va"><a href="http://jepusto.github.io/clubSandwich/reference/vcovCR.html" class="external-link">vcovCR</a></span>,</span>
 <span>  vcov.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  ci.method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"normal"</span>, <span class="st">"qf"</span>, <span class="st">"cf"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
+<span>  ci.design <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -423,6 +427,11 @@ One of `"boot"` (bootstrap), `"qf"` (quadratic-form inversion, default for lm an
 `"normal"` (normal approximation), or `"cf"` (Cornish-Fisher inversion).
 See `resi_pe_asymptotic` for details on the asymptotic methods.</p></dd>
 
+
+<dt id="arg-ci-design">ci.design<a class="anchor" aria-label="anchor" href="#arg-ci-design"></a></dt>
+<dd><p>Logical; for `lmerMod` and `lme` CIs, include the
+variability of the cluster-level design.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -483,8 +492,24 @@ and then try rerunning <code>resi</code>.</p>
 <li><p><code>resi(geeglm)</code>: RESI point and interval estimation for GEE models</p></li>
 <li><p><code>resi(glmgee)</code>: RESI point and interval estimation for GEE models in glmtoolbox</p></li>
 <li><p><code>resi(gee)</code>: RESI point and interval estimation for GEE models</p></li>
-<li><p><code>resi(lme)</code>: RESI point and interval estimation for LME (nlme) models</p></li>
-<li><p><code>resi(lmerMod)</code>: RESI point and interval estimation for lmerMod models</p></li>
+<li><p><code>resi(lme)</code>: RESI point and asymptotic interval estimation for LME
+(nlme) models whose random effects are nested in an outermost cluster;
+identical method and arguments to the `lmerMod` method. Supported fits
+have independent homoscedastic within-group errors (no `weights` or
+`correlation`) and pdSymm/pdLogChol/pdDiag/pdIdent random-effect
+covariances; other fits return point estimates only, with a warning.</p></li>
+<li><p><code>resi(lmerMod)</code>: RESI point and asymptotic interval estimation for lmerMod
+models whose random effects are nested in an outermost cluster. CIs use
+cluster-level influence functions (`ci.method` one of `"normal"`, `"qf"`,
+`"cf"`; coefficients get the signed normal CI for `"qf"`). Use
+`vcovfunc = stats::vcov` for model-based or `clubSandwich::vcovCR` (e.g.
+`vcov.args = list(type = "CR2")`) for cluster-robust intervals;
+cluster-robust intervals use t / F references with g - 1 denominator
+degrees of freedom (g = number of clusters).
+`ci.design = TRUE` (default) treats the cluster covariate profiles as
+sampled; `FALSE` gives intervals conditional on the observed design.
+`ci.method = "none"` returns point estimates only. ANOVA CIs are for the
+joint Wald test of each term's columns (Type II without interactions).</p></li>
 <li><p><code>resi(glmmTMB)</code>: RESI point and interval estimation for glmmTMB models - Gaussian only</p></li>
 <li><p><code>resi(gam)</code>: RESI point estimates for generalized additive models.
 Confidence intervals are not yet available for <code>gam</code> and <code>bam</code>

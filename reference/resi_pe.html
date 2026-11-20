@@ -229,7 +229,7 @@ for models with existing Anova methods. This function is the building block for 
 <span><span class="co"># S3 method for class 'gee'</span></span>
 <span><span class="fu">resi_pe</span><span class="op">(</span><span class="va">model.full</span>, <span class="va">data</span>, unbiased <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># S3 method for class 'lme'</span></span>
+<span><span class="co"># S3 method for class 'glmmTMB'</span></span>
 <span><span class="fu">resi_pe</span><span class="op">(</span></span>
 <span>  <span class="va">model.full</span>,</span>
 <span>  anova <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -238,6 +238,9 @@ for models with existing Anova methods. This function is the building block for 
 <span>  vcov.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'emmGrid'</span></span>
+<span><span class="fu">resi_pe</span><span class="op">(</span><span class="va">object</span>, <span class="va">model</span>, N <span class="op">=</span> <span class="cn">NULL</span>, unbiased <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'lmerMod'</span></span>
 <span><span class="fu">resi_pe</span><span class="op">(</span></span>
@@ -247,16 +250,25 @@ for models with existing Anova methods. This function is the building block for 
 <span>  Anova.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  vcov.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  unbiased <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  n <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  level <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  cluster <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  include_level <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># S3 method for class 'glmmTMB'</span></span>
+<span><span class="co"># S3 method for class 'lme'</span></span>
 <span><span class="fu">resi_pe</span><span class="op">(</span></span>
 <span>  <span class="va">model.full</span>,</span>
 <span>  anova <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  vcovfunc <span class="op">=</span> <span class="fu">clubSandwich</span><span class="fu">::</span><span class="va"><a href="http://jepusto.github.io/clubSandwich/reference/vcovCR.html" class="external-link">vcovCR</a></span>,</span>
 <span>  Anova.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  vcov.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  unbiased <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  n <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  level <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  cluster <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  include_level <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -337,6 +349,50 @@ for models with existing Anova methods. This function is the building block for 
 <dt id="arg-n">N<a class="anchor" aria-label="anchor" href="#arg-n"></a></dt>
 <dd><p>sample size</p></dd>
 
+
+<dt id="arg-n">n<a class="anchor" aria-label="anchor" href="#arg-n"></a></dt>
+<dd><p>Optional positive scalar normalizing count applied to every
+coefficient and ANOVA term. If `NULL` (default), the count is
+term-specific (Lyu &amp; Welsh, 2022): terms constant within the outermost
+grouping factor (including the intercept) use the number of outermost
+groups, and all other terms use the number of groups at `level`. A term
+with a random slope at a coarser grouping factor than this uses the
+number of groups of the coarsest such factor (e.g. the number of schools
+for `year` in `(year | school)`), since that variance component drives
+the variance of its coefficient.</p></dd>
+
+
+<dt id="arg-level">level<a class="anchor" aria-label="anchor" href="#arg-level"></a></dt>
+<dd><p>Random-effect hierarchy level or grouping-factor name whose
+group count normalizes terms that vary within the outermost grouping
+factor. Numeric levels are ordered from outermost to innermost grouping
+(for `egsingle`, school is level 1 and student is level 2). If omitted,
+level 1 is used and a message names the grouping factor.</p></dd>
+
+
+<dt id="arg-cluster">cluster<a class="anchor" aria-label="anchor" href="#arg-cluster"></a></dt>
+<dd><p>Optional grouping-factor name or observation-length vector
+specifying the cluster used only by `vcovfunc`. `NULL` leaves the
+variance function's default unchanged. For `clubSandwich::vcovCR`, this
+is commonly the outermost grouping factor; it need not equal the level
+used to infer `n`.</p></dd>
+
+
+<dt id="arg-include-level">include_level<a class="anchor" aria-label="anchor" href="#arg-include-level"></a></dt>
+<dd><p>Logical; add `Variation level` and `n level` columns
+to coefficient and ANOVA tables (default `TRUE`). `Variation level`
+reports the lowest observed design level at which a term changes;
+`n level` reports the grouping factor whose count is the term's `n`. These can differ (e.g., `year` varies by occasion within a
+student, while its default `n` counts students). Explicit `n` overrides
+retain the design-derived variation label and mark `n level` as
+user-specified. Also adds one `Var prop &lt;group&gt;` column per grouping
+factor (outermost first): the share of the fixed-effect design column's
+(coefficients) or term's (ANOVA; pooled across its columns) observation-
+level sum of squares lying between units of that grouping factor within
+the next-outer one. The remainder, `1 - sum`, is the share varying within
+the innermost group. Values are `NA` for the intercept and for
+non-nested grouping factors.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -401,10 +457,10 @@ test is not computed for these models.</p>
 <li><p><code>resi_pe(geeglm)</code>: RESI point estimation for geeglm object</p></li>
 <li><p><code>resi_pe(glmgee)</code>: RESI point estimation for glmgee object</p></li>
 <li><p><code>resi_pe(gee)</code>: RESI point estimation for gee object</p></li>
-<li><p><code>resi_pe(lme)</code>: RESI point estimation for lme object</p></li>
-<li><p><code>resi_pe(lmerMod)</code>: RESI point estimation for lmerMod object</p></li>
 <li><p><code>resi_pe(glmmTMB)</code>: RESI point estimation for glmmTMB object - Gaussian only</p></li>
 <li><p><code>resi_pe(emmGrid)</code>: RESI point estimation for emmeans object</p></li>
+<li><p><code>resi_pe(lmerMod)</code>: Mixed-model RESI point estimation</p></li>
+<li><p><code>resi_pe(lme)</code>: Mixed-model RESI point estimation</p></li>
 <li><p><code>resi_pe(gam)</code>: RESI point estimation for generalized additive models
 (<code><a href="https://rdrr.io/pkg/mgcv/man/gam.html" class="external-link">mgcv::gam</a></code> and <code><a href="https://rdrr.io/pkg/mgcv/man/bam.html" class="external-link">mgcv::bam</a></code> fits)</p></li>
 </ul></div>

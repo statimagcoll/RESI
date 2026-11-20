@@ -188,7 +188,7 @@ resi_pe(
 # S3 method for class 'gee'
 resi_pe(model.full, data, unbiased = TRUE, ...)
 
-# S3 method for class 'lme'
+# S3 method for class 'glmmTMB'
 resi_pe(
   model.full,
   anova = TRUE,
@@ -197,6 +197,9 @@ resi_pe(
   vcov.args = list(),
   ...
 )
+
+# S3 method for class 'emmGrid'
+resi_pe(object, model, N = NULL, unbiased = TRUE, ...)
 
 # S3 method for class 'lmerMod'
 resi_pe(
@@ -206,16 +209,25 @@ resi_pe(
   Anova.args = list(),
   vcov.args = list(),
   unbiased = TRUE,
+  n = NULL,
+  level = NULL,
+  cluster = NULL,
+  include_level = TRUE,
   ...
 )
 
-# S3 method for class 'glmmTMB'
+# S3 method for class 'lme'
 resi_pe(
   model.full,
   anova = TRUE,
   vcovfunc = clubSandwich::vcovCR,
   Anova.args = list(),
   vcov.args = list(),
+  unbiased = TRUE,
+  n = NULL,
+  level = NULL,
+  cluster = NULL,
+  include_level = TRUE,
   ...
 )
 
@@ -305,6 +317,51 @@ resi_pe(
 - N:
 
   sample size
+
+- n:
+
+  Optional positive scalar normalizing count applied to every
+  coefficient and ANOVA term. If \`NULL\` (default), the count is
+  term-specific (Lyu & Welsh, 2022): terms constant within the outermost
+  grouping factor (including the intercept) use the number of outermost
+  groups, and all other terms use the number of groups at \`level\`. A
+  term with a random slope at a coarser grouping factor than this uses
+  the number of groups of the coarsest such factor (e.g. the number of
+  schools for \`year\` in \`(year \| school)\`), since that variance
+  component drives the variance of its coefficient.
+
+- level:
+
+  Random-effect hierarchy level or grouping-factor name whose group
+  count normalizes terms that vary within the outermost grouping factor.
+  Numeric levels are ordered from outermost to innermost grouping (for
+  \`egsingle\`, school is level 1 and student is level 2). If omitted,
+  level 1 is used and a message names the grouping factor.
+
+- cluster:
+
+  Optional grouping-factor name or observation-length vector specifying
+  the cluster used only by \`vcovfunc\`. \`NULL\` leaves the variance
+  function's default unchanged. For \`clubSandwich::vcovCR\`, this is
+  commonly the outermost grouping factor; it need not equal the level
+  used to infer \`n\`.
+
+- include_level:
+
+  Logical; add \`Variation level\` and \`n level\` columns to
+  coefficient and ANOVA tables (default \`TRUE\`). \`Variation level\`
+  reports the lowest observed design level at which a term changes; \`n
+  level\` reports the grouping factor whose count is the term's \`n\`.
+  These can differ (e.g., \`year\` varies by occasion within a student,
+  while its default \`n\` counts students). Explicit \`n\` overrides
+  retain the design-derived variation label and mark \`n level\` as
+  user-specified. Also adds one \`Var prop \<group\>\` column per
+  grouping factor (outermost first): the share of the fixed-effect
+  design column's (coefficients) or term's (ANOVA; pooled across its
+  columns) observation- level sum of squares lying between units of that
+  grouping factor within the next-outer one. The remainder, \`1 - sum\`,
+  is the share varying within the innermost group. Values are \`NA\` for
+  the intercept and for non-nested grouping factors.
 
 ## Value
 
@@ -402,14 +459,14 @@ not computed for these models.
 
 - `resi_pe(gee)`: RESI point estimation for gee object
 
-- `resi_pe(lme)`: RESI point estimation for lme object
-
-- `resi_pe(lmerMod)`: RESI point estimation for lmerMod object
-
 - `resi_pe(glmmTMB)`: RESI point estimation for glmmTMB object -
   Gaussian only
 
 - `resi_pe(emmGrid)`: RESI point estimation for emmeans object
+
+- `resi_pe(lmerMod)`: Mixed-model RESI point estimation
+
+- `resi_pe(lme)`: Mixed-model RESI point estimation
 
 - `resi_pe(gam)`: RESI point estimation for generalized additive models
   ([`mgcv::gam`](https://rdrr.io/pkg/mgcv/man/gam.html) and

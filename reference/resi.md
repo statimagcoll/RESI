@@ -274,6 +274,8 @@ resi(
   anova = TRUE,
   vcovfunc = clubSandwich::vcovCR,
   vcov.args = list(),
+  ci.method = c("normal", "qf", "cf", "none"),
+  ci.design = TRUE,
   ...
 )
 
@@ -285,6 +287,8 @@ resi(
   anova = TRUE,
   vcovfunc = clubSandwich::vcovCR,
   vcov.args = list(),
+  ci.method = c("normal", "qf", "cf", "none"),
+  ci.design = TRUE,
   ...
 )
 
@@ -405,6 +409,11 @@ resi(model.full, ...)
   (Cornish-Fisher inversion). See \`resi_pe_asymptotic\` for details on
   the asymptotic methods.
 
+- ci.design:
+
+  Logical; for \`lmerMod\` and \`lme\` CIs, include the variability of
+  the cluster-level design.
+
 ## Value
 
 Returns a list that includes function arguments, RESI point estimates,
@@ -496,9 +505,27 @@ by the model and then try rerunning `resi`.
 
 - `resi(gee)`: RESI point and interval estimation for GEE models
 
-- `resi(lme)`: RESI point and interval estimation for LME (nlme) models
+- `resi(lme)`: RESI point and asymptotic interval estimation for LME
+  (nlme) models whose random effects are nested in an outermost cluster;
+  identical method and arguments to the \`lmerMod\` method. Supported
+  fits have independent homoscedastic within-group errors (no
+  \`weights\` or \`correlation\`) and pdSymm/pdLogChol/pdDiag/pdIdent
+  random-effect covariances; other fits return point estimates only,
+  with a warning.
 
-- `resi(lmerMod)`: RESI point and interval estimation for lmerMod models
+- `resi(lmerMod)`: RESI point and asymptotic interval estimation for
+  lmerMod models whose random effects are nested in an outermost
+  cluster. CIs use cluster-level influence functions (\`ci.method\` one
+  of \`"normal"\`, \`"qf"\`, \`"cf"\`; coefficients get the signed
+  normal CI for \`"qf"\`). Use \`vcovfunc = stats::vcov\` for
+  model-based or \`clubSandwich::vcovCR\` (e.g. \`vcov.args = list(type
+  = "CR2")\`) for cluster-robust intervals; cluster-robust intervals use
+  t / F references with g - 1 denominator degrees of freedom (g = number
+  of clusters). \`ci.design = TRUE\` (default) treats the cluster
+  covariate profiles as sampled; \`FALSE\` gives intervals conditional
+  on the observed design. \`ci.method = "none"\` returns point estimates
+  only. ANOVA CIs are for the joint Wald test of each term's columns
+  (Type II without interactions).
 
 - `resi(glmmTMB)`: RESI point and interval estimation for glmmTMB
   models - Gaussian only
