@@ -1,5 +1,7 @@
 # RESI (development version)
 
+- Added `resi_pe()` for `mgcv::gam` and `mgcv::bam` fits. RESI for smooth terms uses mgcv's Wald statistic (`Vp`) with `Ref.df` (`f2S`, or `chisq2S` when the scale is known). Parametric terms use `t2S`/`z2S`. Terms tested by mgcv's random-effect test (`bs = "re"`, shrinkage bases, `select = TRUE`) return `NA` with a warning. `resi()` for these models gives an informative error; confidence intervals are not yet implemented.
+
 # RESI 1.5.1.9001
 
 - Fixed `resi_pe.lmerMod()` handling for spline terms like `ns(Days, 3)` by reconstructing the auxiliary fixed-effects model data from the original model call and replacing deprecated `lme4::nobars` usage with `reformulas::nobars`.

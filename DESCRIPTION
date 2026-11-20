@@ -40,6 +40,7 @@ Collate:
   'mixed_simulations.R'
   'resi_mixed_ci.R'
   'resi_asymptotic.R'
+  'resi_pe_gam.R'
 Imports:
     aod,
     boot,
@@ -54,6 +55,7 @@ Imports:
     splines
 Suggests:
     gee,
+    mgcv,
     geepack,
     robustbase,
   reformulas,
