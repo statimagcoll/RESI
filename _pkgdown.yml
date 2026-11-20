@@ -72,6 +72,7 @@ reference:
 - title: Simulation functions
   desc: Functions used for evaluating new RESI estimators and CI methods.
 - contents:
+  - hybridPlasmodeSim
   - insurancePlasmodeSim
   - simCalibrationFigures
   - simCalibrationSim

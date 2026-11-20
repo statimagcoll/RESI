@@ -147,6 +147,36 @@ test_that("Normal and QF anova CIs are close for large n (lm)", {
               label = "normal vs QF CI widths agree within 30%")
 })
 
+test_that("QF CI for one df is correct for large and moderate noncentrality", {
+  # Large n * S^2 / Sigma_R: the QF interval approaches the normal interval.
+  ct <- list(m1 = 1L, n = 20000, R_beta = 3.33, Stilde = 3.33, Sigma_R = matrix(20))
+  expect_equal(.resi_ci_qf(ct), .resi_ci_normal_unsigned(ct), tolerance = 1e-3)
+  # Moderate: the bounds invert the noncentral chi-square(1) test exactly.
+  ct <- list(m1 = 1L, n = 50, R_beta = 0.6, Stilde = 0.6, Sigma_R = matrix(1.3))
+  ci <- .resi_ci_qf(ct)
+  q <- ct$n * ct$Stilde^2 / 1.3
+  tail_at <- function(s) pchisq(q, 1, ncp = ct$n * s^2 / 1.3, lower.tail = FALSE)
+  expect_equal(tail_at(ci[[1]]), 0.025, tolerance = 1e-3)
+  expect_equal(tail_at(ci[[2]]), 0.975, tolerance = 1e-3)
+})
+
+test_that("finite-df QF and CF invert the shifted-t test and match signed normal-t", {
+  # t-type reference: T = sqrt(n / Sigma_R) * S + T_df, so the 1-df bounds
+  # solve P(|T_df + delta(S)| >= t_obs) = alpha / 2 and 1 - alpha / 2.
+  ct <- list(m1 = 1L, n = 200, R_beta = 0.4, Stilde = 0.4, Sigma_R = matrix(1.3), df = 9)
+  t_obs <- sqrt(ct$n / 1.3) * ct$Stilde
+  tail_at <- function(s) {
+    d <- sqrt(ct$n / 1.3) * s
+    pt(t_obs - d, 9, lower.tail = FALSE) + pt(-t_obs - d, 9)
+  }
+  for (ci in list(.resi_ci_qf(ct), .resi_ci_cf(ct))) {
+    expect_lt(abs(tail_at(ci[[1]]) - 0.025), 5e-4)
+    expect_lt(abs(tail_at(ci[[2]]) - 0.975), 5e-4)
+  }
+  expect_equal(unname(.resi_ci_qf(ct)),
+               unname(.resi_ci_normal_signed(ct)), tolerance = 1e-3)
+})
+
 
 # ===========================================================================
 # 7. CI bounds agree on coefficients: normal and QF both use signed normal

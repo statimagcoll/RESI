@@ -1,3 +1,20 @@
+# Round only numeric columns so tables with character columns (e.g. the
+# mixed-model `Term` and `Variation level`) can be printed.
+# print.anova mangles character columns, so such anova tables are printed as
+# plain data frames after their heading.
+.roundNumeric <- function(x, digits) {
+  if (!is.data.frame(x)) return(round(x, digits = digits))
+  num <- vapply(x, is.numeric, logical(1L))
+  if (all(num)) return(round(x, digits = digits))
+  if (inherits(x, "anova")) {
+    if (!is.null(attr(x, "heading"))) cat(attr(x, "heading"), sep = "\n")
+    attr(x, "heading") <- NULL
+    class(x) <- "data.frame"
+  }
+  x[num] <- lapply(x[num], round, digits = digits)
+  x
+}
+
 #' @export
 print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   cat("\nAnalysis of effect sizes based on RESI:")
@@ -14,20 +31,20 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   # coefficients table
   if (!is.null(x$coefficients)){
     cat("\nCoefficient Table \n")
-    print(round(x$coefficients, digits = digits))
+    print(.roundNumeric(x$coefficients, digits = digits))
   }
 
   # anova table
   if (!is.null(x$anova)){
     cat("\n\n")
-    print(round(x$anova, digits = digits))
+    print(.roundNumeric(x$anova, digits = digits))
   }
 
   # overall
   if (!(is.null(x$overall))){
     if (is.null(x$model.reduced$formula)){
       cat("\nOverall RESI comparing model to intercept-only model:\n\n")
-      print(round(x$overall, digits = digits))
+      print(.roundNumeric(x$overall, digits = digits))
     } else{
       if ((x$model.reduced$formula == as.formula(paste(format(formula(x$model.full)[[2]]), "~ 1")))){
         cat("\nOverall RESI comparing model to intercept-only model:\n\n")
@@ -37,7 +54,7 @@ print.resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
       overall = as.data.frame(x$overall)
       overall = overall[nrow(overall),]
       rownames(overall) = NULL
-      print(round(overall, digits = digits))
+      print(.roundNumeric(overall, digits = digits))
       }
     }
 
@@ -70,7 +87,7 @@ print.summary_resi <- function(x, digits = max(3L, getOption("digits") - 3L), ..
   cat("\nConfidence level = ", x$alpha)
   cat("\nCall:  ", paste(deparse(x$model.full$call), sep = "\n", collapse = "\n"),  "\n",sep = "")
   cat("\nCoefficient Table \n")
-  print(round(x$coefficients, digits = digits))
+  print(.roundNumeric(x$coefficients, digits = digits))
   invisible(x)
 }
 
@@ -78,7 +95,7 @@ print.summary_resi <- function(x, digits = max(3L, getOption("digits") - 3L), ..
 print.omnibus_resi <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   cat("\nAnalysis of effect sizes based on RESI:")
   cat("\nConfidence level = ", x$alpha, "\n")
-  print(round(x$overall, digits = digits))
+  print(.roundNumeric(x$overall, digits = digits))
   invisible(x)
 }
 
