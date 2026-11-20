@@ -298,6 +298,9 @@ resi(
   vcov.args = list(),
   ...
 )
+
+# S3 method for class 'gam'
+resi(model.full, ...)
 ```
 
 ## Arguments
@@ -499,6 +502,11 @@ by the model and then try rerunning `resi`.
 
 - `resi(glmmTMB)`: RESI point and interval estimation for glmmTMB
   models - Gaussian only
+
+- `resi(gam)`: RESI point estimates for generalized additive models.
+  Confidence intervals are not yet available for `gam` and `bam` fits;
+  use
+  [`resi_pe`](https://statimagcoll.github.io/RESI/reference/resi_pe.md).
 
 ## References
 

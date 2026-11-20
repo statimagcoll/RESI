@@ -221,6 +221,16 @@ resi_pe(
 
 # S3 method for class 'emmGrid'
 resi_pe(object, model, N = NULL, unbiased = TRUE, ...)
+
+# S3 method for class 'gam'
+resi_pe(
+  model.full,
+  data,
+  anova = TRUE,
+  coefficients = TRUE,
+  unbiased = TRUE,
+  ...
+)
 ```
 
 ## Arguments
@@ -341,6 +351,26 @@ longitudinal RESI takes the specified clustering into account, while the
 cross-sectional RESI is estimated using a model where each measurement
 is its own cluster.
 
+For `gam` and `bam` models, the RESI is computed from the Wald
+statistics reported by
+[`mgcv::summary.gam`](https://rdrr.io/pkg/mgcv/man/summary.gam.html).
+These use the Bayesian posterior covariance `Vp`, so `vcovfunc` is not
+used. Parametric coefficients use
+[`t2S`](https://statimagcoll.github.io/RESI/reference/t2S.md) (or
+[`z2S`](https://statimagcoll.github.io/RESI/reference/z2S.md) when the
+scale parameter is known). Smooth terms use
+[`f2S`](https://statimagcoll.github.io/RESI/reference/f2S.md) with the
+reference degrees of freedom `Ref.df` and the residual degrees of
+freedom `n - sum(edf)` (or
+[`chisq2S`](https://statimagcoll.github.io/RESI/reference/chisq2S.md)
+when the scale is known). The smooth-term RESI estimates the RESI of the
+population smooth function (net of the other terms); when that function
+is well represented by the basis, it does not depend on the basis size
+or the penalty. Penalized terms without an unpenalized null space
+(`bs = "re"`, shrinkage bases, or `select = TRUE`) are tested by mgcv
+with a different statistic, so their RESI is `NA`. The overall test is
+not computed for these models.
+
 ## Methods (by class)
 
 - `resi_pe(default)`: RESI point estimation
@@ -380,6 +410,10 @@ is its own cluster.
   Gaussian only
 
 - `resi_pe(emmGrid)`: RESI point estimation for emmeans object
+
+- `resi_pe(gam)`: RESI point estimation for generalized additive models
+  ([`mgcv::gam`](https://rdrr.io/pkg/mgcv/man/gam.html) and
+  [`mgcv::bam`](https://rdrr.io/pkg/mgcv/man/bam.html) fits)
 
 ## References
 

@@ -2,6 +2,18 @@
 
 ## RESI (development version)
 
+- Added
+  [`resi_pe()`](https://statimagcoll.github.io/RESI/reference/resi_pe.md)
+  for [`mgcv::gam`](https://rdrr.io/pkg/mgcv/man/gam.html) and
+  [`mgcv::bam`](https://rdrr.io/pkg/mgcv/man/bam.html) fits. RESI for
+  smooth terms uses mgcv’s Wald statistic (`Vp`) with `Ref.df` (`f2S`,
+  or `chisq2S` when the scale is known). Parametric terms use
+  `t2S`/`z2S`. Terms tested by mgcv’s random-effect test (`bs = "re"`,
+  shrinkage bases, `select = TRUE`) return `NA` with a warning.
+  [`resi()`](https://statimagcoll.github.io/RESI/reference/resi.md) for
+  these models gives an informative error; confidence intervals are not
+  yet implemented.
+
 ## RESI 1.5.1.9001
 
 - Fixed
